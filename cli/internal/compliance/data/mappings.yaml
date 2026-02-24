@@ -1,0 +1,210 @@
+mappings:
+  sqli:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A03:2021 - Injection"]
+      description: "SQL injection falls under the Injection category"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4", "6.5.1"]
+      description: "Prevent injection flaws in custom software"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC7.1"]
+      description: "Logical access security and system operations"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.26", "A.8.28"]
+      description: "Application security requirements and secure coding"
+
+  xss:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A03:2021 - Injection"]
+      description: "Cross-site scripting is classified under Injection"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4", "6.5.4"]
+      description: "Address XSS vulnerabilities in custom code"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC7.1"]
+      description: "Logical access controls and system monitoring"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.26", "A.8.28"]
+      description: "Application security and secure development lifecycle"
+
+  ssrf:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A10:2021 - Server-Side Request Forgery"]
+      description: "SSRF has its own dedicated OWASP Top 10 category"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4", "1.3.1"]
+      description: "Network segmentation and custom code security"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC6.6"]
+      description: "Network access restrictions and logical access"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.20", "A.8.26"]
+      description: "Network security and application security"
+
+  cmdi:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A03:2021 - Injection"]
+      description: "Command injection falls under the Injection category"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4", "6.5.1"]
+      description: "Prevent OS command injection in custom software"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC7.1"]
+      description: "System access controls and operational monitoring"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.26", "A.8.28"]
+      description: "Secure coding and application security testing"
+
+  lfi:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A01:2021 - Broken Access Control"]
+      description: "Local file inclusion is a path traversal access control issue"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4", "6.5.8"]
+      description: "Prevent improper access control in file operations"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC6.3"]
+      description: "Logical access and role-based access controls"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.3", "A.8.26"]
+      description: "Information access restriction and application security"
+
+  ssti:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A03:2021 - Injection"]
+      description: "Server-side template injection falls under Injection"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4"]
+      description: "Prevent injection vulnerabilities in custom code"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC7.1"]
+      description: "Access controls and system operations monitoring"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.26", "A.8.28"]
+      description: "Secure development and application security testing"
+
+  deserialization:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A08:2021 - Software and Data Integrity Failures"]
+      description: "Insecure deserialization is a data integrity issue"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4", "6.5.1"]
+      description: "Validate data integrity in custom software"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC7.2"]
+      description: "Access controls and change management monitoring"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.24", "A.8.26"]
+      description: "Secure coding and data integrity verification"
+
+  xxe:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A05:2021 - Security Misconfiguration"]
+      description: "XXE often results from misconfigured XML parsers"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4", "6.5.1"]
+      description: "Secure XML processing in custom software"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC7.1"]
+      description: "System configuration and access controls"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.9", "A.8.26"]
+      description: "Configuration management and secure development"
+
+  idor:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A01:2021 - Broken Access Control"]
+      description: "IDOR is a direct access control vulnerability"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4", "6.5.8", "7.1.1"]
+      description: "Access control enforcement in custom software"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC6.3"]
+      description: "Role-based access and authorization controls"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.3", "A.8.5"]
+      description: "Information access restriction and secure authentication"
+
+  authz:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A01:2021 - Broken Access Control"]
+      description: "Authorization bypass is a broken access control issue"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["7.1.1", "7.2.1", "6.5.8"]
+      description: "Access control policy and least privilege enforcement"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC6.2", "CC6.3"]
+      description: "Logical access, user provisioning, and role-based controls"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.3", "A.8.5", "A.5.15"]
+      description: "Access control policy and information access restriction"
+
+  redirect:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A01:2021 - Broken Access Control"]
+      description: "Open redirects enable phishing and access control bypass"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4"]
+      description: "Validate redirect targets in custom software"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1"]
+      description: "Logical access controls and URL validation"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.26"]
+      description: "Application security requirements"
+
+  csrf:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A01:2021 - Broken Access Control"]
+      description: "CSRF exploits lack of request origin validation"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4", "6.5.9"]
+      description: "Anti-CSRF controls in custom software"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC6.8"]
+      description: "Session management and access controls"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.26"]
+      description: "Application security and session management"
+
+  csv_injection:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A03:2021 - Injection"]
+      description: "CSV/formula injection is an injection vulnerability"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4"]
+      description: "Output encoding in exported data"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1"]
+      description: "Data output controls"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.26"]
+      description: "Application security requirements"
+
+  nosql:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A03:2021 - Injection"]
+      description: "NoSQL injection falls under the Injection category"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4", "6.5.1"]
+      description: "Prevent NoSQL injection in custom software"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC7.1"]
+      description: "Database access controls and monitoring"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.26", "A.8.28"]
+      description: "Secure coding and application security testing"
+
+  auth_bypass:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A07:2021 - Identification and Authentication Failures"]
+      description: "Authentication bypass is an auth failure"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["8.2.1", "8.3.1", "6.5.10"]
+      description: "Authentication mechanism security"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC6.2"]
+      description: "Authentication controls and user provisioning"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.5", "A.5.17"]
+      description: "Secure authentication and authentication information"

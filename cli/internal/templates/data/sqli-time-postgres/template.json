@@ -1,0 +1,18 @@
+{
+  "name": "sqli-time-postgres",
+  "description": "PostgreSQL time-based blind SQL injection — inject pg_sleep and measure response delay",
+  "vuln_type": "sqli",
+  "technique": "blind_time",
+  "auth_method": "none",
+  "risk": 3,
+  "run_command": "python3 exploit.py",
+  "success_signals": ["timing_delta:>4s"],
+  "params": [
+    {"name": "TARGET_URL", "description": "Full URL with injectable parameter", "example": "http://localhost:3000/api/items?id=1", "required": true},
+    {"name": "PARAM", "description": "Query parameter name to inject", "example": "id", "required": true},
+    {"name": "SLEEP_SECONDS", "description": "Seconds to sleep for timing test", "example": "5", "required": false},
+    {"name": "BOUNDARY", "description": "String boundary: single_quote, double_quote, numeric", "example": "single_quote", "required": false},
+    {"name": "AUTH_HEADER", "description": "Authorization header value", "example": "Bearer eyJ...", "required": false}
+  ],
+  "files": ["exploit.py", "README.md"]
+}

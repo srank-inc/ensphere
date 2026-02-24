@@ -1,0 +1,59 @@
+# ── Build artifacts ──────────────────────────────────────────────
+bin/
+cli/internal/payloads/payloads.sqlite
+
+# ── Go ──────────────────────────────────────────────────────────
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.prof
+*.cover
+coverage.out
+coverage.html
+vendor/
+
+# ── SQLite ──────────────────────────────────────────────────────
+*.db-journal
+*.db-wal
+*.db-shm
+
+# ── Runtime / session data ──────────────────────────────────────
+pentest/
+evidence.jsonl
+
+# ── Environment & secrets ───────────────────────────────────────
+.env
+.env.*
+*.pem
+*.key
+
+# ── Dependencies ────────────────────────────────────────────────
+node_modules/
+
+# ── OS generated ────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ── Editors & IDEs ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+.project
+.settings/
+.classpath
+
+# ── Sample reports (to be regenerated with Ensphere) ─────────────
+sample-reports/ensphere-report-*.md
+
+# ── Claude Code local settings ──────────────────────────────────
+.claude/settings.local.json

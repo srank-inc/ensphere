@@ -1,0 +1,122 @@
+package evidence
+
+import (
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"os"
+	"time"
+)
+
+// EntryFilter specifies criteria for filtering evidence entries.
+type EntryFilter struct {
+	ID         string
+	Result     string
+	ProbeType  string
+	FindingRef string
+	After      string // RFC3339 timestamp
+	Before     string // RFC3339 timestamp
+	Limit      int
+}
+
+// ReadAll reads all entries from a JSONL evidence file.
+func ReadAll(path string) ([]Entry, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("open evidence file: %w", err)
+	}
+	defer f.Close()
+
+	var entries []Entry
+	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+		var e Entry
+		if err := json.Unmarshal(line, &e); err != nil {
+			continue // skip malformed lines
+		}
+		entries = append(entries, e)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("read evidence file: %w", err)
+	}
+	return entries, nil
+}
+
+// ReadFiltered reads entries matching the given filter.
+func ReadFiltered(path string, filter EntryFilter) ([]Entry, error) {
+	all, err := ReadAll(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var afterTime, beforeTime time.Time
+	if filter.After != "" {
+		afterTime, _ = time.Parse(time.RFC3339, filter.After)
+	}
+	if filter.Before != "" {
+		beforeTime, _ = time.Parse(time.RFC3339, filter.Before)
+	}
+
+	var result []Entry
+	for _, e := range all {
+		if filter.ID != "" && e.ID != filter.ID {
+			continue
+		}
+		if filter.Result != "" && e.Result != filter.Result {
+			continue
+		}
+		if filter.ProbeType != "" && e.ProbeType != filter.ProbeType {
+			continue
+		}
+		if filter.FindingRef != "" && e.FindingRef != filter.FindingRef {
+			continue
+		}
+		if !afterTime.IsZero() {
+			t, err := time.Parse(time.RFC3339, e.Timestamp)
+			if err == nil && t.Before(afterTime) {
+				continue
+			}
+		}
+		if !beforeTime.IsZero() {
+			t, err := time.Parse(time.RFC3339, e.Timestamp)
+			if err == nil && t.After(beforeTime) {
+				continue
+			}
+		}
+		result = append(result, e)
+		if filter.Limit > 0 && len(result) >= filter.Limit {
+			break
+		}
+	}
+	return result, nil
+}
+
+// CountByResult returns counts grouped by result type.
+func CountByResult(path string) (map[string]int, error) {
+	entries, err := ReadAll(path)
+	if err != nil {
+		return nil, err
+	}
+	counts := make(map[string]int)
+	for _, e := range entries {
+		counts[e.Result]++
+	}
+	return counts, nil
+}
+
+// NextID reads the file, counts entries, and returns the next sequential ID.
+func NextID(path string) (string, error) {
+	entries, err := ReadAll(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "EVID-001", nil
+		}
+		return "", err
+	}
+	return fmt.Sprintf("EVID-%03d", len(entries)+1), nil
+}

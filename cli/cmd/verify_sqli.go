@@ -1,0 +1,118 @@
+package cmd
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
+
+	"github.com/srank/ensphere/internal/verify"
+)
+
+var (
+	sqliURL       string
+	sqliParam     string
+	sqliTechnique string
+	sqliMethod    string
+	sqliHeaders   []string
+	sqliBoundary  string
+	sqliInScope   []string
+	sqliMaxRisk   int
+	sqliThrottle  int
+	sqliTimeout   int
+	sqliEvidence  string
+)
+
+var verifySQLiCmd = &cobra.Command{
+	Use:   "sqli",
+	Short: "Verify SQL injection vulnerability",
+	Long: `Verify SQL injection with targeted probes.
+
+Techniques:
+  blind_time     Inject pg_sleep and measure response delay (default)
+  blind_boolean  Compare responses for true/false conditions
+  error_based    Check for PostgreSQL error signatures in response
+
+Examples:
+  ensphere verify sqli --url http://localhost:3000/api?id=1 --param id --in-scope *.localhost
+  ensphere verify sqli --url http://app.test/search?q=test --param q --technique blind_boolean --in-scope *.test
+  ensphere verify sqli --url http://app.test/items?id=1 --param id --technique error_based --in-scope *.test`,
+	RunE: runVerifySQLi,
+}
+
+func init() {
+	verifySQLiCmd.Flags().StringVar(&sqliURL, "url", "", "Target URL with injectable parameter (required)")
+	verifySQLiCmd.Flags().StringVar(&sqliParam, "param", "", "Query parameter name to inject (required)")
+	verifySQLiCmd.Flags().StringVar(&sqliTechnique, "technique", "blind_time", "Technique: blind_time, blind_boolean, error_based")
+	verifySQLiCmd.Flags().StringVar(&sqliMethod, "method", "GET", "HTTP method: GET or POST")
+	verifySQLiCmd.Flags().StringSliceVar(&sqliHeaders, "header", nil, "Custom headers (key:value, repeatable)")
+	verifySQLiCmd.Flags().StringVar(&sqliBoundary, "string-boundary", "single_quote", "String boundary: single_quote, double_quote, numeric")
+	verifySQLiCmd.Flags().StringSliceVar(&sqliInScope, "in-scope", nil, "In-scope hostname patterns (required, repeatable)")
+	verifySQLiCmd.Flags().IntVar(&sqliMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
+	verifySQLiCmd.Flags().IntVar(&sqliThrottle, "throttle", 500, "Milliseconds between probes")
+	verifySQLiCmd.Flags().IntVar(&sqliTimeout, "timeout", 10, "HTTP request timeout in seconds")
+	verifySQLiCmd.Flags().StringVar(&sqliEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
+
+	_ = verifySQLiCmd.MarkFlagRequired("url")
+	_ = verifySQLiCmd.MarkFlagRequired("param")
+	_ = verifySQLiCmd.MarkFlagRequired("in-scope")
+
+	verifyCmd.AddCommand(verifySQLiCmd)
+}
+
+func runVerifySQLi(cmd *cobra.Command, args []string) error {
+	headers := make(map[string]string)
+	for _, h := range sqliHeaders {
+		parts := splitOnce(h, ":")
+		if len(parts) == 2 {
+			headers[parts[0]] = parts[1]
+		}
+	}
+
+	cfg := verify.SQLiConfig{
+		URL:       sqliURL,
+		Param:     sqliParam,
+		Technique: sqliTechnique,
+		Method:    sqliMethod,
+		Boundary:  sqliBoundary,
+		ProbeConfig: verify.ProbeConfig{
+			InScope:    sqliInScope,
+			MaxRisk:    sqliMaxRisk,
+			ThrottleMs: sqliThrottle,
+			TimeoutSec: sqliTimeout,
+			Headers:    headers,
+			Evidence:   sqliEvidence,
+		},
+	}
+
+	result, err := verify.VerifySQLi(cfg)
+	if err != nil {
+		return err
+	}
+
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(result); err != nil {
+		return fmt.Errorf("encode result: %w", err)
+	}
+
+	if result.Status == "confirmed" || result.Status == "potential" {
+		os.Exit(1)
+	}
+	return nil
+}
+
+func splitOnce(s, sep string) []string {
+	idx := -1
+	for i := 0; i < len(s); i++ {
+		if s[i] == sep[0] {
+			idx = i
+			break
+		}
+	}
+	if idx < 0 {
+		return []string{s}
+	}
+	return []string{s[:idx], s[idx+1:]}
+}

