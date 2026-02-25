@@ -3,6 +3,7 @@ package evidence
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -113,7 +114,7 @@ func CountByResult(path string) (map[string]int, error) {
 func NextID(path string) (string, error) {
 	entries, err := ReadAll(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return "EVID-001", nil
 		}
 		return "", err

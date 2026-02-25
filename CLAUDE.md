@@ -50,6 +50,39 @@ make install-all  # install binary + skill files
 make clean        # remove build artifacts
 ```
 
+## Testing
+
+```bash
+make test                                          # go vet + go test ./...
+cd cli && go test -short ./...                     # fast: contracts + core + evidence + drift (~94 tests, ~3s)
+cd cli && go test ./...                            # full: everything including integration (~123 tests, ~5s)
+cd cli && go test -race ./internal/verify/         # race detector on verify package
+cd cli && go test -race -short ./internal/verify/  # race detector, fast path only
+```
+
+Test files are organized by concern:
+
+| File | Package | Purpose |
+|------|---------|---------|
+| `verify/helpers_test.go` | verify | Shared test utilities (newTestServer, baseProbeConfig, assertScopeErr, handler factories) |
+| `verify/probe_test.go` | verify | Core infrastructure (CheckScope, CheckMaxRisk, HTTPProbe) |
+| `verify/contracts_test.go` | verify | Safety gate contracts for all 23 probes (scope, max-risk, technique validation) |
+| `verify/integration_injection_test.go` | verify | Integration: sqli, xss, cmdi, lfi, ssti, xxe, nosql, deserialization, csvinjection |
+| `verify/integration_auth_test.go` | verify | Integration: auth, authz, rls, jwt, cors, csrf, idor |
+| `verify/integration_infra_test.go` | verify | Integration: ssrf, redirect, protopollution, graphql, cachepoisoning |
+| `verify/smuggling_test.go` | verify | Smuggling: buildSmugglingPayload + rawHTTPProbe |
+| `verify/race_test.go` | verify | Race: concurrent burst verification |
+| `evidence/evidence_test.go` | evidence | Hash chain integrity, redaction, read/write/filter, NextID (empty/missing/existing) |
+| `payloads/drift_test.go` | payloads | Docs drift guard (payload count + vuln type canary values) |
+
+**Test conventions:**
+- Integration tests skip with `testing.Short()` — use `-short` for fast CI
+- Assertions are **relational** (e.g., `PayloadAvgMs > BaselineAvgMs`), never exact values or message strings
+- No `t.Parallel()` in timing-sensitive or raw-TCP tests
+- Use `newTestServer(t, handler)` for all test HTTP servers (IPv4-only, auto-cleanup); never use `httptest.NewServer` directly
+- Use `t.Cleanup()` for net.Listener, temp files
+- Drift test canary values (1059 payloads, 21 vuln types) must be updated alongside docs when payloads change
+
 ## Conventions
 
 - **Commands**: One file per command in `cli/cmd/`. Register with parent in `init()`.

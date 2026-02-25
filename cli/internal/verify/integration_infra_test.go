@@ -1,0 +1,182 @@
+package verify
+
+import (
+	"fmt"
+	"net/http"
+	"testing"
+)
+
+func TestIntegration_SSRF(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	ts := newTestServer(t,signatureHandler("latest/meta-data ami-id"))
+
+
+	cfg := SSRFConfig{
+		URL:         ts.URL + "/api",
+		Param:       "url",
+		Method:      "GET",
+		ProbeConfig: baseProbeConfig(),
+	}
+
+	result, err := VerifySSRF(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	m, ok := result.Measurements.(SSRFMeasurements)
+	if !ok {
+		t.Fatalf("expected SSRFMeasurements, got %T", result.Measurements)
+	}
+	if len(m.MatchedSignatures) == 0 {
+		t.Fatal("expected non-empty MatchedSignatures")
+	}
+}
+
+func TestIntegration_Redirect(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	ts := newTestServer(t,http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		nextParam := r.URL.Query().Get("next")
+		if nextParam != "" {
+			w.Header().Set("Location", nextParam)
+			w.WriteHeader(302)
+			return
+		}
+		w.WriteHeader(200)
+		fmt.Fprint(w, "home")
+	}))
+
+
+	cfg := RedirectConfig{
+		URL:         ts.URL + "/redirect",
+		Param:       "next",
+		Method:      "GET",
+		ProbeConfig: baseProbeConfig(),
+	}
+
+	result, err := VerifyRedirect(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	m, ok := result.Measurements.(RedirectMeasurements)
+	if !ok {
+		t.Fatalf("expected RedirectMeasurements, got %T", result.Measurements)
+	}
+	if m.LocationHeader == "" {
+		t.Fatal("expected non-empty LocationHeader")
+	}
+	if !m.ExternalRedirect {
+		t.Fatal("expected ExternalRedirect == true")
+	}
+}
+
+func TestIntegration_ProtoPollution(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	ts := newTestServer(t,echoHandler())
+
+
+	cfg := ProtoPollutionConfig{
+		URL:         ts.URL + "/api",
+		Method:      "POST",
+		Technique:   "proto_assignment",
+		ProbeConfig: baseProbeConfig(),
+	}
+
+	result, err := VerifyProtoPollution(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	m, ok := result.Measurements.(ProtoPollutionMeasurements)
+	if !ok {
+		t.Fatalf("expected ProtoPollutionMeasurements, got %T", result.Measurements)
+	}
+	if m.Baseline.StatusCode == 0 {
+		t.Fatal("expected Baseline.StatusCode > 0")
+	}
+	if m.InjectionProbe.StatusCode == 0 {
+		t.Fatal("expected InjectionProbe.StatusCode > 0")
+	}
+	if m.VerifyProbe.StatusCode == 0 {
+		t.Fatal("expected VerifyProbe.StatusCode > 0")
+	}
+}
+
+func TestIntegration_GraphQL(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	ts := newTestServer(t,http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(200)
+		fmt.Fprint(w, `{"data":{"__schema":{"types":[{"name":"Query"},{"name":"Mutation"}]}}}`)
+	}))
+
+
+	cfg := GraphQLConfig{
+		URL:         ts.URL + "/graphql",
+		Technique:   "introspection",
+		Method:      "POST",
+		ProbeConfig: baseProbeConfig(),
+	}
+
+	result, err := VerifyGraphQL(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	m, ok := result.Measurements.(GraphQLMeasurements)
+	if !ok {
+		t.Fatalf("expected GraphQLMeasurements, got %T", result.Measurements)
+	}
+	if m.IntrospectionEnabled == nil {
+		t.Fatal("expected IntrospectionEnabled to be non-nil")
+	}
+	if !*m.IntrospectionEnabled {
+		t.Fatal("expected IntrospectionEnabled == true")
+	}
+}
+
+func TestIntegration_CachePoisoning(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	ts := newTestServer(t,echoHandler())
+
+
+	cfg := CachePoisoningConfig{
+		URL:         ts.URL + "/page",
+		Technique:   "unkeyed_header",
+		ProbeConfig: baseProbeConfig(),
+	}
+
+	result, err := VerifyCachePoisoning(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	m, ok := result.Measurements.(CachePoisoningMeasurements)
+	if !ok {
+		t.Fatalf("expected CachePoisoningMeasurements, got %T", result.Measurements)
+	}
+	if m.Baseline.StatusCode == 0 {
+		t.Fatal("expected Baseline.StatusCode > 0")
+	}
+	if m.Injection.StatusCode == 0 {
+		t.Fatal("expected Injection.StatusCode > 0")
+	}
+	if m.Verify.StatusCode == 0 {
+		t.Fatal("expected Verify.StatusCode > 0")
+	}
+}
