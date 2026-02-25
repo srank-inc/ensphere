@@ -7,10 +7,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var version = "dev"
+
 var rootCmd = &cobra.Command{
-	Use:   "ensphere",
-	Short: "Ensphere security testing toolkit",
-	Long:  "Curated payload database and security testing tools for authorized penetration testing.",
+	Use:     "ensphere",
+	Short:   "Ensphere security testing toolkit",
+	Long:    "Curated payload database and security testing tools for authorized penetration testing.",
+	Version: version,
 }
 
 func Execute() {

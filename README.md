@@ -54,7 +54,7 @@ make install-all  # binary + skill files
 
 ### payloads — Query payload database
 
-1059 payloads across 22 vulnerability types. YAML seeds compiled to SQLite, queried at runtime.
+1059 payloads across 21 vulnerability types. YAML seeds compiled to SQLite, queried at runtime.
 
 ```bash
 ensphere payloads sqli --db postgres --technique blind_time
@@ -67,37 +67,121 @@ JSON output: `query`, `count`, `results[]` (payload, placeholders, evidence_type
 
 ### verify — Targeted verification probes
 
-All verify commands output JSON (schema v2: measurements only, no status/confidence), log evidence to `./evidence.jsonl`, and use exit codes: 0 = probes completed, 2 = scope/usage error, 3 = runtime failure.
+23 probe types. All verify commands output JSON (schema v2: measurements only, no status/confidence), log evidence to `./evidence.jsonl`, and use exit codes: 0 = probes completed, 2 = scope/usage error, 3 = runtime failure. All require `--in-scope`.
 
-**SQLi** — `--in-scope` required, default throttle 500ms, default `--max-risk 3`
+**SQLi** — Techniques: `blind_time` (default), `blind_boolean`, `error_based`
 ```bash
 ensphere verify sqli --url http://localhost:3000/api?id=1 --param id --technique blind_time --in-scope *.localhost
 ```
-Techniques: `blind_time` (default), `blind_boolean`, `error_based`.
 
-**RLS** — Supabase cross-tenant via PostgREST. Builds JWTs with `company_id` claims.
-```bash
-ensphere verify rls --project-url http://127.0.0.1:54321 --anon-key eyJ... --jwt-secret super-secret-jwt-token --table invoices --tenant-a uuid-a --tenant-b uuid-b --in-scope 127.0.0.1
-```
-
-**IDOR** — URL uses `{id}` placeholder. `--in-scope` required.
-```bash
-ensphere verify idor --url "http://target/api/items/{id}" --id "victim-uuid" --token "attacker-jwt" --in-scope *.target.com
-```
-
-**XSS** — Checks reflection in response. Supports `--method POST`. `--in-scope` required.
+**XSS** — Checks reflection in response. Supports `--method POST`
 ```bash
 ensphere verify xss --url "http://target/search" --param q --payload "<script>alert(1)</script>" --in-scope *.target.com
 ```
 
-**SSRF** — Internal URL injection + cloud metadata detection. Optional `--callback-url`. `--in-scope` required.
+**IDOR** — URL uses `{id}` placeholder
+```bash
+ensphere verify idor --url "http://target/api/items/{id}" --id "victim-uuid" --token "attacker-jwt" --in-scope *.target.com
+```
+
+**SSRF** — Internal URL injection + cloud metadata detection. Optional `--callback-url`
 ```bash
 ensphere verify ssrf --url "http://target/fetch" --param url --in-scope *.target.com
 ```
 
-**Auth Bypass** — `--in-scope` required. Techniques: `no_token`, `expired_token`, `alg_none`, `method_override`.
+**Auth Bypass** — Techniques: `no_token`, `expired_token`, `alg_none`, `method_override`
 ```bash
 ensphere verify auth --url "http://target/api/admin" --token "valid-jwt" --technique alg_none --in-scope *.target.com
+```
+
+**RLS** — Supabase cross-tenant via PostgREST. Builds JWTs with `company_id` claims
+```bash
+ensphere verify rls --project-url http://127.0.0.1:54321 --anon-key eyJ... --jwt-secret super-secret-jwt-token --table invoices --tenant-a uuid-a --tenant-b uuid-b --in-scope 127.0.0.1
+```
+
+**CMDi** — Time-based blind command injection. `--os linux|windows`
+```bash
+ensphere verify cmdi --url "http://target/api?cmd=test" --param cmd --in-scope *.target.com
+```
+
+**LFI** — Path traversal with file content signature detection. `--os linux|windows`
+```bash
+ensphere verify lfi --url "http://target/api?file=test" --param file --in-scope *.target.com
+```
+
+**SSTI** — Template expression injection. `--engine auto|jinja2|twig|freemarker|erb`
+```bash
+ensphere verify ssti --url "http://target/search?q=test" --param q --in-scope *.target.com
+```
+
+**XXE** — XML external entity injection. Techniques: `file_read`, `ssrf`, `oob`
+```bash
+ensphere verify xxe --url "http://target/api/xml" --technique file_read --in-scope *.target.com
+```
+
+**Deserialization** — Time-based blind. `--runtime java|python|php|node`
+```bash
+ensphere verify deserialization --url "http://target/api" --runtime python --in-scope *.target.com
+```
+
+**CSRF** — Origin header validation + SameSite cookie checks
+```bash
+ensphere verify csrf --url "http://target/api/action" --method POST --in-scope *.target.com
+```
+
+**NoSQL** — Techniques: `operator_injection` (default), `where_time`
+```bash
+ensphere verify nosql --url "http://target/api/login" --param username --in-scope *.target.com
+```
+
+**JWT** — Techniques: `alg_none`, `kid_injection`
+```bash
+ensphere verify jwt --url "http://target/api/me" --token "eyJ..." --technique alg_none --in-scope *.target.com
+```
+
+**CORS** — Origin reflection testing (evil, null, subdomain origins)
+```bash
+ensphere verify cors --url "http://target/api/data" --in-scope *.target.com
+```
+
+**Prototype Pollution** — Techniques: `proto_assignment`, `constructor_pollution`, `json_merge`
+```bash
+ensphere verify protopollution --url "http://target/api/config" --in-scope *.target.com
+```
+
+**GraphQL** — Techniques: `introspection`, `batch_query`, `nested_query_dos`
+```bash
+ensphere verify graphql --url "http://target/graphql" --technique introspection --in-scope *.target.com
+```
+
+**Race Condition** — Concurrent request bursts. `--concurrency N` (default 10)
+```bash
+ensphere verify race --url "http://target/api/redeem" --method POST --body '{"code":"PROMO"}' --in-scope *.target.com
+```
+
+**Request Smuggling** — Techniques: `cl_te`, `te_cl`, `te_te`
+```bash
+ensphere verify smuggling --url "http://target/" --technique cl_te --in-scope *.target.com
+```
+
+**Cache Poisoning** — Techniques: `unkeyed_header`, `unkeyed_cookie`, `fat_get`
+```bash
+ensphere verify cachepoisoning --url "http://target/page" --in-scope *.target.com
+```
+
+**Open Redirect** — Location header inspection with redirect chain tracking
+```bash
+ensphere verify redirect --url "http://target/login?next=/dashboard" --param next --in-scope *.target.com
+```
+
+**CSV Injection** — Formula payload submission + export verification
+```bash
+ensphere verify csvinjection --submit-url "http://target/api/items" --export-url "http://target/api/export.csv" --param name --in-scope *.target.com
+```
+
+**AuthZ Bypass** — Privilege level comparison (high-priv vs low-priv response)
+```bash
+ensphere verify authz --url "http://target/api/admin" --low-token "user-jwt" --high-token "admin-jwt" --in-scope *.target.com
 ```
 
 ### template — Exploit templates
@@ -152,11 +236,11 @@ ensphere sinks              # list categories with counts
 ensphere sinks sqli         # patterns for category
 ```
 
-Categories: `sqli`, `xss`, `ssrf`, `cmdi`, `lfi`, `ssti`, `deserialization`, `xxe`. Each pattern: regex, file extensions, description, risk.
+Categories: `sqli`, `xss`, `ssrf`, `cmdi`, `lfi`, `ssti`, `deserialization`, `xxe`, `nosql`, `csrf`, `jwt`, `cors`, `redirect`, `idor`. Each pattern: regex, file extensions, description, risk.
 
 ### compliance — Compliance mapping
 
-Maps vuln types to OWASP Top 10, PCI-DSS v4.0, SOC 2, ISO 27001.
+Maps 22 vuln types to OWASP Top 10, PCI-DSS v4.0, SOC 2, ISO 27001.
 
 ```bash
 ensphere compliance sqli

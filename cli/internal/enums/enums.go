@@ -29,24 +29,24 @@ var ValidTechniques = map[string]bool{
 	// Command injection techniques
 	"command_injection": true, "command_chaining": true, "argument_injection": true,
 	// NoSQL injection techniques
-	"nosql_injection": true, "operator_injection": true, "js_injection": true,
+	"nosql_injection": true, "operator_injection": true, "js_injection": true, "where_time": true,
 	// LFI techniques
 	"directory_traversal": true, "null_byte": true, "wrapper": true,
 	// SSTI techniques
-	"sandbox_escape": true,
+	"sandbox_escape": true, "expression_eval": true,
 	// XXE techniques
 	"xxe_file_read": true, "xxe_ssrf": true, "xxe_oob": true, "xxe_dos": true,
 	// Redirect techniques
 	"open_redirect_param": true, "open_redirect_path": true,
 	// Deserialization techniques
-	"deserialization_rce": true, "deserialization_read": true,
+	"deserialization_rce": true, "deserialization_read": true, "time_based": true, "dns_oob": true,
 	// Auth bypass techniques
 	"jwt_manipulation": true, "default_credential": true, "forced_browsing": true,
 	"auth_bypass": true, "session_fixation": true,
 	// IDOR/BOLA techniques
-	"idor_numeric": true, "idor_uuid": true, "idor_path": true, "bola": true,
+	"idor_numeric": true, "idor_uuid": true, "idor_path": true, "bola": true, "privilege_escalation": true,
 	// CSRF techniques
-	"form_auto_submit": true, "xhr_cross_origin": true, "fetch_cross_origin": true, "image_tag": true,
+	"form_auto_submit": true, "xhr_cross_origin": true, "fetch_cross_origin": true, "image_tag": true, "origin_validation": true,
 	// Prototype pollution techniques
 	"proto_assignment": true, "constructor_pollution": true, "json_merge": true,
 	// GraphQL techniques

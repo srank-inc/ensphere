@@ -24,6 +24,10 @@ func VerifyIDOR(cfg IDORConfig) (*ProbeResult, error) {
 		return nil, err
 	}
 
+	if err := CheckMaxRisk(2, cfg.MaxRisk); err != nil {
+		return nil, err
+	}
+
 	timer := NewTimer()
 	throttle := NewThrottle(cfg.ThrottleMs)
 

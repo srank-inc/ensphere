@@ -19,6 +19,14 @@ type ProbeResponse struct {
 	Error        error
 }
 
+// CheckMaxRisk returns a ScopeError if payloadRisk exceeds maxRisk.
+func CheckMaxRisk(payloadRisk, maxRisk int) error {
+	if maxRisk > 0 && payloadRisk > maxRisk {
+		return &ScopeError{Msg: fmt.Sprintf("payload risk %d exceeds max-risk %d", payloadRisk, maxRisk)}
+	}
+	return nil
+}
+
 // HTTPProbe sends an HTTP request and captures timing + response hash.
 func HTTPProbe(method, url string, body string, headers map[string]string, timeoutSec int) ProbeResponse {
 	client := &http.Client{

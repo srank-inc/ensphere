@@ -97,12 +97,9 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 		}
 	}
 
-	// Build exclude set
+	// Build exclude set for default directory names (fast exact match)
 	excludeSet := make(map[string]bool)
 	for _, d := range DefaultExcludes {
-		excludeSet[d] = true
-	}
-	for _, d := range cfg.Excludes {
 		excludeSet[d] = true
 	}
 
@@ -112,11 +109,22 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 		if err != nil {
 			return nil // skip inaccessible
 		}
+		relPath, _ := filepath.Rel(cfg.Directory, path)
 		if d.IsDir() {
 			if excludeSet[d.Name()] {
 				return filepath.SkipDir
 			}
+			for _, pattern := range cfg.Excludes {
+				if matchExclude(pattern, d.Name(), relPath) {
+					return filepath.SkipDir
+				}
+			}
 			return nil
+		}
+		for _, pattern := range cfg.Excludes {
+			if matchExclude(pattern, filepath.Base(path), relPath) {
+				return nil
+			}
 		}
 		ext := filepath.Ext(path)
 		if extUnion[ext] {
@@ -265,4 +273,36 @@ func scanFile(path, baseDir string, patterns []compiledPattern) []ScanMatch {
 	}
 
 	return matches
+}
+
+// matchExclude checks if name or relPath matches an exclude pattern.
+// Supports ** for recursive directory matching (e.g. "test/**").
+func matchExclude(pattern, name, relPath string) bool {
+	// Handle "prefix/**" — match the prefix directory and anything under it
+	if strings.HasSuffix(pattern, "/**") {
+		prefix := pattern[:len(pattern)-3] // strip "/**"
+		if name == prefix || relPath == prefix {
+			return true
+		}
+		if strings.HasPrefix(relPath, prefix+string(filepath.Separator)) {
+			return true
+		}
+		return false
+	}
+	// Handle "**/suffix" — match name at any depth
+	if strings.HasPrefix(pattern, "**/") {
+		suffix := pattern[3:] // strip "**/"
+		if name == suffix || strings.HasSuffix(relPath, string(filepath.Separator)+suffix) {
+			return true
+		}
+		return false
+	}
+	// Standard glob against name and relative path
+	if matched, _ := filepath.Match(pattern, name); matched {
+		return true
+	}
+	if matched, _ := filepath.Match(pattern, relPath); matched {
+		return true
+	}
+	return false
 }

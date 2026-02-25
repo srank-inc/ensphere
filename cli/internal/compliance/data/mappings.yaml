@@ -208,3 +208,101 @@ mappings:
     - framework: "ISO 27001"
       control_ids: ["A.8.5", "A.5.17"]
       description: "Secure authentication and authentication information"
+
+  cache_poisoning:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A05:2021 - Security Misconfiguration"]
+      description: "Cache poisoning exploits misconfigured caching layers"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4"]
+      description: "Secure configuration of caching infrastructure"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC7.1"]
+      description: "System configuration and operational monitoring"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.9", "A.8.26"]
+      description: "Configuration management and application security"
+
+  cors:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A05:2021 - Security Misconfiguration"]
+      description: "CORS misconfiguration is a security configuration failure"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4", "1.3.1"]
+      description: "Secure cross-origin policy configuration"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC6.6"]
+      description: "Logical access and network security controls"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.20", "A.8.26"]
+      description: "Network security and application security configuration"
+
+  graphql:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A01:2021 - Broken Access Control", "A05:2021 - Security Misconfiguration"]
+      description: "GraphQL abuse via introspection, batching, or excessive nesting"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4", "6.5.8"]
+      description: "API access controls and input validation"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC6.6"]
+      description: "Logical access and API security controls"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.26", "A.8.28"]
+      description: "Application security and API security testing"
+
+  jwt:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A07:2021 - Identification and Authentication Failures"]
+      description: "JWT manipulation is an authentication/cryptographic failure"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["8.2.1", "8.3.1", "6.2.4"]
+      description: "Strong authentication and cryptographic controls"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC6.7"]
+      description: "Authentication and cryptographic controls"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.5", "A.8.24"]
+      description: "Secure authentication and cryptographic controls"
+
+  prototype_pollution:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A03:2021 - Injection"]
+      description: "Prototype pollution is a JavaScript object injection"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4"]
+      description: "Prevent object injection in client-side code"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1"]
+      description: "Application logic and data integrity controls"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.26"]
+      description: "Application security requirements"
+
+  race_condition:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A04:2021 - Insecure Design"]
+      description: "Race conditions are a design flaw in concurrent processing"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4"]
+      description: "Secure transaction processing and concurrency control"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC7.2"]
+      description: "Transaction integrity and processing controls"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.26", "A.8.28"]
+      description: "Application security and transaction integrity"
+
+  request_smuggling:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A05:2021 - Security Misconfiguration"]
+      description: "Request smuggling exploits misconfigured HTTP processing"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4", "1.3.1"]
+      description: "Secure HTTP proxy and load balancer configuration"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC6.6"]
+      description: "Network security and HTTP processing controls"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.20", "A.8.26"]
+      description: "Network security and application security"

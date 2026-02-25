@@ -4,7 +4,7 @@
 
 ### Layer 1 — Payload Database
 
-1059 curated payloads across 22 vuln types, compiled from YAML seeds to embedded SQLite. Agent queries `ensphere payloads <vuln_type> [filters]` for deterministic, context-indexed payloads instead of generating from training data.
+1059 curated payloads across 21 vuln types, compiled from YAML seeds to embedded SQLite. Agent queries `ensphere payloads <vuln_type> [filters]` for deterministic, context-indexed payloads instead of generating from training data.
 
 Payloads indexed by **context**, not framework:
 - **SQLi**: db_engine (postgres/mysql/mssql/sqlite/oracle), technique, injection_surface, encoding, string_boundary
@@ -20,7 +20,7 @@ Custom Go HTTP probes (not wrappers around external tools). Agent calls `enspher
 - Returns structured JSON (schema v2): `{schema_version, vuln_type, technique, started_at, probe_count, duration, measurements}` — measurement-only output, no status/confidence classification
 - Safety: mandatory `--in-scope` scoping, rate throttling (default 500ms), max-risk gate (default 3)
 - Evidence auto-logged to JSONL with secret redaction
-- Probes: sqli, xss, idor, ssrf, auth, rls (Supabase cross-tenant JWT)
+- Probes: sqli, xss, idor, ssrf, auth, rls, cmdi, lfi, ssti, xxe, deserialization, csrf, nosql, jwt, cors, protopollution, graphql, race, smuggling, cachepoisoning, redirect, csvinjection, authz (23 total)
 
 ### Layer 3 — Exploit Templates
 
@@ -50,6 +50,23 @@ cli/
     verify_ssrf.go                # ensphere verify ssrf
     verify_auth.go                # ensphere verify auth
     verify_rls.go                 # ensphere verify rls
+    verify_cmdi.go                # ensphere verify cmdi
+    verify_lfi.go                 # ensphere verify lfi
+    verify_ssti.go                # ensphere verify ssti
+    verify_xxe.go                 # ensphere verify xxe
+    verify_deserialization.go     # ensphere verify deserialization
+    verify_csrf.go                # ensphere verify csrf
+    verify_nosql.go               # ensphere verify nosql
+    verify_jwt.go                 # ensphere verify jwt
+    verify_cors.go                # ensphere verify cors
+    verify_protopollution.go      # ensphere verify protopollution
+    verify_graphql.go             # ensphere verify graphql
+    verify_race.go                # ensphere verify race
+    verify_smuggling.go           # ensphere verify smuggling
+    verify_cachepoisoning.go      # ensphere verify cachepoisoning
+    verify_redirect.go            # ensphere verify redirect
+    verify_csvinjection.go        # ensphere verify csvinjection
+    verify_authz.go               # ensphere verify authz
     scan.go                       # ensphere scan <dir>
     template.go                   # ensphere template [name]
     evidence.go                   # parent: ensphere evidence
@@ -72,9 +89,26 @@ cli/
       ssrf.go                     # SSRF internal URL + metadata probes
       auth.go                     # Auth bypass (no_token, expired, alg_none, method_override)
       rls.go                      # Supabase RLS cross-tenant (builds JWTs with company_id)
-      probe.go                    # HTTPProbe shared request logic
+      cmdi.go                     # Command injection (time-based blind)
+      lfi.go                      # Local file inclusion (path traversal + signature detection)
+      ssti.go                     # Server-side template injection (multi-engine)
+      xxe.go                      # XML external entity (file_read, ssrf, oob)
+      deserialization.go          # Insecure deserialization (time-based blind)
+      csrf.go                     # CSRF (Origin validation + SameSite checks)
+      nosql.go                    # NoSQL injection (operator injection, $where timing)
+      jwt.go                      # JWT manipulation (alg_none, kid_injection)
+      cors.go                     # CORS misconfiguration (origin reflection)
+      protopollution.go           # Prototype pollution (__proto__, constructor)
+      graphql.go                  # GraphQL abuse (introspection, batch, nested DoS)
+      race.go                     # Race conditions (concurrent bursts)
+      smuggling.go                # Request smuggling (CL-TE, TE-CL, TE-TE)
+      cachepoisoning.go           # Cache poisoning (unkeyed headers/cookies)
+      redirect.go                 # Open redirect (Location header inspection)
+      csvinjection.go             # CSV injection (formula in exports)
+      authz.go                    # Authorization bypass (privilege level comparison)
+      probe.go                    # HTTPProbe shared request logic + CheckMaxRisk
       scope.go                    # CheckScope hostname validation
-      model.go                    # Result/config structs
+      model.go                    # Result/config structs (23 measurement types)
       throttle.go                 # Rate limiting between probes
     evidence/
       writer.go                   # JSONL append writer
@@ -106,7 +140,7 @@ cli/
       scanner.go                  # Multi-worker source code scanner
       model.go                    # ScanResult, Match structs
     sinks/
-      data/sinks.yaml             # 8 categories: sqli, xss, ssrf, cmdi, lfi, ssti, deserialization, xxe
+      data/sinks.yaml             # 14 categories: sqli, xss, ssrf, cmdi, lfi, ssti, deserialization, xxe, nosql, csrf, jwt, cors, redirect, idor
       embed.go                    # go:embed data/*
       query.go                    # query by category
       model.go                    # Sink pattern struct
@@ -180,7 +214,7 @@ All validated at build time by `enums.ValidateSeedPayload()` in seedgen.
 | vuln_type | sqli, xss, ssrf, csv_injection, cmdi, lfi, ssti, deserialization, xxe, idor, authz, redirect, csrf, nosql, auth_bypass, prototype_pollution, graphql, jwt, cors, race_condition, request_smuggling, cache_poisoning |
 | db_engine | postgres, mysql, mssql, sqlite, oracle |
 | runtime | node, jvm, python, php, dotnet, ruby, go |
-| technique | blind_time, blind_boolean, error_based, union, dns, oob, metadata_access, internal_service, protocol_smuggling, port_scan, cross_tenant, formula_injection, open_redirect, path_traversal, server_action, webhook_spoof, rls_bypass, reflected, stored, dom, polyglot, command_injection, command_chaining, argument_injection, nosql_injection, operator_injection, js_injection, directory_traversal, null_byte, wrapper, sandbox_escape, xxe_file_read, xxe_ssrf, xxe_oob, xxe_dos, open_redirect_param, open_redirect_path, deserialization_rce, deserialization_read, jwt_manipulation, default_credential, forced_browsing, auth_bypass, session_fixation, idor_numeric, idor_uuid, idor_path, bola, form_auto_submit, xhr_cross_origin, fetch_cross_origin, image_tag, proto_assignment, constructor_pollution, json_merge, introspection, batch_query, nested_query_dos, field_suggestion, alias_dos, alg_none, alg_confusion, kid_injection, jwk_injection, jku_spoofing, origin_reflection, null_origin, subdomain_wildcard, credential_leak, toctou, parallel_request, double_spend, cl_te, te_cl, te_te, h2_downgrade, unkeyed_header, unkeyed_cookie, fat_get, no_token, expired_token, method_override |
+| technique | blind_time, blind_boolean, error_based, union, dns, oob, metadata_access, internal_service, protocol_smuggling, port_scan, cross_tenant, formula_injection, open_redirect, path_traversal, server_action, webhook_spoof, rls_bypass, reflected, stored, dom, polyglot, command_injection, command_chaining, argument_injection, nosql_injection, operator_injection, js_injection, where_time, directory_traversal, null_byte, wrapper, sandbox_escape, expression_eval, xxe_file_read, xxe_ssrf, xxe_oob, xxe_dos, open_redirect_param, open_redirect_path, deserialization_rce, deserialization_read, time_based, dns_oob, jwt_manipulation, default_credential, forced_browsing, auth_bypass, session_fixation, idor_numeric, idor_uuid, idor_path, bola, privilege_escalation, form_auto_submit, xhr_cross_origin, fetch_cross_origin, image_tag, origin_validation, proto_assignment, constructor_pollution, json_merge, introspection, batch_query, nested_query_dos, field_suggestion, alias_dos, alg_none, alg_confusion, kid_injection, jwk_injection, jku_spoofing, origin_reflection, null_origin, subdomain_wildcard, credential_leak, toctou, parallel_request, double_spend, cl_te, te_cl, te_te, h2_downgrade, unkeyed_header, unkeyed_cookie, fat_get, no_token, expired_token, method_override |
 | injection_surface | query, path, header, cookie, json_body, form_body, xml_body, file_upload, websocket, graphql_query |
 | encoding | raw, url, double_url, unicode, hex, base64, html_entity, js_escape, null_byte |
 | string_boundary | single_quote, double_quote, unquoted, numeric |

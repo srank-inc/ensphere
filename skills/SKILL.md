@@ -329,7 +329,7 @@ ensphere sinks xss             # XSS sink patterns
 ```
 
 ### Categories
-`sqli`, `xss`, `ssrf`, `cmdi`, `lfi`, `ssti`, `deserialization`, `xxe`
+`sqli`, `xss`, `ssrf`, `cmdi`, `lfi`, `ssti`, `deserialization`, `xxe`, `nosql`, `csrf`, `jwt`, `cors`, `redirect`, `idor`
 
 Each pattern includes a regex, applicable file extensions, description, and risk level.
 
@@ -404,6 +404,191 @@ ensphere verify auth --url "http://target/api/admin" --token "valid-jwt" --techn
 ```
 
 Techniques: `no_token`, `expired_token`, `alg_none`, `method_override`. Required flags: `--url`, `--token`, `--technique`, `--in-scope`.
+
+## Verify CMDi
+
+Verify command injection with time-based blind probes. Injects OS-specific sleep commands and measures response delay.
+
+```bash
+ensphere verify cmdi --url "http://target/api?cmd=test" --param cmd --in-scope "*.target.com"
+ensphere verify cmdi --url "http://target/api?input=1" --param input --os windows --in-scope "*.target.com"
+```
+
+Required flags: `--url`, `--param`, `--in-scope`. Optional: `--os` (linux/windows, default linux), `--method`.
+
+## Verify LFI
+
+Verify local file inclusion by injecting path traversal payloads and checking for file content signatures.
+
+```bash
+ensphere verify lfi --url "http://target/api?file=test" --param file --in-scope "*.target.com"
+ensphere verify lfi --url "http://target/load?path=x" --param path --os windows --in-scope "*.target.com"
+```
+
+Required flags: `--url`, `--param`, `--in-scope`. Optional: `--os` (linux/windows, default linux), `--method`.
+
+## Verify SSTI
+
+Verify server-side template injection by injecting template expressions and checking for evaluated output.
+
+```bash
+ensphere verify ssti --url "http://target/search?q=test" --param q --in-scope "*.target.com"
+ensphere verify ssti --url "http://target/render?tpl=x" --param tpl --engine jinja2 --in-scope "*.target.com"
+```
+
+Engines: `auto` (default, tries all), `jinja2`, `twig`, `freemarker`, `erb`. Required flags: `--url`, `--param`, `--in-scope`.
+
+## Verify XXE
+
+Verify XML external entity injection by sending crafted XML with external entity references.
+
+```bash
+ensphere verify xxe --url "http://target/api/xml" --technique file_read --in-scope "*.target.com"
+ensphere verify xxe --url "http://target/upload" --technique ssrf --in-scope "*.target.com"
+```
+
+Techniques: `file_read` (default), `ssrf`, `oob`. Required flags: `--url`, `--in-scope`. Default method: POST.
+
+## Verify Deserialization
+
+Verify insecure deserialization with time-based blind probes.
+
+```bash
+ensphere verify deserialization --url "http://target/api" --runtime python --in-scope "*.target.com"
+ensphere verify deserialization --url "http://target/deserialize" --runtime java --in-scope "*.target.com"
+```
+
+Runtimes: `java`, `python`, `php`, `node`. Techniques: `time_based` (default), `dns_oob`. Required flags: `--url`, `--runtime`, `--in-scope`.
+
+## Verify CSRF
+
+Verify CSRF by testing Origin header validation and SameSite cookie attributes.
+
+```bash
+ensphere verify csrf --url "http://target/api/action" --method POST --in-scope "*.target.com"
+ensphere verify csrf --url "http://target/transfer" --token "auth-jwt" --in-scope "*.target.com"
+```
+
+Required flags: `--url`, `--in-scope`. Optional: `--token`, `--method` (default POST).
+
+## Verify NoSQL
+
+Verify NoSQL injection with operator injection or time-based probes.
+
+```bash
+ensphere verify nosql --url "http://target/api/login" --param username --in-scope "*.target.com"
+ensphere verify nosql --url "http://target/api/search" --param q --technique where_time --in-scope "*.target.com"
+```
+
+Techniques: `operator_injection` (default), `where_time`. Required flags: `--url`, `--param`, `--in-scope`.
+
+## Verify JWT
+
+Verify JWT manipulation by modifying token algorithm or claims.
+
+```bash
+ensphere verify jwt --url "http://target/api/me" --token "eyJ..." --technique alg_none --in-scope "*.target.com"
+ensphere verify jwt --url "http://target/api/me" --token "eyJ..." --technique kid_injection --in-scope "*.target.com"
+```
+
+Techniques: `alg_none`, `kid_injection`. Required flags: `--url`, `--token`, `--technique`, `--in-scope`.
+
+## Verify CORS
+
+Verify CORS misconfiguration by testing Origin header reflection.
+
+```bash
+ensphere verify cors --url "http://target/api/data" --in-scope "*.target.com"
+ensphere verify cors --url "http://target/api/user" --method OPTIONS --in-scope "*.target.com"
+```
+
+Sends requests with evil, null, and subdomain Origin headers and inspects ACAO response. Required flags: `--url`, `--in-scope`.
+
+## Verify Prototype Pollution
+
+Verify prototype pollution by injecting `__proto__` or `constructor.prototype` payloads.
+
+```bash
+ensphere verify protopollution --url "http://target/api/config" --in-scope "*.target.com"
+ensphere verify protopollution --url "http://target/api/merge" --technique json_merge --in-scope "*.target.com"
+```
+
+Techniques: `proto_assignment` (default), `constructor_pollution`, `json_merge`. Required flags: `--url`, `--in-scope`. Default method: POST.
+
+## Verify GraphQL
+
+Verify GraphQL abuse via introspection, batch queries, or nested query DoS.
+
+```bash
+ensphere verify graphql --url "http://target/graphql" --technique introspection --in-scope "*.target.com"
+ensphere verify graphql --url "http://target/graphql" --technique batch_query --token "jwt" --in-scope "*.target.com"
+```
+
+Techniques: `introspection`, `batch_query`, `nested_query_dos`. Required flags: `--url`, `--technique`, `--in-scope`.
+
+## Verify Race Condition
+
+Verify race conditions by sending concurrent request bursts.
+
+```bash
+ensphere verify race --url "http://target/api/redeem" --method POST --body '{"code":"PROMO"}' --in-scope "*.target.com"
+ensphere verify race --url "http://target/api/transfer" --concurrency 20 --token "jwt" --in-scope "*.target.com"
+```
+
+Sends N identical requests in parallel and measures response distribution. Required flags: `--url`, `--in-scope`. Optional: `--concurrency` (default 10), `--body`, `--method`, `--token`.
+
+## Verify Request Smuggling
+
+Verify HTTP request smuggling via CL-TE/TE-CL/TE-TE differential timing.
+
+```bash
+ensphere verify smuggling --url "http://target/" --technique cl_te --in-scope "*.target.com"
+ensphere verify smuggling --url "http://target/" --technique te_cl --in-scope "*.target.com"
+```
+
+Techniques: `cl_te`, `te_cl`, `te_te`. Required flags: `--url`, `--technique`, `--in-scope`.
+
+## Verify Cache Poisoning
+
+Verify web cache poisoning by injecting unkeyed headers and checking for cache contamination.
+
+```bash
+ensphere verify cachepoisoning --url "http://target/page" --in-scope "*.target.com"
+ensphere verify cachepoisoning --url "http://target/page" --technique fat_get --in-scope "*.target.com"
+```
+
+Techniques: `unkeyed_header` (default), `unkeyed_cookie`, `fat_get`. Required flags: `--url`, `--in-scope`.
+
+## Verify Open Redirect
+
+Verify open redirect by injecting an external URL and checking the Location header.
+
+```bash
+ensphere verify redirect --url "http://target/login?next=/dashboard" --param next --in-scope "*.target.com"
+ensphere verify redirect --url "http://target/goto?url=/" --param url --in-scope "*.target.com"
+```
+
+Required flags: `--url`, `--param`, `--in-scope`.
+
+## Verify CSV Injection
+
+Verify CSV injection by submitting formula payloads and checking if they survive in exports.
+
+```bash
+ensphere verify csvinjection --submit-url "http://target/api/items" --export-url "http://target/api/export.csv" --param name --in-scope "*.target.com"
+```
+
+Required flags: `--submit-url`, `--export-url`, `--param`, `--in-scope`.
+
+## Verify AuthZ Bypass
+
+Verify authorization bypass by comparing responses for different privilege levels.
+
+```bash
+ensphere verify authz --url "http://target/api/admin" --low-token "user-jwt" --high-token "admin-jwt" --in-scope "*.target.com"
+```
+
+Sends the same request with a high-privilege and low-privilege token and compares results. Required flags: `--url`, `--low-token`, `--high-token`, `--in-scope`.
 
 ## Evidence Management
 

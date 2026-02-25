@@ -323,6 +323,123 @@ categories:
       description: "Node.js serialization library — check for eval in deserialize"
       risk: 4
 
+  nosql:
+    - name: mongo_query_dynamic
+      pattern: '\.find\s*\(\s*\{.*\$'
+      extensions: [.js, .ts]
+      description: "MongoDB find with dynamic $ operator — NoSQL injection risk"
+      risk: 4
+    - name: mongo_where
+      pattern: '\.find\s*\(.*\$where'
+      extensions: [.js, .ts]
+      description: "MongoDB $where clause — executes JavaScript on server"
+      risk: 5
+    - name: mongo_regex_dynamic
+      pattern: '\$regex.*req\.'
+      extensions: [.js, .ts]
+      description: "MongoDB $regex with user input — ReDoS and injection risk"
+      risk: 4
+    - name: mongoose_raw
+      pattern: '\.aggregate\s*\(\s*\['
+      extensions: [.js, .ts]
+      description: "Mongoose aggregation pipeline — check for user-controlled stages"
+      risk: 3
+    - name: pymongo_query
+      pattern: '(find|find_one|update|delete)\s*\(\s*\{.*\:'
+      extensions: [.py]
+      description: "PyMongo query with dict literal — check for user input in keys"
+      risk: 3
+
+  csrf:
+    - name: no_csrf_middleware
+      pattern: '(disable|skip|exclude).*csrf'
+      extensions: [.js, .ts, .py, .rb, .php, .go]
+      description: "CSRF protection disabled or excluded — check if intentional"
+      risk: 4
+    - name: cors_any_origin
+      pattern: "origin:\\s*[\"\\x27]\\*[\"\\x27]|AllowAllOrigins|Access-Control-Allow-Origin.*\\*"
+      extensions: [.js, .ts, .py, .rb, .go, .java]
+      description: "CORS allows all origins — may enable CSRF-like attacks"
+      risk: 4
+    - name: samesite_none
+      pattern: '(?i)samesite.*none'
+      extensions: [.js, .ts, .py, .rb, .go, .java, .php]
+      description: "Cookie SameSite=None — cookies sent on cross-origin requests"
+      risk: 3
+
+  jwt:
+    - name: jwt_no_verify
+      pattern: 'jwt\.(decode|verify).*verify\s*[:=]\s*false'
+      extensions: [.js, .ts, .py, .rb]
+      description: "JWT decoded without signature verification"
+      risk: 5
+    - name: jwt_weak_secret
+      pattern: "jwt\\.sign.*[\"\\x27](secret|password|key|test|123)[\"\\x27]"
+      extensions: [.js, .ts]
+      description: "JWT signed with weak/hardcoded secret"
+      risk: 5
+    - name: jwt_none_algorithm
+      pattern: "algorithm.*[\"\\x27]none[\"\\x27]|alg.*none"
+      extensions: [.js, .ts, .py, .rb, .go, .java]
+      description: "JWT none algorithm configuration — signature bypass risk"
+      risk: 5
+    - name: jwt_hs256_with_public_key
+      pattern: 'HS256.*publicKey|publicKey.*HS256'
+      extensions: [.js, .ts, .py, .go]
+      description: "JWT HS256 with public key — algorithm confusion attack risk"
+      risk: 5
+
+  cors:
+    - name: cors_reflect_origin
+      pattern: "req\\.(headers?\\.origin|get\\s*\\(\\s*[\"\\x27]origin)"
+      extensions: [.js, .ts, .py, .rb, .go]
+      description: "Origin header accessed — check if reflected in ACAO without validation"
+      risk: 3
+    - name: cors_wildcard
+      pattern: "Access-Control-Allow-Origin.*\\*|AllowAllOrigins.*true"
+      extensions: [.js, .ts, .py, .rb, .go, .java, .php]
+      description: "CORS wildcard origin — no origin restriction"
+      risk: 4
+    - name: cors_credentials_true
+      pattern: 'Access-Control-Allow-Credentials.*true|AllowCredentials.*true'
+      extensions: [.js, .ts, .py, .rb, .go, .java, .php]
+      description: "CORS credentials allowed — combined with origin reflection is exploitable"
+      risk: 4
+
+  redirect:
+    - name: redirect_param
+      pattern: '(redirect|return|next|url|goto|dest|continue|redir)\s*=\s*req\.'
+      extensions: [.js, .ts, .py, .rb, .go, .java, .php]
+      description: "Redirect destination from user input — open redirect risk"
+      risk: 3
+    - name: redirect_header
+      pattern: 'res\.(redirect|writeHead|setHeader)\s*\(.*req\.'
+      extensions: [.js, .ts]
+      description: "HTTP redirect with user-controlled destination"
+      risk: 4
+    - name: redirect_location
+      pattern: 'Location.*req\.(query|params|body)'
+      extensions: [.js, .ts, .py]
+      description: "Location header set from request input — open redirect"
+      risk: 4
+
+  idor:
+    - name: path_param_resource
+      pattern: 'params\.(id|userId|user_id|orderId|accountId)'
+      extensions: [.js, .ts]
+      description: "Resource ID from URL path — check for authorization before access"
+      risk: 3
+    - name: no_ownership_check
+      pattern: '\.findById\s*\(.*params\.'
+      extensions: [.js, .ts]
+      description: "Database lookup by ID from params without ownership check"
+      risk: 4
+    - name: direct_object_ref
+      pattern: 'findOne\s*\(\s*\{.*id\s*:\s*(req\.|params\.|args\.)'
+      extensions: [.js, .ts, .py]
+      description: "Direct database query with user-supplied ID — verify authorization"
+      risk: 4
+
   xxe:
     - name: dom_parser
       pattern: 'DOMParser\s*\(\)|parseFromString'

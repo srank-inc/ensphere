@@ -9,27 +9,27 @@ import (
 	"github.com/srank/ensphere/internal/evidence"
 )
 
-// SSRFConfig holds configuration for SSRF verification.
-type SSRFConfig struct {
-	URL         string
-	Param       string
-	CallbackURL string // optional external callback URL
-	Method      string // GET or POST
+// LFIConfig holds configuration for LFI verification.
+type LFIConfig struct {
+	URL    string
+	Param  string
+	OS     string // linux | windows
+	Method string
 	ProbeConfig
 }
 
-// Internal metadata signatures that indicate SSRF success.
-var internalSignatures = []string{
-	"latest/meta-data",
-	"computeMetadata",
-	"metadata/instance",
-	"127.0.0.1",
-	"root:x:0:0",
-	"AWS_ACCESS_KEY",
+var lfiPayloads = map[string]string{
+	"linux":   "../../../../etc/passwd",
+	"windows": `..\..\..\..\windows\win.ini`,
 }
 
-// VerifySSRF runs the SSRF verification probe.
-func VerifySSRF(cfg SSRFConfig) (*ProbeResult, error) {
+var lfiSignatures = map[string][]string{
+	"linux":   {"root:x:0:0", "daemon:x:", "/bin/bash", "/bin/sh"},
+	"windows": {"[extensions]", "[fonts]", "for 16-bit app support"},
+}
+
+// VerifyLFI runs the local file inclusion verification probe.
+func VerifyLFI(cfg LFIConfig) (*ProbeResult, error) {
 	if err := CheckScope(cfg.URL, cfg.InScope); err != nil {
 		return nil, err
 	}
@@ -37,6 +37,12 @@ func VerifySSRF(cfg SSRFConfig) (*ProbeResult, error) {
 	if err := CheckMaxRisk(3, cfg.MaxRisk); err != nil {
 		return nil, err
 	}
+
+	payload, ok := lfiPayloads[cfg.OS]
+	if !ok {
+		return nil, &ScopeError{Msg: fmt.Sprintf("unsupported OS %q — use: linux, windows", cfg.OS)}
+	}
+	sigs := lfiSignatures[cfg.OS]
 
 	timer := NewTimer()
 	throttle := NewThrottle(cfg.ThrottleMs)
@@ -54,41 +60,35 @@ func VerifySSRF(cfg SSRFConfig) (*ProbeResult, error) {
 
 	probeCount := 0
 
-	// Baseline: inject a safe external URL
+	// Baseline
 	throttle.Wait()
 	probeCount++
-	baselineResp := ssrfProbeWithParam(cfg, "https://example.com")
+	baselineResp := lfiProbeWithParam(cfg, "test")
 	if baselineResp.Error != nil {
 		return nil, fmt.Errorf("baseline probe: %w", baselineResp.Error)
 	}
 	fmt.Fprintf(os.Stderr, "[BASELINE] status=%d hash=%s\n", baselineResp.StatusCode, baselineResp.BodyHash[:16])
-	writeEvidence(ew, "ssrf", "metadata_access", cfg.URL, cfg.Param, baselineResp.StatusCode,
-		fmt.Sprintf("%dms", baselineResp.ElapsedMs), "baseline", "injected https://example.com")
+	writeEvidence(ew, "lfi", "path_traversal", cfg.URL, cfg.Param, baselineResp.StatusCode,
+		fmt.Sprintf("%dms", baselineResp.ElapsedMs), "baseline", "")
 
-	// Probe: inject internal URL or callback
-	probeURL := "http://169.254.169.254/latest/meta-data/"
-	if cfg.CallbackURL != "" {
-		probeURL = cfg.CallbackURL
-	}
-
+	// Payload probe
 	throttle.Wait()
 	probeCount++
-	probeResp := ssrfProbeWithParam(cfg, probeURL)
+	probeResp := lfiProbeWithParam(cfg, payload)
 	if probeResp.Error != nil {
-		return nil, fmt.Errorf("ssrf probe: %w", probeResp.Error)
+		return nil, fmt.Errorf("lfi probe: %w", probeResp.Error)
 	}
 	fmt.Fprintf(os.Stderr, "[PROBE] status=%d hash=%s\n", probeResp.StatusCode, probeResp.BodyHash[:16])
-	writeEvidence(ew, "ssrf", "metadata_access", cfg.URL, cfg.Param, probeResp.StatusCode,
-		fmt.Sprintf("%dms", probeResp.ElapsedMs), "probe", fmt.Sprintf("injected %s", probeURL))
+	writeEvidence(ew, "lfi", "path_traversal", cfg.URL, cfg.Param, probeResp.StatusCode,
+		fmt.Sprintf("%dms", probeResp.ElapsedMs), "probe", fmt.Sprintf("payload=%s", payload))
 
-	// Check for internal content signatures — collect all matches
 	var matchedSignatures []string
-	for _, sig := range internalSignatures {
+	for _, sig := range sigs {
 		if strings.Contains(probeResp.Body, sig) {
 			matchedSignatures = append(matchedSignatures, sig)
 		}
 	}
-	hashesMatch := baselineResp.BodyHash == probeResp.BodyHash
+
 	snippet := probeResp.Body
 	if len(snippet) > 500 {
 		snippet = snippet[:500]
@@ -109,25 +109,23 @@ func VerifySSRF(cfg SSRFConfig) (*ProbeResult, error) {
 
 	return &ProbeResult{
 		SchemaVersion: 2,
-		VulnType:      "ssrf",
-		Technique:     "metadata_access",
+		VulnType:      "lfi",
+		Technique:     "path_traversal",
 		StartedAt:     timer.StartedAt(),
 		ProbeCount:    probeCount,
 		Duration:      timer.Elapsed(),
-		Measurements: SSRFMeasurements{
+		Measurements: LFIMeasurements{
 			Baseline:          baseline,
 			Probe:             probe,
-			HashesMatch:       hashesMatch,
+			HashesMatch:       baselineResp.BodyHash == probeResp.BodyHash,
 			MatchedSignatures: matchedSignatures,
-			CallbackURL:       cfg.CallbackURL,
-			PayloadUsed:       probeURL,
+			PayloadUsed:       payload,
 			ResponseSnippet:   snippet,
 		},
 	}, nil
 }
 
-// ssrfProbeWithParam injects a URL value into the target parameter.
-func ssrfProbeWithParam(cfg SSRFConfig, value string) ProbeResponse {
+func lfiProbeWithParam(cfg LFIConfig, value string) ProbeResponse {
 	parsed, err := url.Parse(cfg.URL)
 	if err != nil {
 		return ProbeResponse{Error: fmt.Errorf("parse URL: %w", err)}

@@ -56,6 +56,10 @@ func VerifySQLi(cfg SQLiConfig) (*ProbeResult, error) {
 		return nil, err
 	}
 
+	if err := CheckMaxRisk(3, cfg.MaxRisk); err != nil {
+		return nil, err
+	}
+
 	timer := NewTimer()
 	throttle := NewThrottle(cfg.ThrottleMs)
 

