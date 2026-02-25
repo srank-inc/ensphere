@@ -26,11 +26,14 @@ python3 exploit.py
 ## What It Tests
 
 For each endpoint:
-1. Request with user A's token (baseline A)
-2. Request with user B's token (baseline B)
-3. Compare — if responses are identical, the endpoint may not be filtering by user
+1. Request with user A's token (round A)
+2. Request with user B's token (round B)
+3. Compare body hashes and lengths
 
-## Interpreting Results
+## Output
 
-- **safe**: Responses differ between users — data is user-scoped
-- **potential**: Identical responses for different users — needs manual review
+JSON with `schema_version: 2` and `measurements` containing per-endpoint round results for each user, `hashes_match` (whether responses are identical), and `body_length_delta`. No status or confidence — the AI reads measurements to classify.
+
+## Exit Codes
+
+- `0` — probes completed (JSON on stdout)

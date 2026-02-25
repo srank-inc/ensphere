@@ -1,6 +1,11 @@
 package evidence
 
-import "time"
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"time"
+)
 
 // Entry represents a single evidence record written to the JSONL file.
 type Entry struct {
@@ -19,6 +24,8 @@ type Entry struct {
 	Duration       string `json:"duration"`
 	Result         string `json:"result"`
 	Notes          string `json:"notes,omitempty"`
+	PrevHash       string `json:"prev_hash,omitempty"` // Hash of previous entry in chain
+	Hash           string `json:"hash,omitempty"`      // SHA256 of this entry (excluding Hash field)
 }
 
 // NewEntry creates an Entry with the current timestamp.
@@ -54,3 +61,11 @@ func (e Entry) WithFinding(ref string) Entry { e.FindingRef = ref; return e }
 
 // WithScreenshot sets the screenshot path.
 func (e Entry) WithScreenshot(path string) Entry { e.ScreenshotPath = path; return e }
+
+// ComputeHash returns the SHA256 hex digest of the entry with its Hash field zeroed.
+func ComputeHash(e Entry) string {
+	e.Hash = ""
+	raw, _ := json.Marshal(e)
+	h := sha256.Sum256(raw)
+	return hex.EncodeToString(h[:])
+}

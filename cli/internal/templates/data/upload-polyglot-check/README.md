@@ -27,8 +27,10 @@ python3 exploit.py
 | null_byte | test.php%00.png | image/png | PHP code |
 | html_content_type | test.txt | text/html | JavaScript |
 
-## Interpreting Results
+## Output
 
-- **confirmed**: 2+ polyglot uploads accepted — validation is insufficient
-- **potential**: 1 upload accepted — may be intentional
-- **safe**: All polyglot uploads rejected
+JSON with `schema_version: 2` and `measurements` containing per-test round results (status_code, elapsed_ms, body_hash, body_length) and `accepted` boolean for each test case, plus `accepted_count` total. No status or confidence — the AI reads measurements to classify.
+
+## Exit Codes
+
+- `0` — probes completed (JSON on stdout)

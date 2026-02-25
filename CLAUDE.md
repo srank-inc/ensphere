@@ -1,14 +1,43 @@
 # Ensphere Development Guide
 
+## Design Principle
+
+> **Ensphere produces verifiable facts. The AI produces all security judgments.**
+
+Everything that ships as part of Ensphere — Go code, Python templates, YAML seeds, all tooling — is a **measurement and execution engine**. Given the same inputs, it produces the same outputs every time. Ensphere never classifies, interprets, or judges findings.
+
+**Ensphere is allowed to:** execute HTTP requests, measure timing, hash responses, compare raw values, count rows, validate scope, redact secrets, calculate CVSS from fixed inputs, map to compliance frameworks. All deterministic.
+
+**Ensphere must NOT:** assign status (confirmed/potential/safe), assign confidence (high/medium/low), apply thresholds ("delta > 500ms = SQLi"), decide exploitability, or make any statement that requires interpretation or context. Those are heuristics, not facts — they belong to the AI.
+
+**The AI (Claude / agent)** consumes Ensphere's raw measurements and applies context, reasoning, multi-step correlation, framework knowledge, and security expertise to classify findings, assign confidence, chain attack paths, and write reports.
+
+This separation means: no hallucinated probes (Ensphere owns execution), no fake determinism (Ensphere never pretends to be certain about judgments), and maximum intelligence where it matters (the AI reasons with full context instead of crude thresholds).
+
 ## Architecture
 
-Ensphere is a 4-layer security testing toolkit:
-1. **Payloads** — Curated YAML seeds compiled to SQLite, queried at runtime
-2. **Verify** — Targeted verification probes with evidence logging
-3. **Templates** — Pre-built Python 3 exploit scripts
-4. **Checklists** — Framework-specific security checklists
+Go CLI binary (`ensphere`) + Claude Code skill files (`skills/`). CLI commands and business logic live in `cli/`. Skill methodology and checklists live in `skills/`.
 
-Delivery: Go CLI binary (`ensphere`) + Claude Code skill files (`skills/`).
+| Path | Purpose |
+|------|---------|
+| `cli/cmd/` | Cobra command files (one per command) |
+| `cli/internal/` | Business logic packages |
+| `cli/internal/verify/` | Verification probe logic |
+| `cli/internal/evidence/` | JSONL evidence writer/reader |
+| `cli/internal/payloads/` | SQLite DB + query logic |
+| `cli/internal/templates/` | Pre-built Python 3 exploit scripts |
+| `cli/internal/checklist/` | Framework-specific security checklists |
+| `cli/internal/compliance/` | Compliance framework mappings |
+| `cli/internal/cvss/` | CVSS v3.1/v4.0 scoring engine |
+| `cli/internal/scan/` | Static sink pattern scanner |
+| `cli/internal/sinks/` | Sink pattern database |
+| `cli/internal/enums/` | Enum validation maps |
+| `cli/tools/seedgen/` | YAML → SQLite compiler |
+| `assets/seeds/` | YAML payload seed files |
+| `skills/` | Claude Code skill files |
+| `skills/methodology/` | Session methodology (01-07) |
+| `skills/checklists/` | Security checklists |
+| `skills/shared/` | Evidence standards and proof-level definitions |
 
 ## Build
 
@@ -21,37 +50,12 @@ make install-all  # install binary + skill files
 make clean        # remove build artifacts
 ```
 
-## Key Paths
-
-| Path | Purpose |
-|------|---------|
-| `cli/` | Go module root (`github.com/srank/ensphere`) |
-| `cli/cmd/` | Cobra command files (one per command) |
-| `cli/internal/` | Business logic packages |
-| `cli/internal/enums/` | Enum validation maps |
-| `cli/internal/payloads/` | SQLite DB + query logic |
-| `cli/internal/verify/` | Verification probe logic |
-| `cli/internal/evidence/` | JSONL evidence writer/reader |
-| `cli/internal/templates/` | Pre-built Python 3 exploit scripts |
-| `cli/internal/checklist/` | Framework-specific security checklists |
-| `cli/internal/compliance/` | Compliance framework mappings |
-| `cli/internal/cvss/` | CVSS v3.1/v4.0 scoring engine |
-| `cli/internal/scan/` | Code scanning engine |
-| `cli/internal/sinks/` | Sink pattern database |
-| `cli/tools/seedgen/` | YAML → SQLite compiler |
-| `assets/seeds/` | YAML payload seed files |
-| `skills/` | Claude Code skill files |
-| `skills/methodology/` | Session methodology (01-07) |
-| `skills/checklists/` | Security checklists |
-
 ## Conventions
 
 - **Commands**: One file per command in `cli/cmd/`. Register with parent in `init()`.
 - **Logic**: All business logic in `cli/internal/<package>/`. Commands only parse flags, build config, call logic, encode JSON output.
 - **JSON output**: `json.NewEncoder(os.Stdout).SetIndent("", "  ")` for all structured output.
 - **Errors**: `fmt.Errorf("context: %w", err)` for wrapping.
-- **Exit codes**: Exit 1 on confirmed/potential findings (CI-friendly).
-- **Flag vars**: Package-level vars in cmd files, named `<command><FlagName>`.
 
 ## Adding Payloads
 
@@ -72,4 +76,4 @@ make clean        # remove build artifacts
 - Don't modify `payloads.sqlite` directly — it's generated from YAML
 - Don't add Go dependencies without clear need
 - Don't put business logic in `cli/cmd/` files
-- Don't skip `--in-scope` validation on verify commands
+- Don't skip `--in-scope` validation on verify commands (all verify commands require it)

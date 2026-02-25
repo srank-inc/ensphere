@@ -15,38 +15,38 @@ Synthesize all category reports into a final security assessment.
 ## Process
 
 1. Read all session reports:
-   - `pentest/01-recon/report.md`
-   - `pentest/02-injection/report.md`
-   - `pentest/03-auth/report.md`
-   - `pentest/04-authz/report.md`
-   - `pentest/05-xss/report.md`
-   - `pentest/06-ssrf/report.md`
+   - `ensphere-pentest/01-recon/report.md`
+   - `ensphere-pentest/02-injection/report.md`
+   - `ensphere-pentest/03-auth/report.md`
+   - `ensphere-pentest/04-authz/report.md`
+   - `ensphere-pentest/05-xss/report.md`
+   - `ensphere-pentest/06-ssrf/report.md`
 
 2. Read external scan results (if they exist):
-   - `pentest/01-recon/nmap.txt`
-   - `pentest/01-recon/subdomains.txt`
-   - `pentest/01-recon/whatweb.txt`
+   - `ensphere-pentest/01-recon/nmap.txt`
+   - `ensphere-pentest/01-recon/subdomains.txt`
+   - `ensphere-pentest/01-recon/whatweb.txt`
 
-3. Read `pentest/config.md` for target details and authorization statement.
+3. Read `ensphere-pentest/config.md` for target details and authorization statement.
 
 4. Read all evidence files from sessions 02-06:
-   - `pentest/02-injection/evidence.jsonl`
-   - `pentest/03-auth/evidence.jsonl`
-   - `pentest/04-authz/evidence.jsonl`
-   - `pentest/05-xss/evidence.jsonl`
-   - `pentest/06-ssrf/evidence.jsonl`
+   - `ensphere-pentest/02-injection/evidence.jsonl`
+   - `ensphere-pentest/03-auth/evidence.jsonl`
+   - `ensphere-pentest/04-authz/evidence.jsonl`
+   - `ensphere-pentest/05-xss/evidence.jsonl`
+   - `ensphere-pentest/06-ssrf/evidence.jsonl`
    Use `ensphere evidence query --file <path>` to read entries from each.
 
 ## Report Template
 
-Write to `pentest/07-report/report.md`:
+Write to `ensphere-pentest/07-report/report.md`:
 
 ```markdown
 # Security Assessment Report
 
 ## Authorization & Attestation
 
-[Copy the Authorization section from pentest/config.md verbatim here]
+[Copy the Authorization section from ensphere-pentest/config.md verbatim here]
 
 **Assessor**: Ensphere Autonomous Security Assessment
 **Report Date**: [current date]
@@ -75,7 +75,7 @@ Include this section ONLY when Assessment Mode is BLACK_BOX.
 - **LOW confidence**: Findings that would require out-of-band verification (callback server) to confirm definitively
 
 ### Technology Profile
-[Copy the Technology Profile from pentest/progress.md here]
+[Copy the Technology Profile from ensphere-pentest/progress.md here]
 
 [2-3 paragraph overview: overall security posture, most critical findings, key recommendations]
 

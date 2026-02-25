@@ -19,7 +19,7 @@ type IDORConfig struct {
 }
 
 // VerifyIDOR runs the IDOR verification probe.
-func VerifyIDOR(cfg IDORConfig) (*VerifyResult, error) {
+func VerifyIDOR(cfg IDORConfig) (*ProbeResult, error) {
 	if err := CheckScope(cfg.URL, cfg.InScope); err != nil {
 		return nil, err
 	}
@@ -63,42 +63,29 @@ func VerifyIDOR(cfg IDORConfig) (*VerifyResult, error) {
 		fmt.Sprintf("%dms", resp.ElapsedMs), "probe",
 		fmt.Sprintf("method=%s resource_id=%s", cfg.Method, cfg.ID))
 
-	// Evaluate result
-	var status, confidence, evidenceStr string
-	containsData := len(resp.Body) > 2
-
-	if resp.StatusCode == 200 && containsData {
-		status = "confirmed"
-		confidence = "high"
-		evidenceStr = fmt.Sprintf("Resource %s accessible with attacker token — status 200 with %d bytes", cfg.ID, len(resp.Body))
-	} else if resp.StatusCode == 200 && !containsData {
-		status = "potential"
-		confidence = "medium"
-		evidenceStr = fmt.Sprintf("Status 200 but empty body for resource %s", cfg.ID)
-	} else if resp.StatusCode == 403 || resp.StatusCode == 404 {
-		status = "safe"
-		confidence = "high"
-		evidenceStr = fmt.Sprintf("Access denied with status %d for resource %s", resp.StatusCode, cfg.ID)
-	} else {
-		status = "potential"
-		confidence = "low"
-		evidenceStr = fmt.Sprintf("Unexpected status %d for resource %s", resp.StatusCode, cfg.ID)
+	probeRound := RoundResult{
+		StatusCode: resp.StatusCode,
+		ElapsedMs:  resp.ElapsedMs,
+		BodyHash:   resp.BodyHash,
+		BodyLength: len(resp.Body),
+	}
+	snippet := resp.Body
+	if len(snippet) > 500 {
+		snippet = snippet[:500]
 	}
 
-	return &VerifyResult{
-		Status:     status,
-		VulnType:   "idor",
-		Technique:  "idor_uuid",
-		Confidence: confidence,
-		Evidence:   evidenceStr,
-		Details: IDORDetails{
-			StatusCode:     resp.StatusCode,
-			ResponseLength: len(resp.Body),
-			ContainsData:   containsData,
-			ExpectedStatus: cfg.ExpectedStatus,
-			ResourceID:     cfg.ID,
+	return &ProbeResult{
+		SchemaVersion: 2,
+		VulnType:      "idor",
+		Technique:     "idor_uuid",
+		StartedAt:     timer.StartedAt(),
+		ProbeCount:    probeCount,
+		Duration:      timer.Elapsed(),
+		Measurements: IDORMeasurements{
+			ProbeRound:      probeRound,
+			ExpectedStatus:  cfg.ExpectedStatus,
+			ResourceID:      cfg.ID,
+			ResponseSnippet: snippet,
 		},
-		ProbeCount: probeCount,
-		Duration:   timer.Elapsed(),
 	}, nil
 }

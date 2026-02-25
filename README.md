@@ -8,6 +8,10 @@
 
 Autonomous penetration testing as Claude Code skills. Go CLI binary + skill files (portable markdown).
 
+> **Design Principle:** Ensphere produces verifiable facts. The AI produces all security judgments.
+
+All Ensphere tooling — Go CLI, Python templates, payload databases — is purely deterministic: same inputs → same outputs. It measures, hashes, compares, and counts. It never classifies findings or assigns confidence. The AI layer consumes raw measurements and applies context, reasoning, and security expertise to interpret results.
+
 ## Quick Start
 
 ```bash
@@ -18,7 +22,7 @@ git clone https://github.com/srank/ensphere.git && cd ensphere
 
 ## Sessions
 
-Each session covers one vulnerability category. Run `/clear` between sessions. Progress persists in `pentest/`.
+Each session covers one vulnerability category. Run `/clear` between sessions. Progress persists in `ensphere-pentest/`.
 
 ```
 01-recon → 02-injection → 03-auth → 04-authz → 05-xss → 06-ssrf → 07-report
@@ -34,7 +38,7 @@ Each session covers one vulnerability category. Run `/clear` between sessions. P
 | 06 | SSRF | Classic, blind, semi-blind, stored SSRF with redirect chains |
 | 07 | Report | Executive summary with risk ratings from all sessions |
 
-First run prompts creation of `pentest/config.md` (target URL, credentials, scope, authorization). Template: [`templates/config.md`](templates/config.md).
+First run prompts creation of `ensphere-pentest/config.md` (target URL, credentials, scope, authorization). Template: [`templates/config.md`](templates/config.md).
 
 ## Build
 
@@ -63,7 +67,7 @@ JSON output: `query`, `count`, `results[]` (payload, placeholders, evidence_type
 
 ### verify — Targeted verification probes
 
-All verify commands output JSON, log evidence to `./evidence.jsonl`, and exit 1 on confirmed/potential findings.
+All verify commands output JSON (schema v2: measurements only, no status/confidence), log evidence to `./evidence.jsonl`, and use exit codes: 0 = probes completed, 2 = scope/usage error, 3 = runtime failure.
 
 **SQLi** — `--in-scope` required, default throttle 500ms, default `--max-risk 3`
 ```bash
@@ -73,7 +77,7 @@ Techniques: `blind_time` (default), `blind_boolean`, `error_based`.
 
 **RLS** — Supabase cross-tenant via PostgREST. Builds JWTs with `company_id` claims.
 ```bash
-ensphere verify rls --project-url http://127.0.0.1:54321 --anon-key eyJ... --jwt-secret super-secret-jwt-token --table invoices --tenant-a uuid-a --tenant-b uuid-b
+ensphere verify rls --project-url http://127.0.0.1:54321 --anon-key eyJ... --jwt-secret super-secret-jwt-token --table invoices --tenant-a uuid-a --tenant-b uuid-b --in-scope 127.0.0.1
 ```
 
 **IDOR** — URL uses `{id}` placeholder. `--in-scope` required.
@@ -122,13 +126,14 @@ ensphere scan ./src --category sqli,xss
 ensphere scan ./src --exclude "test/**"
 ```
 
-JSON output with match details, file locations, risk levels. Exit 1 if matches found.
+JSON output with match details, file locations, risk levels. Exit 1 if matches found. Use `--exit-zero` to always exit 0, or `--min-risk N` to only fail on matches at or above risk level N.
 
 ### evidence — Evidence management
 
 ```bash
 ensphere evidence log --probe-type sqli --technique blind_time --url "http://target/api" --result confirmed --session 2
 ensphere evidence query --file ./evidence.jsonl --result confirmed --summary
+ensphere evidence verify --file ./evidence.jsonl  # verify hash chain integrity
 ```
 
 ### cvss — CVSS calculator

@@ -20,12 +20,17 @@ type RLSConfig struct {
 	TenantA    string
 	TenantB    string
 	Select     string
-	Evidence   string
+	ProbeConfig
 }
 
 // VerifyRLS runs the Supabase RLS cross-tenant probe.
-func VerifyRLS(cfg RLSConfig) (*VerifyResult, error) {
+func VerifyRLS(cfg RLSConfig) (*ProbeResult, error) {
+	if err := CheckScope(cfg.ProjectURL, cfg.InScope); err != nil {
+		return nil, err
+	}
+
 	timer := NewTimer()
+	throttle := NewThrottle(cfg.ThrottleMs)
 
 	var ew *evidence.Writer
 	if cfg.Evidence != "" {
@@ -63,7 +68,7 @@ func VerifyRLS(cfg RLSConfig) (*VerifyResult, error) {
 	ownResp := HTTPProbe("GET", ownURL, "", map[string]string{
 		"apikey":        cfg.AnonKey,
 		"Authorization": "Bearer " + tokenA,
-	}, 10)
+	}, cfg.TimeoutSec)
 	if ownResp.Error != nil {
 		return nil, fmt.Errorf("tenant A own query: %w", ownResp.Error)
 	}
@@ -73,12 +78,13 @@ func VerifyRLS(cfg RLSConfig) (*VerifyResult, error) {
 		fmt.Sprintf("%dms", ownResp.ElapsedMs), "tenant_a_own", fmt.Sprintf("%d rows", ownRows))
 
 	// Step 2: Tenant B queries own data
+	throttle.Wait()
 	probeCount++
 	bOwnURL := fmt.Sprintf("%s/rest/v1/%s?select=%s&company_id=eq.%s", cfg.ProjectURL, cfg.Table, selectCols, cfg.TenantB)
 	bOwnResp := HTTPProbe("GET", bOwnURL, "", map[string]string{
 		"apikey":        cfg.AnonKey,
 		"Authorization": "Bearer " + tokenB,
-	}, 10)
+	}, cfg.TimeoutSec)
 	if bOwnResp.Error != nil {
 		return nil, fmt.Errorf("tenant B own query: %w", bOwnResp.Error)
 	}
@@ -88,12 +94,13 @@ func VerifyRLS(cfg RLSConfig) (*VerifyResult, error) {
 		fmt.Sprintf("%dms", bOwnResp.ElapsedMs), "tenant_b_own", fmt.Sprintf("%d rows", bOwnRows))
 
 	// Step 3: Tenant A tries to access tenant B's data (cross-tenant)
+	throttle.Wait()
 	probeCount++
 	crossURL := fmt.Sprintf("%s/rest/v1/%s?select=%s&company_id=eq.%s", cfg.ProjectURL, cfg.Table, selectCols, cfg.TenantB)
 	crossResp := HTTPProbe("GET", crossURL, "", map[string]string{
 		"apikey":        cfg.AnonKey,
 		"Authorization": "Bearer " + tokenA,
-	}, 10)
+	}, cfg.TimeoutSec)
 	if crossResp.Error != nil {
 		return nil, fmt.Errorf("cross-tenant query: %w", crossResp.Error)
 	}
@@ -102,40 +109,35 @@ func VerifyRLS(cfg RLSConfig) (*VerifyResult, error) {
 	writeEvidence(ew, "authz", "rls_bypass", crossURL, "", crossResp.StatusCode,
 		fmt.Sprintf("%dms", crossResp.ElapsedMs), "cross_tenant", fmt.Sprintf("%d rows", crossRows))
 
-	rlsEnabled := true  // assume enabled unless we can check via PostgREST
-	policiesFound := true
-
-	var status, confidence, evidenceStr string
-	if crossRows > 0 {
-		status = "confirmed"
-		confidence = "high"
-		evidenceStr = fmt.Sprintf("Tenant A JWT returned %d rows from tenant B's data in table '%s'", crossRows, cfg.Table)
-	} else if crossResp.StatusCode == 200 {
-		status = "safe"
-		confidence = "high"
-		evidenceStr = fmt.Sprintf("Tenant A cannot access tenant B's data in table '%s' (0 rows returned)", cfg.Table)
-	} else {
-		status = "safe"
-		confidence = "medium"
-		evidenceStr = fmt.Sprintf("Cross-tenant query returned status %d", crossResp.StatusCode)
+	tenantAOwnRound := RoundResult{
+		StatusCode: ownResp.StatusCode, ElapsedMs: ownResp.ElapsedMs,
+		BodyHash: ownResp.BodyHash, BodyLength: len(ownResp.Body),
+	}
+	tenantBOwnRound := RoundResult{
+		StatusCode: bOwnResp.StatusCode, ElapsedMs: bOwnResp.ElapsedMs,
+		BodyHash: bOwnResp.BodyHash, BodyLength: len(bOwnResp.Body),
+	}
+	crossTenantRound := RoundResult{
+		StatusCode: crossResp.StatusCode, ElapsedMs: crossResp.ElapsedMs,
+		BodyHash: crossResp.BodyHash, BodyLength: len(crossResp.Body),
 	}
 
-	return &VerifyResult{
-		Status:     status,
-		VulnType:   "authz",
-		Technique:  "rls_bypass",
-		Confidence: confidence,
-		Evidence:   evidenceStr,
-		Details: RLSDetails{
-			Table:            cfg.Table,
+	return &ProbeResult{
+		SchemaVersion: 2,
+		VulnType:      "authz",
+		Technique:     "rls_bypass",
+		StartedAt:     timer.StartedAt(),
+		ProbeCount:    probeCount,
+		Duration:      timer.Elapsed(),
+		Measurements: RLSMeasurements{
+			Table:           cfg.Table,
+			TenantAOwn:      tenantAOwnRound,
 			TenantAOwnRows:  ownRows,
-			TenantACrossRows: crossRows,
+			TenantBOwn:      tenantBOwnRound,
 			TenantBOwnRows:  bOwnRows,
-			RLSEnabled:      rlsEnabled,
-			PoliciesFound:   policiesFound,
+			CrossTenant:     crossTenantRound,
+			CrossTenantRows: crossRows,
 		},
-		ProbeCount: probeCount,
-		Duration:   timer.Elapsed(),
 	}, nil
 }
 

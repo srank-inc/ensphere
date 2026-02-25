@@ -25,8 +25,8 @@ When assessment mode is BLACK_BOX, replace Phase A (code analysis) with the foll
 
 ### Phase A-BB: URL Parameter Probing (replaces code analysis)
 
-Read `pentest/01-recon/report.md` section 10 (SSRF Candidate Inputs) for your target list.
-Read the Technology Profile from `pentest/progress.md`.
+Read `ensphere-pentest/01-recon/report.md` section 10 (SSRF Candidate Inputs) for your target list.
+Read the Technology Profile from `ensphere-pentest/progress.md`.
 
 **Step 1 — Identify URL-Accepting Parameters**: From recon, catalog parameters whose names suggest URL input:
 
@@ -118,7 +118,7 @@ After Phase A-BB, proceed to **Phase B: Exploitation** (same as white-box path).
 
 ## Phase A: Analysis
 
-Read `pentest/01-recon/report.md` section 10 (SSRF Sinks).
+Read `ensphere-pentest/01-recon/report.md` section 10 (SSRF Sinks).
 Create a task for each sink to trace.
 
 ### Sink Catalog
@@ -225,6 +225,6 @@ http://127.0.0.1:6379   # Redis
 
 ## Report Format
 
-Write to `pentest/06-ssrf/report.md`:
+Write to `ensphere-pentest/06-ssrf/report.md`:
 - Successfully Exploited (with SSRF type, endpoint, payload, internal access evidence)
 - Secure by Design (table: Component | Endpoint | Defense Mechanism | Verdict)

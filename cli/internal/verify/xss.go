@@ -20,7 +20,7 @@ type XSSConfig struct {
 }
 
 // VerifyXSS runs the XSS verification probe.
-func VerifyXSS(cfg XSSConfig) (*VerifyResult, error) {
+func VerifyXSS(cfg XSSConfig) (*ProbeResult, error) {
 	if err := CheckScope(cfg.URL, cfg.InScope); err != nil {
 		return nil, err
 	}
@@ -92,44 +92,30 @@ func VerifyXSS(cfg XSSConfig) (*VerifyResult, error) {
 		}
 	}
 
-	var status, confidence, evidenceStr string
-	var result string
-
-	if reflected && !encoded {
-		status = "confirmed"
-		confidence = "high"
-		evidenceStr = fmt.Sprintf("Payload reflected unencoded in response — XSS confirmed")
-		result = "confirmed"
-	} else if encoded {
-		status = "safe"
-		confidence = "high"
-		evidenceStr = "Payload is HTML-encoded in response — properly escaped"
-		result = "safe"
-	} else {
-		status = "safe"
-		confidence = "high"
-		evidenceStr = "Payload not reflected in response"
-		result = "safe"
+	probeRound := RoundResult{
+		StatusCode: resp.StatusCode,
+		ElapsedMs:  resp.ElapsedMs,
+		BodyHash:   resp.BodyHash,
+		BodyLength: len(resp.Body),
 	}
 
 	writeEvidence(ew, "xss", "reflected", cfg.URL, cfg.Param, resp.StatusCode,
-		fmt.Sprintf("%dms", resp.ElapsedMs), result,
+		fmt.Sprintf("%dms", resp.ElapsedMs), "probe",
 		fmt.Sprintf("payload=%s reflected=%v encoded=%v", cfg.Payload, reflected, encoded))
 
-	return &VerifyResult{
-		Status:     status,
-		VulnType:   "xss",
-		Technique:  "reflected",
-		Confidence: confidence,
-		Evidence:   evidenceStr,
-		Details: XSSDetails{
-			Reflected:      reflected,
-			Encoded:        encoded,
-			Context:        context,
-			PayloadUsed:    cfg.Payload,
-			ResponseLength: len(resp.Body),
+	return &ProbeResult{
+		SchemaVersion: 2,
+		VulnType:      "xss",
+		Technique:     "reflected",
+		StartedAt:     timer.StartedAt(),
+		ProbeCount:    probeCount,
+		Duration:      timer.Elapsed(),
+		Measurements: XSSMeasurements{
+			ProbeRound:  probeRound,
+			Reflected:   reflected,
+			Encoded:     encoded,
+			Context:     context,
+			PayloadUsed: cfg.Payload,
 		},
-		ProbeCount: probeCount,
-		Duration:   timer.Elapsed(),
 	}, nil
 }

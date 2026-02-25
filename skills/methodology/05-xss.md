@@ -17,7 +17,7 @@ Covers: Reflected, Stored, and DOM-based XSS.
    - `browser_navigate` to vulnerable page
    - Inject payload via `browser_type` / `browser_fill_form` or URL parameter
    - `browser_evaluate` to verify JS executed: `document.querySelector('#xss-proof') !== null` or `window.__xss_executed === true`
-   - `browser_take_screenshot` → save to `pentest/05-xss/screenshots/xss-{vuln-id}.png`
+   - `browser_take_screenshot` → save to `ensphere-pentest/05-xss/screenshots/xss-{vuln-id}.png`
    - Record screenshot path and evaluate result in evidence
    - Demonstrate impact: `browser_evaluate → document.cookie`, `localStorage.getItem('token')`, DOM data extraction
 
@@ -29,8 +29,8 @@ When assessment mode is BLACK_BOX, replace Phase A (sink-to-source analysis) wit
 
 ### Phase A-BB: Reflection-Based XSS Detection (replaces sink-to-source analysis)
 
-Read `pentest/01-recon/report.md` sections 5 (Input Vectors) and 9 (XSS Reflection Points) for your target list.
-Read the Technology Profile from `pentest/progress.md` — framework determines default encoding behavior.
+Read `ensphere-pentest/01-recon/report.md` sections 5 (Input Vectors) and 9 (XSS Reflection Points) for your target list.
+Read the Technology Profile from `ensphere-pentest/progress.md` — framework determines default encoding behavior.
 
 **Step 1 — Systematic Canary Injection**: If not already done during Session 01 recon, inject a unique tracking string (e.g., `ensph3r3canary`) into every input parameter:
 - Query parameters (GET)
@@ -85,13 +85,13 @@ Build a filter profile: "This endpoint HTML-encodes `<>` but passes `"'()` throu
    - `browser_navigate` to the page
    - `browser_evaluate("document.querySelector('script')?.textContent")` to verify injection
    - `browser_take_screenshot` for L3 evidence
-   - Save screenshot to `pentest/05-xss/screenshots/`
+   - Save screenshot to `ensphere-pentest/05-xss/screenshots/`
 
 After Phase A-BB, proceed to **Phase B: Exploitation** (same as white-box path).
 
 ## Phase A: Sink-to-Source Analysis
 
-Read `pentest/01-recon/report.md` section 9 (XSS Sinks).
+Read `ensphere-pentest/01-recon/report.md` section 9 (XSS Sinks).
 Create a task for each sink-context pair.
 
 ### Sink Catalog
@@ -166,7 +166,7 @@ Go beyond `alert(1)`:
 
 ## Report Format
 
-Write to `pentest/05-xss/report.md`:
+Write to `ensphere-pentest/05-xss/report.md`:
 - Successfully Exploited (with type: Reflected/Stored/DOM, full payload, impact evidence)
 - Vectors Confirmed Secure (table: Source | Endpoint | Defense | Render Context | Verdict)
 - CSP analysis and bypass attempts

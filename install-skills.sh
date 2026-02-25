@@ -52,7 +52,7 @@ find "$SKILL_DIR" -name "*.md" | sort | while read -r f; do
   echo "  $f"
 done
 echo ""
-echo "Config template: templates/config.md (copy to your project's pentest/config.md)"
+echo "Config template: templates/config.md (copy to your project's ensphere-pentest/config.md)"
 echo "Usage: Open Claude Code in your project directory and say '/ensphere' or 'Run session 01'"
 echo "Uninstall: $0 --uninstall"
 

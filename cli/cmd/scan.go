@@ -15,6 +15,8 @@ var (
 	scanCategories []string
 	scanExtensions []string
 	scanExcludes   []string
+	scanExitZero   bool
+	scanMinRisk    int
 )
 
 var scanCmd = &cobra.Command{
@@ -37,6 +39,8 @@ func init() {
 	scanCmd.Flags().StringSliceVar(&scanCategories, "category", nil, "Filter by sink category (repeatable)")
 	scanCmd.Flags().StringSliceVar(&scanExtensions, "extensions", nil, "Override file extensions to scan (repeatable)")
 	scanCmd.Flags().StringSliceVar(&scanExcludes, "exclude", nil, "Additional glob patterns to exclude (repeatable)")
+	scanCmd.Flags().BoolVar(&scanExitZero, "exit-zero", false, "Always exit 0, even when matches are found")
+	scanCmd.Flags().IntVar(&scanMinRisk, "min-risk", 0, "Only exit 1 if matches at or above this risk level (1-5)")
 
 	rootCmd.AddCommand(scanCmd)
 }
@@ -76,8 +80,21 @@ func runScan(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("encode result: %w", err)
 	}
 
-	if result.TotalMatches > 0 {
-		os.Exit(1)
+	if !scanExitZero && result.TotalMatches > 0 {
+		if scanMinRisk > 0 {
+			hasHighRisk := false
+			for _, m := range result.Matches {
+				if m.Risk >= scanMinRisk {
+					hasHighRisk = true
+					break
+				}
+			}
+			if hasHighRisk {
+				os.Exit(1)
+			}
+		} else {
+			os.Exit(1)
+		}
 	}
 	return nil
 }

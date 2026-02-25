@@ -12,93 +12,103 @@ type ProbeConfig struct {
 	Evidence   string            // Evidence file path
 }
 
-// VerifyResult is the JSON output for all verify commands.
-type VerifyResult struct {
-	Status     string      `json:"status"`     // confirmed | potential | safe | error
-	VulnType   string      `json:"vuln_type"`
-	Technique  string      `json:"technique"`
-	Confidence string      `json:"confidence"` // high | medium | low
-	Evidence   string      `json:"evidence"`
-	Details    interface{} `json:"details"`
-	ProbeCount int         `json:"probe_count"`
-	Duration   string      `json:"duration"`
+// ProbeResult is the JSON output for all verify commands.
+// Schema version 2: measurement-only output. No status/confidence/evidence.
+type ProbeResult struct {
+	SchemaVersion int         `json:"schema_version"`
+	VulnType      string      `json:"vuln_type"`
+	Technique     string      `json:"technique"`
+	StartedAt     string      `json:"started_at"`
+	ProbeCount    int         `json:"probe_count"`
+	Duration      string      `json:"duration"`
+	Measurements  interface{} `json:"measurements"`
 }
 
-// SQLiDetails holds SQLi-specific result details.
-type SQLiDetails struct {
-	BaselineMs     int64  `json:"baseline_ms"`
-	PayloadMs      int64  `json:"payload_ms"`
-	DeltaMs        int64  `json:"delta_ms"`
-	Rounds         int    `json:"rounds"`
-	Consistent     bool   `json:"consistent"`
-	PayloadUsed    string `json:"payload_used"`
-	StringBoundary string `json:"string_boundary"`
+// RoundResult captures raw measurements from a single HTTP round-trip.
+type RoundResult struct {
+	StatusCode int    `json:"status_code"`
+	ElapsedMs  int64  `json:"elapsed_ms"`
+	BodyHash   string `json:"body_hash"`
+	BodyLength int    `json:"body_length"`
 }
 
-// SQLiBooleanDetails holds boolean-based SQLi result details.
-type SQLiBooleanDetails struct {
-	TrueHash       string `json:"true_hash"`
-	FalseHash      string `json:"false_hash"`
-	BaselineHash   string `json:"baseline_hash"`
-	Rounds         int    `json:"rounds"`
-	Consistent     bool   `json:"consistent"`
-	PayloadUsed    string `json:"payload_used"`
-	StringBoundary string `json:"string_boundary"`
+// SQLiTimeMeasurements holds blind-time SQLi probe measurements.
+type SQLiTimeMeasurements struct {
+	SleepSeconds   int           `json:"sleep_seconds"`
+	BaselineRounds []RoundResult `json:"baseline_rounds"`
+	PayloadRounds  []RoundResult `json:"payload_rounds"`
+	BaselineAvgMs  int64         `json:"baseline_avg_ms"`
+	PayloadAvgMs   int64         `json:"payload_avg_ms"`
+	DeltaMs        int64         `json:"delta_ms"`
+	PayloadUsed    string        `json:"payload_used"`
+	StringBoundary string        `json:"string_boundary"`
 }
 
-// SQLiErrorDetails holds error-based SQLi result details.
-type SQLiErrorDetails struct {
-	ErrorPattern   string `json:"error_pattern"`
-	PayloadUsed    string `json:"payload_used"`
-	StringBoundary string `json:"string_boundary"`
-	ResponseSnippet string `json:"response_snippet,omitempty"`
+// SQLiBooleanMeasurements holds boolean-based SQLi probe measurements.
+type SQLiBooleanMeasurements struct {
+	BaselineRound  RoundResult   `json:"baseline_round"`
+	TrueRounds     []RoundResult `json:"true_rounds"`
+	FalseRounds    []RoundResult `json:"false_rounds"`
+	HashesMatch    bool          `json:"hashes_match"`
+	TruePayload    string        `json:"true_payload"`
+	FalsePayload   string        `json:"false_payload"`
+	StringBoundary string        `json:"string_boundary"`
 }
 
-// RLSDetails holds RLS probe result details.
-type RLSDetails struct {
-	Table           string `json:"table"`
-	TenantAOwnRows int    `json:"tenant_a_own_rows"`
-	TenantACrossRows int  `json:"tenant_a_cross_rows"`
-	TenantBOwnRows  int   `json:"tenant_b_own_rows"`
-	RLSEnabled      bool  `json:"rls_enabled"`
-	PoliciesFound   bool  `json:"policies_found"`
+// SQLiErrorMeasurements holds error-based SQLi probe measurements.
+type SQLiErrorMeasurements struct {
+	ProbeRound      RoundResult `json:"probe_round"`
+	MatchedPatterns []string    `json:"matched_patterns"`
+	PayloadUsed     string      `json:"payload_used"`
+	StringBoundary  string      `json:"string_boundary"`
+	ResponseSnippet string      `json:"response_snippet,omitempty"`
 }
 
-// IDORDetails holds IDOR-specific result details.
-type IDORDetails struct {
-	StatusCode     int    `json:"status_code"`
-	ResponseLength int    `json:"response_length"`
-	ContainsData   bool   `json:"contains_data"`
-	ExpectedStatus int    `json:"expected_status"`
-	ResourceID     string `json:"resource_id"`
+// XSSMeasurements holds XSS probe measurements.
+type XSSMeasurements struct {
+	ProbeRound  RoundResult `json:"probe_round"`
+	Reflected   bool        `json:"reflected"`
+	Encoded     bool        `json:"encoded"`
+	Context     string      `json:"context,omitempty"`
+	PayloadUsed string      `json:"payload_used"`
 }
 
-// XSSDetails holds XSS-specific result details.
-type XSSDetails struct {
-	Reflected      bool   `json:"reflected"`
-	Encoded        bool   `json:"encoded"`
-	Context        string `json:"context"`
-	PayloadUsed    string `json:"payload_used"`
-	ResponseLength int    `json:"response_length"`
+// IDORMeasurements holds IDOR probe measurements.
+type IDORMeasurements struct {
+	ProbeRound      RoundResult `json:"probe_round"`
+	ExpectedStatus  int         `json:"expected_status"`
+	ResourceID      string      `json:"resource_id"`
+	ResponseSnippet string      `json:"response_snippet,omitempty"`
 }
 
-// SSRFDetails holds SSRF-specific result details.
-type SSRFDetails struct {
-	CallbackHit     bool   `json:"callback_hit"`
-	ResponseDiff    bool   `json:"response_diff"`
-	InternalContent bool   `json:"internal_content"`
-	CallbackURL     string `json:"callback_url,omitempty"`
-	BaselineHash    string `json:"baseline_hash"`
-	ProbeHash       string `json:"probe_hash"`
-	PayloadUsed     string `json:"payload_used"`
+// SSRFMeasurements holds SSRF probe measurements.
+type SSRFMeasurements struct {
+	Baseline          RoundResult `json:"baseline"`
+	Probe             RoundResult `json:"probe"`
+	HashesMatch       bool        `json:"hashes_match"`
+	MatchedSignatures []string    `json:"matched_signatures"`
+	CallbackURL       string      `json:"callback_url,omitempty"`
+	PayloadUsed       string      `json:"payload_used"`
+	ResponseSnippet   string      `json:"response_snippet,omitempty"`
 }
 
-// AuthDetails holds auth bypass result details.
-type AuthDetails struct {
-	Technique      string `json:"technique"`
-	Bypassed       bool   `json:"bypassed"`
-	ResponseStatus int    `json:"response_status"`
-	ResponseLength int    `json:"response_length"`
+// AuthMeasurements holds auth bypass probe measurements.
+type AuthMeasurements struct {
+	Technique       string      `json:"technique"`
+	Baseline        RoundResult `json:"baseline"`
+	Probe           RoundResult `json:"probe"`
+	BodyLengthDelta int         `json:"body_length_delta"`
+}
+
+// RLSMeasurements holds Supabase RLS probe measurements.
+type RLSMeasurements struct {
+	Table           string      `json:"table"`
+	TenantAOwn      RoundResult `json:"tenant_a_own"`
+	TenantAOwnRows  int         `json:"tenant_a_own_rows"`
+	TenantBOwn      RoundResult `json:"tenant_b_own"`
+	TenantBOwnRows  int         `json:"tenant_b_own_rows"`
+	CrossTenant     RoundResult `json:"cross_tenant"`
+	CrossTenantRows int         `json:"cross_tenant_rows"`
 }
 
 // Timer tracks probe duration.
@@ -109,6 +119,11 @@ type Timer struct {
 // NewTimer starts a new timer.
 func NewTimer() *Timer {
 	return &Timer{start: time.Now()}
+}
+
+// StartedAt returns the start time formatted as RFC3339.
+func (t *Timer) StartedAt() string {
+	return t.start.UTC().Format(time.RFC3339)
 }
 
 // Elapsed returns formatted elapsed duration.

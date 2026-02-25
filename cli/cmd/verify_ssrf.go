@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
@@ -40,7 +41,7 @@ func init() {
 	verifySSRFCmd.Flags().StringVar(&ssrfCallbackURL, "callback-url", "", "External callback URL for blind SSRF")
 	verifySSRFCmd.Flags().StringVar(&ssrfMethod, "method", "GET", "HTTP method")
 	verifySSRFCmd.Flags().StringSliceVar(&ssrfHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifySSRFCmd.Flags().StringSliceVar(&ssrfInScope, "in-scope", nil, "In-scope hostname patterns (required, repeatable)")
+	verifySSRFCmd.Flags().StringSliceVar(&ssrfInScope, "in-scope", nil, "In-scope patterns: globs (*.example.com) or CIDR (10.0.0.0/8)")
 	verifySSRFCmd.Flags().IntVar(&ssrfMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
 	verifySSRFCmd.Flags().IntVar(&ssrfThrottle, "throttle", 500, "Milliseconds between probes")
 	verifySSRFCmd.Flags().IntVar(&ssrfTimeout, "timeout", 10, "HTTP request timeout in seconds")
@@ -79,17 +80,19 @@ func runVerifySSRF(cmd *cobra.Command, args []string) error {
 
 	result, err := verify.VerifySSRF(cfg)
 	if err != nil {
-		return err
+		var scopeErr *verify.ScopeError
+		if errors.As(err, &scopeErr) {
+			fmt.Fprintf(os.Stderr, "scope error: %s\n", err)
+			os.Exit(2)
+		}
+		fmt.Fprintf(os.Stderr, "probe error: %s\n", err)
+		os.Exit(3)
 	}
-
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(result); err != nil {
-		return fmt.Errorf("encode result: %w", err)
-	}
-
-	if result.Status == "confirmed" || result.Status == "potential" {
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, "encode error: %s\n", err)
+		os.Exit(3)
 	}
 	return nil
 }

@@ -55,7 +55,7 @@ After these adjustments, proceed with the standard Phase A checklist and Phase B
 
 ## Phase A: Analysis (9-Point Checklist)
 
-Read `pentest/01-recon/report.md` sections 3 (Auth & Session) and 4 (API Endpoints).
+Read `ensphere-pentest/01-recon/report.md` sections 3 (Auth & Session) and 4 (API Endpoints).
 Create a task for each checklist item.
 
 ### 1. Transport & Caching
@@ -143,6 +143,6 @@ Prove you have become another user or bypassed authentication:
 
 ## Report Format
 
-Write to `pentest/03-auth/report.md`:
+Write to `ensphere-pentest/03-auth/report.md`:
 - Successfully Exploited (with full reproduction steps)
 - Secure by Design: Validated Components (table of safe checks)

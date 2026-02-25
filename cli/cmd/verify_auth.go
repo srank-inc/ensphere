@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
@@ -46,7 +47,7 @@ func init() {
 	verifyAuthCmd.Flags().StringVar(&authToken, "token", "", "Valid auth token for baseline (required)")
 	verifyAuthCmd.Flags().StringVar(&authTechnique, "technique", "", "Technique: no_token, expired_token, alg_none, method_override (required)")
 	verifyAuthCmd.Flags().StringSliceVar(&authHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyAuthCmd.Flags().StringSliceVar(&authInScope, "in-scope", nil, "In-scope hostname patterns (required, repeatable)")
+	verifyAuthCmd.Flags().StringSliceVar(&authInScope, "in-scope", nil, "In-scope patterns: globs (*.example.com) or CIDR (10.0.0.0/8)")
 	verifyAuthCmd.Flags().IntVar(&authMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
 	verifyAuthCmd.Flags().IntVar(&authThrottle, "throttle", 500, "Milliseconds between probes")
 	verifyAuthCmd.Flags().IntVar(&authTimeout, "timeout", 10, "HTTP request timeout in seconds")
@@ -86,17 +87,19 @@ func runVerifyAuth(cmd *cobra.Command, args []string) error {
 
 	result, err := verify.VerifyAuth(cfg)
 	if err != nil {
-		return err
+		var scopeErr *verify.ScopeError
+		if errors.As(err, &scopeErr) {
+			fmt.Fprintf(os.Stderr, "scope error: %s\n", err)
+			os.Exit(2)
+		}
+		fmt.Fprintf(os.Stderr, "probe error: %s\n", err)
+		os.Exit(3)
 	}
-
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(result); err != nil {
-		return fmt.Errorf("encode result: %w", err)
-	}
-
-	if result.Status == "confirmed" || result.Status == "potential" {
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, "encode error: %s\n", err)
+		os.Exit(3)
 	}
 	return nil
 }

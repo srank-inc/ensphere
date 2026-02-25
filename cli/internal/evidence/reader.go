@@ -120,3 +120,61 @@ func NextID(path string) (string, error) {
 	}
 	return fmt.Sprintf("EVID-%03d", len(entries)+1), nil
 }
+
+// ChainResult holds the result of evidence chain verification.
+type ChainResult struct {
+	Valid          bool   `json:"valid"`
+	EntriesChecked int    `json:"entries_checked"`
+	BrokenAt       string `json:"broken_at,omitempty"`
+	Error          string `json:"error,omitempty"`
+}
+
+// VerifyChain reads an evidence file and validates the hash chain integrity.
+func VerifyChain(path string) (*ChainResult, error) {
+	entries, err := ReadAll(path)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &ChainResult{EntriesChecked: len(entries)}
+
+	if len(entries) == 0 {
+		result.Valid = true
+		return result, nil
+	}
+
+	for i, e := range entries {
+		// Check hash field exists
+		if e.Hash == "" {
+			result.BrokenAt = e.ID
+			result.Error = "missing hash"
+			return result, nil
+		}
+
+		// Recompute and verify hash
+		expected := ComputeHash(e)
+		if e.Hash != expected {
+			result.BrokenAt = e.ID
+			result.Error = "hash mismatch"
+			return result, nil
+		}
+
+		// Verify chain link
+		if i == 0 {
+			if e.PrevHash != "" {
+				result.BrokenAt = e.ID
+				result.Error = "first entry has non-empty prev_hash"
+				return result, nil
+			}
+		} else {
+			if e.PrevHash != entries[i-1].Hash {
+				result.BrokenAt = e.ID
+				result.Error = "prev_hash does not match previous entry hash"
+				return result, nil
+			}
+		}
+	}
+
+	result.Valid = true
+	return result, nil
+}

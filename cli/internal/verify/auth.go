@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"strings"
 
@@ -26,13 +25,13 @@ var validAuthTechniques = map[string]bool{
 }
 
 // VerifyAuth runs the auth bypass verification probe.
-func VerifyAuth(cfg AuthConfig) (*VerifyResult, error) {
+func VerifyAuth(cfg AuthConfig) (*ProbeResult, error) {
 	if err := CheckScope(cfg.URL, cfg.InScope); err != nil {
 		return nil, err
 	}
 
 	if !validAuthTechniques[cfg.Technique] {
-		return nil, fmt.Errorf("unsupported technique %q — use: no_token, expired_token, alg_none, method_override", cfg.Technique)
+		return nil, &ScopeError{Msg: fmt.Sprintf("unsupported technique %q — use: no_token, expired_token, alg_none, method_override", cfg.Technique)}
 	}
 
 	timer := NewTimer()
@@ -69,15 +68,7 @@ func VerifyAuth(cfg AuthConfig) (*VerifyResult, error) {
 		fmt.Sprintf("%dms", baselineResp.ElapsedMs), "baseline", "valid token")
 
 	if baselineResp.StatusCode != 200 {
-		return &VerifyResult{
-			Status:     "error",
-			VulnType:   "auth_bypass",
-			Technique:  cfg.Technique,
-			Confidence: "low",
-			Evidence:   fmt.Sprintf("Baseline with valid token returned %d — expected 200", baselineResp.StatusCode),
-			ProbeCount: probeCount,
-			Duration:   timer.Elapsed(),
-		}, nil
+		return nil, fmt.Errorf("baseline with valid token returned %d — expected 200", baselineResp.StatusCode)
 	}
 
 	// Build probe headers based on technique
@@ -120,41 +111,32 @@ func VerifyAuth(cfg AuthConfig) (*VerifyResult, error) {
 	writeEvidence(ew, "auth_bypass", cfg.Technique, cfg.URL, "", probeResp.StatusCode,
 		fmt.Sprintf("%dms", probeResp.ElapsedMs), "probe", fmt.Sprintf("technique=%s", cfg.Technique))
 
-	// Evaluate: 200 with similar body length = bypassed
-	bypassed := probeResp.StatusCode == 200 &&
-		math.Abs(float64(len(probeResp.Body)-len(baselineResp.Body))) < float64(len(baselineResp.Body))*0.3
-
-	var status, confidence, evidenceStr string
-	if bypassed {
-		status = "confirmed"
-		confidence = "high"
-		evidenceStr = fmt.Sprintf("Auth bypass via %s — status 200 with similar body length (%d vs %d baseline)",
-			cfg.Technique, len(probeResp.Body), len(baselineResp.Body))
-	} else if probeResp.StatusCode == 200 {
-		status = "potential"
-		confidence = "medium"
-		evidenceStr = fmt.Sprintf("Status 200 but body length differs significantly (%d vs %d baseline)",
-			len(probeResp.Body), len(baselineResp.Body))
-	} else {
-		status = "safe"
-		confidence = "high"
-		evidenceStr = fmt.Sprintf("Auth correctly enforced — %s returned status %d", cfg.Technique, probeResp.StatusCode)
+	baselineRound := RoundResult{
+		StatusCode: baselineResp.StatusCode,
+		ElapsedMs:  baselineResp.ElapsedMs,
+		BodyHash:   baselineResp.BodyHash,
+		BodyLength: len(baselineResp.Body),
+	}
+	probeRound := RoundResult{
+		StatusCode: probeResp.StatusCode,
+		ElapsedMs:  probeResp.ElapsedMs,
+		BodyHash:   probeResp.BodyHash,
+		BodyLength: len(probeResp.Body),
 	}
 
-	return &VerifyResult{
-		Status:     status,
-		VulnType:   "auth_bypass",
-		Technique:  cfg.Technique,
-		Confidence: confidence,
-		Evidence:   evidenceStr,
-		Details: AuthDetails{
-			Technique:      cfg.Technique,
-			Bypassed:       bypassed,
-			ResponseStatus: probeResp.StatusCode,
-			ResponseLength: len(probeResp.Body),
+	return &ProbeResult{
+		SchemaVersion: 2,
+		VulnType:      "auth_bypass",
+		Technique:     cfg.Technique,
+		StartedAt:     timer.StartedAt(),
+		ProbeCount:    probeCount,
+		Duration:      timer.Elapsed(),
+		Measurements: AuthMeasurements{
+			Technique:       cfg.Technique,
+			Baseline:        baselineRound,
+			Probe:           probeRound,
+			BodyLengthDelta: len(probeResp.Body) - len(baselineResp.Body),
 		},
-		ProbeCount: probeCount,
-		Duration:   timer.Elapsed(),
 	}, nil
 }
 

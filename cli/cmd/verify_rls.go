@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
@@ -19,6 +20,9 @@ var (
 	rlsTenantB    string
 	rlsSelect     string
 	rlsEvidence   string
+	rlsInScope    []string
+	rlsThrottle   int
+	rlsTimeout    int
 )
 
 var verifyRLSCmd = &cobra.Command{
@@ -36,7 +40,8 @@ Example:
     --jwt-secret super-secret-jwt-token-with-at-least-32-characters \
     --table invoices \
     --tenant-a uuid-company-a \
-    --tenant-b uuid-company-b`,
+    --tenant-b uuid-company-b \
+    --in-scope 127.0.0.1`,
 	RunE: runVerifyRLS,
 }
 
@@ -49,6 +54,9 @@ func init() {
 	verifyRLSCmd.Flags().StringVar(&rlsTenantB, "tenant-b", "", "Tenant B company ID (required)")
 	verifyRLSCmd.Flags().StringVar(&rlsSelect, "select", "*", "Columns to select")
 	verifyRLSCmd.Flags().StringVar(&rlsEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
+	verifyRLSCmd.Flags().StringSliceVar(&rlsInScope, "in-scope", nil, "In-scope patterns: globs (*.example.com) or CIDR (10.0.0.0/8)")
+	verifyRLSCmd.Flags().IntVar(&rlsThrottle, "throttle", 500, "Milliseconds between probes")
+	verifyRLSCmd.Flags().IntVar(&rlsTimeout, "timeout", 10, "HTTP request timeout in seconds")
 
 	_ = verifyRLSCmd.MarkFlagRequired("project-url")
 	_ = verifyRLSCmd.MarkFlagRequired("anon-key")
@@ -56,6 +64,7 @@ func init() {
 	_ = verifyRLSCmd.MarkFlagRequired("table")
 	_ = verifyRLSCmd.MarkFlagRequired("tenant-a")
 	_ = verifyRLSCmd.MarkFlagRequired("tenant-b")
+	_ = verifyRLSCmd.MarkFlagRequired("in-scope")
 
 	verifyCmd.AddCommand(verifyRLSCmd)
 }
@@ -69,22 +78,29 @@ func runVerifyRLS(cmd *cobra.Command, args []string) error {
 		TenantA:    rlsTenantA,
 		TenantB:    rlsTenantB,
 		Select:     rlsSelect,
-		Evidence:   rlsEvidence,
+		ProbeConfig: verify.ProbeConfig{
+			InScope:    rlsInScope,
+			ThrottleMs: rlsThrottle,
+			TimeoutSec: rlsTimeout,
+			Evidence:   rlsEvidence,
+		},
 	}
 
 	result, err := verify.VerifyRLS(cfg)
 	if err != nil {
-		return err
+		var scopeErr *verify.ScopeError
+		if errors.As(err, &scopeErr) {
+			fmt.Fprintf(os.Stderr, "scope error: %s\n", err)
+			os.Exit(2)
+		}
+		fmt.Fprintf(os.Stderr, "probe error: %s\n", err)
+		os.Exit(3)
 	}
-
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(result); err != nil {
-		return fmt.Errorf("encode result: %w", err)
-	}
-
-	if result.Status == "confirmed" || result.Status == "potential" {
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, "encode error: %s\n", err)
+		os.Exit(3)
 	}
 	return nil
 }

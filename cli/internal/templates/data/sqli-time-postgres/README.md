@@ -1,6 +1,6 @@
 # PostgreSQL Time-Based Blind SQL Injection
 
-Injects `pg_sleep()` payloads and measures response timing to confirm blind SQLi.
+Injects `pg_sleep()` payloads and measures response timing to detect blind SQLi.
 
 ## Setup
 
@@ -30,8 +30,11 @@ python3 exploit.py
 2. **Payload**: 3 requests with `pg_sleep(N)` — should delay by N seconds
 3. **Control**: 1 request with `pg_sleep(0)` — should be fast (confirms syntax is valid)
 
-## Interpreting Results
+## Output
 
-- **confirmed**: Consistent delay matching sleep duration across all rounds
-- **potential**: Some delay but inconsistent — could be network jitter
-- **safe**: No significant timing difference
+JSON with `schema_version: 2` and `measurements` containing per-round `round` results (status_code, elapsed_ms, body_hash, body_length), baseline/payload averages, delta_ms, and control round. No status or confidence — the AI reads measurements to classify.
+
+## Exit Codes
+
+- `0` — probes completed (JSON on stdout)
+- `2` — configuration error (invalid boundary)

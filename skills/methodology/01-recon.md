@@ -158,12 +158,12 @@ Framework identification from error responses:
 - SSRF: Check for image processing, webhook, or proxy endpoints
 ```
 
-Write this Technology Profile to `pentest/progress.md` (it persists across sessions).
+Write this Technology Profile to `ensphere-pentest/progress.md` (it persists across sessions).
 
 ### Phase BB-3: Active Discovery (replaces Phase B live exploration)
 
 **Step 1 — Crawl**:
-- If browser UI: Use Playwright to navigate target URL, authenticate per `pentest/config.md`, then systematically click every navigation link, open dropdowns, submit forms with benign data. Use `browser_network_requests` to capture all XHR/fetch calls — these reveal the real API surface.
+- If browser UI: Use Playwright to navigate target URL, authenticate per `ensphere-pentest/config.md`, then systematically click every navigation link, open dropdowns, submit forms with benign data. Use `browser_network_requests` to capture all XHR/fetch calls — these reveal the real API surface.
 - If API-only: Skip to Step 2.
 
 **Step 2 — Authentication Flow Mapping**: Use curl to map the auth lifecycle:
@@ -225,7 +225,7 @@ This data feeds directly into Session 02 (injection candidate inputs) and Sessio
 
 ### Black-Box Report Template
 
-Write to `pentest/01-recon/report.md` with these adapted sections:
+Write to `ensphere-pentest/01-recon/report.md` with these adapted sections:
 
 #### 1. Executive Summary
 Same as white-box.
@@ -287,7 +287,7 @@ After Phase 1, launch in parallel:
 
 **If the target has a browser UI** — use Playwright MCP tools:
 
-1. Navigate to target URL from `pentest/config.md`
+1. Navigate to target URL from `ensphere-pentest/config.md`
 2. Map user-facing functionality: login, registration, password reset, dashboards
 3. Follow login instructions from config to authenticate
 4. Explore authenticated areas systematically
@@ -308,18 +308,18 @@ Run via Bash. Gracefully skip any tool not installed.
 
 ```bash
 # Port scanning
-nmap -sV -sC -T4 TARGET_HOST -oN pentest/01-recon/nmap.txt 2>/dev/null || echo "nmap not installed, skipping"
+nmap -sV -sC -T4 TARGET_HOST -oN ensphere-pentest/01-recon/nmap.txt 2>/dev/null || echo "nmap not installed, skipping"
 
 # Subdomain enumeration
-subfinder -d TARGET_DOMAIN -o pentest/01-recon/subdomains.txt 2>/dev/null || echo "subfinder not installed, skipping"
+subfinder -d TARGET_DOMAIN -o ensphere-pentest/01-recon/subdomains.txt 2>/dev/null || echo "subfinder not installed, skipping"
 
 # Technology fingerprinting
-whatweb TARGET_URL -v > pentest/01-recon/whatweb.txt 2>/dev/null || echo "whatweb not installed, skipping"
+whatweb TARGET_URL -v > ensphere-pentest/01-recon/whatweb.txt 2>/dev/null || echo "whatweb not installed, skipping"
 ```
 
 ## Report Template
 
-Write to `pentest/01-recon/report.md` with these sections:
+Write to `ensphere-pentest/01-recon/report.md` with these sections:
 
 ### 1. Executive Summary
 2-3 paragraph overview of security posture and critical attack surfaces.

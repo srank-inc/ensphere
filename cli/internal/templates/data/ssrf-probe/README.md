@@ -23,8 +23,10 @@ Tests 9 internal URL variants:
 - `0x7f000001`, `2130706433`, `127.1` — encoding bypasses
 - AWS/GCP metadata endpoints
 
-## Interpreting Results
+## Output
 
-- **confirmed**: 2+ probes returned different responses than external baseline
-- **potential**: 1 probe showed differences — may be false positive
-- **safe**: All probes returned consistent responses matching external baseline
+JSON with `schema_version: 2` and `measurements` containing a baseline round result, per-probe round results with `hashes_match_baseline` and `matched_signatures` for each internal URL tested. No status or confidence — the AI reads measurements to classify.
+
+## Exit Codes
+
+- `0` — probes completed (JSON on stdout)

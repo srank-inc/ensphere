@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
@@ -40,7 +41,7 @@ func init() {
 	verifyXSSCmd.Flags().StringVar(&xssPayload, "payload", "", "XSS payload string (required)")
 	verifyXSSCmd.Flags().StringVar(&xssMethod, "method", "GET", "HTTP method: GET or POST")
 	verifyXSSCmd.Flags().StringSliceVar(&xssHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyXSSCmd.Flags().StringSliceVar(&xssInScope, "in-scope", nil, "In-scope hostname patterns (required, repeatable)")
+	verifyXSSCmd.Flags().StringSliceVar(&xssInScope, "in-scope", nil, "In-scope patterns: globs (*.example.com) or CIDR (10.0.0.0/8)")
 	verifyXSSCmd.Flags().IntVar(&xssMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
 	verifyXSSCmd.Flags().IntVar(&xssThrottle, "throttle", 500, "Milliseconds between probes")
 	verifyXSSCmd.Flags().IntVar(&xssTimeout, "timeout", 10, "HTTP request timeout in seconds")
@@ -80,17 +81,19 @@ func runVerifyXSS(cmd *cobra.Command, args []string) error {
 
 	result, err := verify.VerifyXSS(cfg)
 	if err != nil {
-		return err
+		var scopeErr *verify.ScopeError
+		if errors.As(err, &scopeErr) {
+			fmt.Fprintf(os.Stderr, "scope error: %s\n", err)
+			os.Exit(2)
+		}
+		fmt.Fprintf(os.Stderr, "probe error: %s\n", err)
+		os.Exit(3)
 	}
-
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(result); err != nil {
-		return fmt.Errorf("encode result: %w", err)
-	}
-
-	if result.Status == "confirmed" || result.Status == "potential" {
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, "encode error: %s\n", err)
+		os.Exit(3)
 	}
 	return nil
 }

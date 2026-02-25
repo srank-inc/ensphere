@@ -2,30 +2,48 @@ package verify
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"path/filepath"
 	"strings"
 )
 
+// ScopeError indicates a scope or usage violation (exit code 2).
+type ScopeError struct {
+	Msg string
+}
+
+func (e *ScopeError) Error() string { return e.Msg }
+
 // CheckScope validates that a URL's hostname matches at least one in-scope pattern.
-// Patterns use glob syntax (e.g., "*.example.com", "localhost").
+// Patterns use glob syntax (e.g., "*.example.com", "localhost") or CIDR notation (e.g., "192.168.1.0/24").
 func CheckScope(rawURL string, inScopePatterns []string) error {
 	if len(inScopePatterns) == 0 {
-		return fmt.Errorf("no in-scope patterns provided — refusing to probe")
+		return &ScopeError{Msg: "no in-scope patterns provided — refusing to probe"}
 	}
 
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
-		return fmt.Errorf("invalid URL %q: %w", rawURL, err)
+		return &ScopeError{Msg: fmt.Sprintf("invalid URL %q: %v", rawURL, err)}
 	}
 
 	hostname := parsed.Hostname()
 	if hostname == "" {
-		return fmt.Errorf("URL %q has no hostname", rawURL)
+		return &ScopeError{Msg: fmt.Sprintf("URL %q has no hostname", rawURL)}
 	}
 
 	for _, pattern := range inScopePatterns {
 		pattern = strings.TrimSpace(pattern)
+
+		// Try CIDR match (e.g., "192.168.1.0/24")
+		if _, ipNet, err := net.ParseCIDR(pattern); err == nil {
+			if ip := net.ParseIP(hostname); ip != nil && ipNet.Contains(ip) {
+				return nil
+			}
+			continue
+		}
+
+		// Fall back to glob match (e.g., "*.example.com")
 		matched, err := filepath.Match(pattern, hostname)
 		if err != nil {
 			continue
@@ -35,5 +53,5 @@ func CheckScope(rawURL string, inScopePatterns []string) error {
 		}
 	}
 
-	return fmt.Errorf("URL hostname %q is not in scope (patterns: %s)", hostname, strings.Join(inScopePatterns, ", "))
+	return &ScopeError{Msg: fmt.Sprintf("URL hostname %q is not in scope (patterns: %s)", hostname, strings.Join(inScopePatterns, ", "))}
 }

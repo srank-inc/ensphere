@@ -25,13 +25,11 @@ python3 exploit.py
 | RESOURCE_ID_B | Yes | UUID of tenant B's resource |
 | TOKEN_B | No | Tenant B's token for baseline comparison |
 
-## Expected Results
+## Output
 
-- **Safe**: 403 or 404 — tenant isolation enforced
-- **Confirmed**: 200 — tenant A can access tenant B's data (IDOR vulnerability)
-- **Potential**: Unexpected status code — manual review needed
+JSON with `schema_version: 2` and `measurements` containing per-request `round` results (status_code, elapsed_ms, body_hash, body_length) and a response snippet. No status or confidence — the AI reads measurements to classify.
 
 ## Exit Codes
 
-- `0` — safe (no vulnerability)
-- `1` — vulnerability confirmed or error
+- `0` — probes completed (JSON on stdout)
+- `2` — configuration error

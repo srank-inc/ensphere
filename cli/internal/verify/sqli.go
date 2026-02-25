@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-	"strings"
 
 	"github.com/srank/ensphere/internal/evidence"
 )
@@ -52,7 +51,7 @@ type SQLiConfig struct {
 }
 
 // VerifySQLi runs the SQLi verification probe.
-func VerifySQLi(cfg SQLiConfig) (*VerifyResult, error) {
+func VerifySQLi(cfg SQLiConfig) (*ProbeResult, error) {
 	if err := CheckScope(cfg.URL, cfg.InScope); err != nil {
 		return nil, err
 	}
@@ -79,11 +78,11 @@ func VerifySQLi(cfg SQLiConfig) (*VerifyResult, error) {
 	case "error_based":
 		return verifySQLiErrorBased(cfg, throttle, timer, ew)
 	default:
-		return nil, fmt.Errorf("unsupported technique %q — use: blind_time, blind_boolean, error_based", cfg.Technique)
+		return nil, &ScopeError{Msg: fmt.Sprintf("unsupported technique %q — use: blind_time, blind_boolean, error_based", cfg.Technique)}
 	}
 }
 
-func verifySQLiBlindTime(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *evidence.Writer) (*VerifyResult, error) {
+func verifySQLiBlindTime(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *evidence.Writer) (*ProbeResult, error) {
 	sleepSec := cfg.TimeoutSec / 2
 	if sleepSec < 3 {
 		sleepSec = 3
@@ -94,13 +93,13 @@ func verifySQLiBlindTime(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *e
 
 	payloadTemplate := sqliPayloads["blind_time"][cfg.Boundary]
 	if payloadTemplate == "" {
-		return nil, fmt.Errorf("no blind_time payload for boundary %q", cfg.Boundary)
+		return nil, &ScopeError{Msg: fmt.Sprintf("no blind_time payload for boundary %q", cfg.Boundary)}
 	}
 
 	probeCount := 0
 
 	// Baseline probes
-	var baselines []int64
+	var baselineRounds []RoundResult
 	for i := 0; i < defaultRounds; i++ {
 		throttle.Wait()
 		probeCount++
@@ -108,16 +107,20 @@ func verifySQLiBlindTime(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *e
 		if resp.Error != nil {
 			return nil, fmt.Errorf("baseline probe %d: %w", i+1, resp.Error)
 		}
-		baselines = append(baselines, resp.ElapsedMs)
+		baselineRounds = append(baselineRounds, RoundResult{
+			StatusCode: resp.StatusCode,
+			ElapsedMs:  resp.ElapsedMs,
+			BodyHash:   resp.BodyHash,
+			BodyLength: len(resp.Body),
+		})
 		fmt.Fprintf(os.Stderr, "[BASELINE %d] %dms\n", i+1, resp.ElapsedMs)
 		writeEvidence(ew, "sqli", "blind_time", cfg.URL, cfg.Param, resp.StatusCode,
 			fmt.Sprintf("%dms", resp.ElapsedMs), "baseline", fmt.Sprintf("round %d", i+1))
 	}
-	baselineAvg := avg(baselines)
 
 	// Payload probes (pg_sleep)
 	payload := fmt.Sprintf(payloadTemplate, sleepSec)
-	var payloadTimes []int64
+	var payloadRounds []RoundResult
 	for i := 0; i < defaultRounds; i++ {
 		throttle.Wait()
 		probeCount++
@@ -126,79 +129,52 @@ func verifySQLiBlindTime(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *e
 			fmt.Fprintf(os.Stderr, "[PAYLOAD %d] error: %v\n", i+1, resp.Error)
 			continue
 		}
-		payloadTimes = append(payloadTimes, resp.ElapsedMs)
+		payloadRounds = append(payloadRounds, RoundResult{
+			StatusCode: resp.StatusCode,
+			ElapsedMs:  resp.ElapsedMs,
+			BodyHash:   resp.BodyHash,
+			BodyLength: len(resp.Body),
+		})
 		fmt.Fprintf(os.Stderr, "[PAYLOAD %d] %dms\n", i+1, resp.ElapsedMs)
 		writeEvidence(ew, "sqli", "blind_time", cfg.URL, cfg.Param, resp.StatusCode,
 			fmt.Sprintf("%dms", resp.ElapsedMs), "payload", fmt.Sprintf("round %d, payload: %s", i+1, payload))
 	}
 
-	if len(payloadTimes) == 0 {
-		return &VerifyResult{
-			Status:     "error",
-			VulnType:   "sqli",
-			Technique:  "blind_time",
-			Confidence: "low",
-			Evidence:   "All payload probes failed",
-			ProbeCount: probeCount,
-			Duration:   timer.Elapsed(),
-		}, nil
+	if len(payloadRounds) == 0 {
+		return nil, fmt.Errorf("all payload probes failed")
 	}
 
-	payloadAvg := avg(payloadTimes)
-	threshold := int64(sleepSec*1000) - 500
-	delta := payloadAvg - baselineAvg
-	consistent := true
-	for _, t := range payloadTimes {
-		if t-baselineAvg < threshold {
-			consistent = false
-			break
-		}
-	}
+	baselineAvg := avgFromRounds(baselineRounds)
+	payloadAvg := avgFromRounds(payloadRounds)
 
-	var status, confidence, evidenceStr string
-	if delta > threshold && consistent {
-		status = "confirmed"
-		confidence = "high"
-		evidenceStr = fmt.Sprintf("Response delayed %.1fs with pg_sleep(%d) payload vs %.1fs baseline",
-			float64(payloadAvg)/1000, sleepSec, float64(baselineAvg)/1000)
-	} else if delta > threshold/2 {
-		status = "potential"
-		confidence = "medium"
-		evidenceStr = fmt.Sprintf("Timing delta %dms — inconsistent across rounds", delta)
-	} else {
-		status = "safe"
-		confidence = "high"
-		evidenceStr = fmt.Sprintf("No significant timing difference (delta: %dms)", delta)
-	}
-
-	return &VerifyResult{
-		Status:     status,
-		VulnType:   "sqli",
-		Technique:  "blind_time",
-		Confidence: confidence,
-		Evidence:   evidenceStr,
-		Details: SQLiDetails{
-			BaselineMs:     baselineAvg,
-			PayloadMs:      payloadAvg,
-			DeltaMs:        delta,
-			Rounds:         defaultRounds,
-			Consistent:     consistent,
+	return &ProbeResult{
+		SchemaVersion: 2,
+		VulnType:      "sqli",
+		Technique:     "blind_time",
+		StartedAt:     timer.StartedAt(),
+		ProbeCount:    probeCount,
+		Duration:      timer.Elapsed(),
+		Measurements: SQLiTimeMeasurements{
+			SleepSeconds:   sleepSec,
+			BaselineRounds: baselineRounds,
+			PayloadRounds:  payloadRounds,
+			BaselineAvgMs:  baselineAvg,
+			PayloadAvgMs:   payloadAvg,
+			DeltaMs:        payloadAvg - baselineAvg,
 			PayloadUsed:    payload,
 			StringBoundary: cfg.Boundary,
 		},
-		ProbeCount: probeCount,
-		Duration:   timer.Elapsed(),
 	}, nil
 }
 
-func verifySQLiBlindBoolean(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *evidence.Writer) (*VerifyResult, error) {
+func verifySQLiBlindBoolean(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *evidence.Writer) (*ProbeResult, error) {
 	trueKey := cfg.Boundary + "_true"
 	falseKey := cfg.Boundary + "_false"
 
 	truePayload := sqliPayloads["blind_boolean"][trueKey]
 	falsePayload := sqliPayloads["blind_boolean"][falseKey]
 	if truePayload == "" || falsePayload == "" {
-		return nil, fmt.Errorf("no blind_boolean payloads for boundary %q", cfg.Boundary)
+		return nil, &ScopeError{Msg: fmt.Sprintf("no blind_boolean payloads for boundary %q", cfg.Boundary)}
 	}
 
 	probeCount := 0
@@ -210,14 +186,18 @@ func verifySQLiBlindBoolean(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew
 	if baselineResp.Error != nil {
 		return nil, fmt.Errorf("baseline: %w", baselineResp.Error)
 	}
+	baselineRound := RoundResult{
+		StatusCode: baselineResp.StatusCode,
+		ElapsedMs:  baselineResp.ElapsedMs,
+		BodyHash:   baselineResp.BodyHash,
+		BodyLength: len(baselineResp.Body),
+	}
 	fmt.Fprintf(os.Stderr, "[BASELINE] hash=%s\n", baselineResp.BodyHash[:16])
 	writeEvidence(ew, "sqli", "blind_boolean", cfg.URL, cfg.Param, baselineResp.StatusCode,
 		fmt.Sprintf("%dms", baselineResp.ElapsedMs), "baseline", "")
 
 	// True/False probes across rounds
-	consistent := true
-	var trueHash, falseHash string
-
+	var trueRounds, falseRounds []RoundResult
 	for i := 0; i < defaultRounds; i++ {
 		throttle.Wait()
 		probeCount++
@@ -225,69 +205,56 @@ func verifySQLiBlindBoolean(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew
 		if trueResp.Error != nil {
 			continue
 		}
-
 		throttle.Wait()
 		probeCount++
 		falseResp := probeWithParam(cfg, falsePayload)
 		if falseResp.Error != nil {
 			continue
 		}
-
 		fmt.Fprintf(os.Stderr, "[ROUND %d] true=%s false=%s\n", i+1, trueResp.BodyHash[:16], falseResp.BodyHash[:16])
 		writeEvidence(ew, "sqli", "blind_boolean", cfg.URL, cfg.Param, trueResp.StatusCode,
 			fmt.Sprintf("%dms", trueResp.ElapsedMs), "true_probe", fmt.Sprintf("round %d", i+1))
 		writeEvidence(ew, "sqli", "blind_boolean", cfg.URL, cfg.Param, falseResp.StatusCode,
 			fmt.Sprintf("%dms", falseResp.ElapsedMs), "false_probe", fmt.Sprintf("round %d", i+1))
-
-		if i == 0 {
-			trueHash = trueResp.BodyHash
-			falseHash = falseResp.BodyHash
-		} else {
-			if trueResp.BodyHash != trueHash || falseResp.BodyHash != falseHash {
-				consistent = false
-			}
-		}
+		trueRounds = append(trueRounds, RoundResult{
+			StatusCode: trueResp.StatusCode, ElapsedMs: trueResp.ElapsedMs,
+			BodyHash: trueResp.BodyHash, BodyLength: len(trueResp.Body),
+		})
+		falseRounds = append(falseRounds, RoundResult{
+			StatusCode: falseResp.StatusCode, ElapsedMs: falseResp.ElapsedMs,
+			BodyHash: falseResp.BodyHash, BodyLength: len(falseResp.Body),
+		})
 	}
 
-	var status, confidence, evidenceStr string
-	if trueHash != falseHash && consistent {
-		status = "confirmed"
-		confidence = "high"
-		evidenceStr = "Boolean conditions produce consistently different response bodies"
-	} else if trueHash != falseHash {
-		status = "potential"
-		confidence = "medium"
-		evidenceStr = "Response diffs detected but inconsistent across rounds"
-	} else {
-		status = "safe"
-		confidence = "high"
-		evidenceStr = "True and false conditions produce identical responses"
+	if len(trueRounds) == 0 || len(falseRounds) == 0 {
+		return nil, fmt.Errorf("all boolean probes failed")
 	}
 
-	return &VerifyResult{
-		Status:     status,
-		VulnType:   "sqli",
-		Technique:  "blind_boolean",
-		Confidence: confidence,
-		Evidence:   evidenceStr,
-		Details: SQLiBooleanDetails{
-			TrueHash:       trueHash,
-			FalseHash:      falseHash,
-			BaselineHash:   baselineResp.BodyHash,
-			Rounds:         defaultRounds,
-			Consistent:     consistent,
-			PayloadUsed:    truePayload,
+	hashesMatch := trueRounds[0].BodyHash == falseRounds[0].BodyHash
+
+	return &ProbeResult{
+		SchemaVersion: 2,
+		VulnType:      "sqli",
+		Technique:     "blind_boolean",
+		StartedAt:     timer.StartedAt(),
+		ProbeCount:    probeCount,
+		Duration:      timer.Elapsed(),
+		Measurements: SQLiBooleanMeasurements{
+			BaselineRound:  baselineRound,
+			TrueRounds:     trueRounds,
+			FalseRounds:    falseRounds,
+			HashesMatch:    hashesMatch,
+			TruePayload:    truePayload,
+			FalsePayload:   falsePayload,
 			StringBoundary: cfg.Boundary,
 		},
-		ProbeCount: probeCount,
-		Duration:   timer.Elapsed(),
 	}, nil
 }
 
-func verifySQLiErrorBased(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *evidence.Writer) (*VerifyResult, error) {
+func verifySQLiErrorBased(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *evidence.Writer) (*ProbeResult, error) {
 	payload := sqliPayloads["error_based"][cfg.Boundary]
 	if payload == "" {
-		return nil, fmt.Errorf("no error_based payload for boundary %q", cfg.Boundary)
+		return nil, &ScopeError{Msg: fmt.Sprintf("no error_based payload for boundary %q", cfg.Boundary)}
 	}
 
 	probeCount := 0
@@ -303,50 +270,40 @@ func verifySQLiErrorBased(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *
 	writeEvidence(ew, "sqli", "error_based", cfg.URL, cfg.Param, resp.StatusCode,
 		fmt.Sprintf("%dms", resp.ElapsedMs), "probe", payload)
 
-	// Check for PG error signatures
-	var matchedPattern string
+	// Check for PG error signatures — collect all matches
+	var matchedPatterns []string
 	for _, re := range pgErrorPatterns {
 		if re.MatchString(resp.Body) {
-			matchedPattern = re.String()
-			break
+			matchedPatterns = append(matchedPatterns, re.String())
 		}
 	}
 
-	var status, confidence, evidenceStr string
-	var snippet string
-	if matchedPattern != "" {
-		status = "confirmed"
-		confidence = "high"
-		evidenceStr = fmt.Sprintf("PostgreSQL error signature found: %s", matchedPattern)
-		// Extract ~100 chars around the match
-		if idx := strings.Index(strings.ToLower(resp.Body), "error"); idx >= 0 {
-			start := idx
-			end := idx + 100
-			if end > len(resp.Body) {
-				end = len(resp.Body)
-			}
-			snippet = resp.Body[start:end]
-		}
-	} else {
-		status = "safe"
-		confidence = "high"
-		evidenceStr = "No PostgreSQL error signatures in response"
+	snippet := resp.Body
+	if len(snippet) > 500 {
+		snippet = snippet[:500]
 	}
 
-	return &VerifyResult{
-		Status:     status,
-		VulnType:   "sqli",
-		Technique:  "error_based",
-		Confidence: confidence,
-		Evidence:   evidenceStr,
-		Details: SQLiErrorDetails{
-			ErrorPattern:    matchedPattern,
+	probeRound := RoundResult{
+		StatusCode: resp.StatusCode,
+		ElapsedMs:  resp.ElapsedMs,
+		BodyHash:   resp.BodyHash,
+		BodyLength: len(resp.Body),
+	}
+
+	return &ProbeResult{
+		SchemaVersion: 2,
+		VulnType:      "sqli",
+		Technique:     "error_based",
+		StartedAt:     timer.StartedAt(),
+		ProbeCount:    probeCount,
+		Duration:      timer.Elapsed(),
+		Measurements: SQLiErrorMeasurements{
+			ProbeRound:      probeRound,
+			MatchedPatterns: matchedPatterns,
 			PayloadUsed:     payload,
 			StringBoundary:  cfg.Boundary,
 			ResponseSnippet: snippet,
 		},
-		ProbeCount: probeCount,
-		Duration:   timer.Elapsed(),
 	}, nil
 }
 
@@ -372,13 +329,13 @@ func writeEvidence(ew *evidence.Writer, probeType, technique, url, param string,
 	_ = ew.Write(entry)
 }
 
-func avg(vals []int64) int64 {
-	if len(vals) == 0 {
+func avgFromRounds(rounds []RoundResult) int64 {
+	if len(rounds) == 0 {
 		return 0
 	}
 	var sum int64
-	for _, v := range vals {
-		sum += v
+	for _, r := range rounds {
+		sum += r.ElapsedMs
 	}
-	return sum / int64(len(vals))
+	return sum / int64(len(rounds))
 }

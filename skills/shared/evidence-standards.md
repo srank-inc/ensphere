@@ -51,7 +51,7 @@ Rule: when uncertain, round down to minimize false positives.
 
 ## False Positive Documentation
 
-Record false positives in `pentest/{NN}-{name}/false-positives.md` with:
+Record false positives in `ensphere-pentest/{NN}-{name}/false-positives.md` with:
 - Vulnerability ID and description
 - All techniques attempted
 - Why it was determined to be a false positive

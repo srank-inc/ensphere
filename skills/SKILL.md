@@ -18,13 +18,13 @@ Each session covers one vulnerability category. Sessions are chained: finish one
 
 When the user says "ensphere" (with or without a session number):
 
-1. **Check for `pentest/config.md`** — if it doesn't exist, this is a first run (see First-Run Setup below)
-1.5. **Determine assessment mode** — read `pentest/config.md` "Source code" field:
+1. **Check for `ensphere-pentest/config.md`** — if it doesn't exist, this is a first run (see First-Run Setup below)
+1.5. **Determine assessment mode** — read `ensphere-pentest/config.md` "Source code" field:
    - If value is "yes" or "available in current directory" → **WHITE_BOX** mode. Follow standard Phase A in each methodology file.
    - If value is "no", "unavailable", or field is missing → **BLACK_BOX** mode. Follow `## Black-Box Path` sections in each methodology file. Never use `ensphere scan` or `ensphere sinks` (these require source code).
    - Tell the user which mode was detected: "Assessment mode: **WHITE_BOX** (source code available)" or "Assessment mode: **BLACK_BOX** (no source code — using behavioral analysis)"
 2. **Detect project structure** — if the repo is a monorepo with multiple apps/services, ask the user which project to target before proceeding
-3. **Check for `pentest/progress.md`** — if it doesn't exist, no sessions have been run:
+3. **Check for `ensphere-pentest/progress.md`** — if it doesn't exist, no sessions have been run:
    - Tell the user: "No assessment in progress. Want to start with **Session 01 — Recon**?"
    - Wait for confirmation before proceeding
 4. **If progress exists**, read it and determine status:
@@ -33,23 +33,23 @@ When the user says "ensphere" (with or without a session number):
    - If the next session is PENDING: Show a summary of completed sessions and their key findings, then ask: "Next up: **Session {NN} — {category}**. Ready to proceed?"
    - Wait for the user's confirmation before starting
 5. If the user provided a specific session number (e.g., "ensphere 03"), skip to that session after confirming
-6. Read the prior session's report if it exists (e.g., `pentest/01-recon/report.md` before any exploit session)
+6. Read the prior session's report if it exists (e.g., `ensphere-pentest/01-recon/report.md` before any exploit session)
 7. Read the methodology file for this session (see Session Map below)
-8. If a plan exists at `pentest/{NN}-{name}/plan.md`, resume from it
+8. If a plan exists at `ensphere-pentest/{NN}-{name}/plan.md`, resume from it
 9. Execute the methodology
 
 ### End Protocol
-1. Write findings to `pentest/{NN}-{name}/report.md`
-2. Update `pentest/progress.md` — mark current session DONE
+1. Write findings to `ensphere-pentest/{NN}-{name}/report.md`
+2. Update `ensphere-pentest/progress.md` — mark current session DONE
 3. Read the next session's methodology file
-4. Study the target based on current findings and write `pentest/{next}/plan.md` with:
+4. Study the target based on current findings and write `ensphere-pentest/{next}/plan.md` with:
    - Key targets identified from this session's findings
    - Prioritized attack surface for next category
    - Hypotheses to test
 5. Tell the user: "Session {NN} complete. Next up: **Session {next} — {category}**. `/clear` when ready, then say `ensphere` to continue."
 
 ### First-Run Setup
-If `pentest/config.md` doesn't exist, prompt the user to create it:
+If `ensphere-pentest/config.md` doesn't exist, prompt the user to create it:
 
 ```markdown
 # Pentest Configuration
@@ -76,7 +76,7 @@ This test is fully authorized against the specified controlled environment.
 
 ## Progress Tracking
 
-Maintain `pentest/progress.md`:
+Maintain `ensphere-pentest/progress.md`:
 
 ```markdown
 # Assessment Progress
@@ -145,7 +145,7 @@ Focus on vulnerabilities exploitable via public internet.
 **BLACK_BOX** (no source code):
 - Phase A replaced by `## Black-Box Path` behavioral analysis in each session
 - `ensphere scan` and `ensphere sinks` NOT available (require source code directory)
-- Session 01 builds a Technology Profile that ALL subsequent sessions read from `pentest/progress.md`
+- Session 01 builds a Technology Profile that ALL subsequent sessions read from `ensphere-pentest/progress.md`
 - Evidence based on HTTP response analysis, not code tracing
 - Findings reference endpoints and behavior, not file:line locations
 - All `ensphere verify` and `ensphere payloads` commands work identically (they're HTTP-based)
@@ -240,7 +240,8 @@ ensphere verify sqli \
 **Required flags:** `--url`, `--param`, `--in-scope`
 **Safety:** `--in-scope` is mandatory (refuses to probe without it), default throttle 500ms, default `--max-risk 3`
 
-**Output:** JSON with `status` (confirmed/potential/safe/error), `confidence`, `evidence`, and technique-specific `details`.
+**Output:** JSON with `schema_version: 2`, `vuln_type`, `technique`, `started_at`, `probe_count`, `duration`, and technique-specific `measurements`. No status or confidence — read measurements and apply evidence-standards.md proof levels to classify.
+**Exit codes:** 0 = probes completed (JSON on stdout), 2 = scope/usage error, 3 = runtime/probe failure.
 
 ### `ensphere verify rls`
 
@@ -253,12 +254,16 @@ ensphere verify rls \
   --jwt-secret super-secret-jwt-token \
   --table invoices \
   --tenant-a uuid-company-a \
-  --tenant-b uuid-company-b
+  --tenant-b uuid-company-b \
+  --in-scope 127.0.0.1
 ```
 
 Builds JWTs with `company_id` claim, queries PostgREST to check if tenant A can read tenant B's rows.
 
-**Output:** JSON with `status`, `confidence`, cross-tenant row counts, and RLS status.
+**Required flags:** `--project-url`, `--anon-key`, `--jwt-secret`, `--table`, `--tenant-a`, `--tenant-b`, `--in-scope`
+**Safety:** `--in-scope` is mandatory, default throttle 500ms, default timeout 10s
+
+**Output:** JSON with `schema_version: 2`, `vuln_type`, `technique`, `started_at`, `probe_count`, `duration`, and `measurements` containing per-query `RoundResult`s and row counts. No status or confidence — read measurements and apply evidence-standards.md proof levels to classify.
 
 ## Checklists
 
@@ -358,7 +363,7 @@ ensphere scan ./src --category sqli,xss      # filter by category
 ensphere scan ./src --exclude "test/**"      # exclude patterns
 ```
 
-Output is JSON with `directory`, `files_scanned`, `total_matches`, `matches[]`, and `summary[]`. Exit code 1 if matches found (CI-friendly).
+Output is JSON with `directory`, `files_scanned`, `total_matches`, `matches[]`, and `summary[]`. Exit code 1 if matches found (CI-friendly). Use `--exit-zero` to always exit 0 (for JSON-only CI workflows), or `--min-risk N` to only exit 1 if matches at or above risk level N (1-5).
 
 ## Verify IDOR
 
@@ -420,3 +425,10 @@ ensphere evidence query --file ./evidence.jsonl --probe-type sqli --limit 10
 ```
 
 Use `--summary` for aggregate counts by result and probe type.
+
+### Verify Evidence Chain
+```bash
+ensphere evidence verify --file ./evidence.jsonl
+```
+
+Validates hash chain integrity of an evidence JSONL file. Each entry's SHA256 hash is recomputed and verified, and the chain link (`prev_hash` -> previous entry's `hash`) is validated. Exit 0 if valid, exit 1 if broken. All evidence entries written by `ensphere` automatically include `hash` and `prev_hash` fields for tamper-evident chains.

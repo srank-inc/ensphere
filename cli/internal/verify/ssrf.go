@@ -29,7 +29,7 @@ var internalSignatures = []string{
 }
 
 // VerifySSRF runs the SSRF verification probe.
-func VerifySSRF(cfg SSRFConfig) (*VerifyResult, error) {
+func VerifySSRF(cfg SSRFConfig) (*ProbeResult, error) {
 	if err := CheckScope(cfg.URL, cfg.InScope); err != nil {
 		return nil, err
 	}
@@ -77,49 +77,48 @@ func VerifySSRF(cfg SSRFConfig) (*VerifyResult, error) {
 	writeEvidence(ew, "ssrf", "metadata_access", cfg.URL, cfg.Param, probeResp.StatusCode,
 		fmt.Sprintf("%dms", probeResp.ElapsedMs), "probe", fmt.Sprintf("injected %s", probeURL))
 
-	// Check for internal content signatures
-	internalContent := false
+	// Check for internal content signatures — collect all matches
+	var matchedSignatures []string
 	for _, sig := range internalSignatures {
 		if strings.Contains(probeResp.Body, sig) {
-			internalContent = true
-			break
+			matchedSignatures = append(matchedSignatures, sig)
 		}
 	}
-
-	responseDiff := baselineResp.BodyHash != probeResp.BodyHash
-
-	var status, confidence, evidenceStr string
-	if internalContent {
-		status = "confirmed"
-		confidence = "high"
-		evidenceStr = fmt.Sprintf("Internal content signatures detected in response to %s", probeURL)
-	} else if responseDiff {
-		status = "potential"
-		confidence = "medium"
-		evidenceStr = "Response differs between baseline and SSRF probe — server may be following URLs"
-	} else {
-		status = "safe"
-		confidence = "high"
-		evidenceStr = "No response difference or internal content detected"
+	hashesMatch := baselineResp.BodyHash == probeResp.BodyHash
+	snippet := probeResp.Body
+	if len(snippet) > 500 {
+		snippet = snippet[:500]
 	}
 
-	return &VerifyResult{
-		Status:     status,
-		VulnType:   "ssrf",
-		Technique:  "metadata_access",
-		Confidence: confidence,
-		Evidence:   evidenceStr,
-		Details: SSRFDetails{
-			CallbackHit:     cfg.CallbackURL != "" && responseDiff,
-			ResponseDiff:    responseDiff,
-			InternalContent: internalContent,
-			CallbackURL:     cfg.CallbackURL,
-			BaselineHash:    baselineResp.BodyHash,
-			ProbeHash:       probeResp.BodyHash,
-			PayloadUsed:     probeURL,
+	baseline := RoundResult{
+		StatusCode: baselineResp.StatusCode,
+		ElapsedMs:  baselineResp.ElapsedMs,
+		BodyHash:   baselineResp.BodyHash,
+		BodyLength: len(baselineResp.Body),
+	}
+	probe := RoundResult{
+		StatusCode: probeResp.StatusCode,
+		ElapsedMs:  probeResp.ElapsedMs,
+		BodyHash:   probeResp.BodyHash,
+		BodyLength: len(probeResp.Body),
+	}
+
+	return &ProbeResult{
+		SchemaVersion: 2,
+		VulnType:      "ssrf",
+		Technique:     "metadata_access",
+		StartedAt:     timer.StartedAt(),
+		ProbeCount:    probeCount,
+		Duration:      timer.Elapsed(),
+		Measurements: SSRFMeasurements{
+			Baseline:          baseline,
+			Probe:             probe,
+			HashesMatch:       hashesMatch,
+			MatchedSignatures: matchedSignatures,
+			CallbackURL:       cfg.CallbackURL,
+			PayloadUsed:       probeURL,
+			ResponseSnippet:   snippet,
 		},
-		ProbeCount: probeCount,
-		Duration:   timer.Elapsed(),
 	}, nil
 }
 

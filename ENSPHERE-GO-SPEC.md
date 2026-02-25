@@ -17,7 +17,7 @@ Payloads indexed by **context**, not framework:
 Custom Go HTTP probes (not wrappers around external tools). Agent calls `ensphere verify sqli --url ... --param ...` for deterministic confirmation.
 
 - Pure Go implementations at protocol level
-- Returns structured JSON: `{status, vuln_type, technique, confidence, evidence, details, probe_count, duration}`
+- Returns structured JSON (schema v2): `{schema_version, vuln_type, technique, started_at, probe_count, duration, measurements}` — measurement-only output, no status/confidence classification
 - Safety: mandatory `--in-scope` scoping, rate throttling (default 500ms), max-risk gate (default 3)
 - Evidence auto-logged to JSONL with secret redaction
 - Probes: sqli, xss, idor, ssrf, auth, rls (Supabase cross-tenant JWT)
@@ -259,7 +259,9 @@ JSONL format. Each entry:
   "status_code": 200,
   "duration": "5.2s",
   "result": "confirmed",
-  "notes": "..."
+  "notes": "...",
+  "prev_hash": "a1b2c3...",
+  "hash": "d4e5f6..."
 }
 ```
 
@@ -267,8 +269,9 @@ Secret redaction applied automatically to URLs via `evidence.RedactSecrets()`. R
 
 ## Safety
 
-- `--in-scope` mandatory on all verify commands except RLS (Supabase-internal)
+- `--in-scope` mandatory on all verify commands
 - Default throttle 500ms between probes
 - Default max-risk 3
 - Evidence JSONL with automatic secret redaction
-- Exit code 1 on confirmed/potential findings (CI-friendly)
+- Exit codes (verify): 0 = probes completed (JSON on stdout), 2 = scope/usage error, 3 = runtime/probe failure
+- Exit codes (evidence verify): 0 = chain valid, 1 = chain broken

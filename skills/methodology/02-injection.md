@@ -28,8 +28,8 @@ When assessment mode is BLACK_BOX, replace Phase A (code review) with the follow
 
 ### Phase A-BB: Behavioral Injection Detection (replaces code review)
 
-Read `pentest/01-recon/report.md` sections 5 (Input Vectors) and 11 (Injection Candidate Inputs) for your target list.
-Read the Technology Profile from `pentest/progress.md` for DB engine and framework info.
+Read `ensphere-pentest/01-recon/report.md` sections 5 (Input Vectors) and 11 (Injection Candidate Inputs) for your target list.
+Read the Technology Profile from `ensphere-pentest/progress.md` for DB engine and framework info.
 
 **Step 1 — Error Character Probing**: For each candidate endpoint+parameter from the recon report, inject error-inducing characters ONE AT A TIME and record status code, response length, and notable content:
 
@@ -58,7 +58,7 @@ Read the Technology Profile from `pentest/progress.md` for DB engine and framewo
 | Generic 403/block page | **WAF detected** | See Step 5 |
 | HTTP 500 with framework stack trace | **Error-based info disclosure** | Extract framework/DB info, retry with context-aware payloads |
 
-**Step 3 — Technology-Aware Payload Selection**: Read Technology Profile from `pentest/progress.md`:
+**Step 3 — Technology-Aware Payload Selection**: Read Technology Profile from `ensphere-pentest/progress.md`:
 - If DB Engine is `postgres`: `ensphere payloads sqli --db postgres --technique blind_time`
 - If DB Engine is `mysql`: `ensphere payloads sqli --db mysql --technique blind_time`
 - If DB Engine is `mssql`: `ensphere payloads sqli --db mssql --technique blind_time`
@@ -88,7 +88,7 @@ After Phase A-BB, proceed to **Phase B: Exploitation** (same as white-box path �
 
 ## Phase A: Vulnerability Analysis (Code Review)
 
-Read `pentest/01-recon/report.md` section 11 (Injection Sources) for your target list.
+Read `ensphere-pentest/01-recon/report.md` section 11 (Injection Sources) for your target list.
 Create a task for each injection source to trace.
 
 ### Slot Type Taxonomy
@@ -171,7 +171,7 @@ Extract first 5 rows from the most sensitive table as proof of impact.
 
 ## Report Format
 
-Write to `pentest/02-injection/report.md`:
+Write to `ensphere-pentest/02-injection/report.md`:
 
 ### Successfully Exploited
 For each: vulnerability ID, type, endpoint, slot type, payload chain, proof of data extraction.

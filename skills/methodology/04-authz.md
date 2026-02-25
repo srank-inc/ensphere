@@ -23,13 +23,13 @@ When assessment mode is BLACK_BOX, replace Phase A (code review) with the follow
 
 ### Phase A-BB: Access Control Matrix (replaces code review)
 
-Read `pentest/01-recon/report.md` sections 4 (API Endpoints), 7 (Role & Privilege Architecture), and 8 (Authorization Vulnerability Candidates).
-Read the Technology Profile from `pentest/progress.md`.
+Read `ensphere-pentest/01-recon/report.md` sections 4 (API Endpoints), 7 (Role & Privilege Architecture), and 8 (Authorization Vulnerability Candidates).
+Read the Technology Profile from `ensphere-pentest/progress.md`.
 
 **Step 1 — Session Setup**: Create separate authenticated sessions for each available role:
 - **User A** (standard user) — login via curl, save token/cookies
 - **User B** (different standard user) — login via curl, save token/cookies
-- **Admin** (if admin credentials available in `pentest/config.md`) — login, save token/cookies
+- **Admin** (if admin credentials available in `ensphere-pentest/config.md`) — login, save token/cookies
 - **Unauthenticated** — no token/cookies
 
 For Playwright-based testing, use separate browser contexts per role.
@@ -72,7 +72,7 @@ After Phase A-BB, proceed to **Phase B: Exploitation** (same as white-box path).
 
 ## Phase A: Analysis
 
-Read `pentest/01-recon/report.md` section 8 (Authorization Vulnerability Candidates).
+Read `ensphere-pentest/01-recon/report.md` section 8 (Authorization Vulnerability Candidates).
 Create a task for each candidate endpoint organized by type.
 
 ### 1. Horizontal Authorization (Ownership/IDOR)
@@ -141,6 +141,6 @@ Evidence: the unauthorized data or functionality accessed.
 
 ## Report Format
 
-Write to `pentest/04-authz/report.md`:
+Write to `ensphere-pentest/04-authz/report.md`:
 - Successfully Exploited (with type: Horizontal/Vertical/Context, full reproduction steps)
 - Vectors Confirmed Secure (table: Endpoint | Guard Location | Defense | Verdict)
