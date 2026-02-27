@@ -283,6 +283,26 @@ type CachePoisoningMeasurements struct {
 	ResponseSnippet        string      `json:"response_snippet,omitempty"`
 }
 
+// ClickjackingMeasurements holds clickjacking header probe measurements.
+type ClickjackingMeasurements struct {
+	Probe             RoundResult `json:"probe"`
+	XFrameOptions     string      `json:"x_frame_options"`
+	CSPFrameAncestors string      `json:"csp_frame_ancestors"`
+	XFOPresent        bool        `json:"xfo_present"`
+	CSPFAPresent      bool        `json:"cspfa_present"`
+}
+
+// HeaderInjectionMeasurements holds CRLF/header injection probe measurements.
+type HeaderInjectionMeasurements struct {
+	Baseline        RoundResult `json:"baseline"`
+	Probe           RoundResult `json:"probe"`
+	InjectedHeader  string      `json:"injected_header"`
+	InjectedValue   string      `json:"injected_value"`
+	HeaderFound     bool        `json:"header_found"`
+	PayloadUsed     string      `json:"payload_used"`
+	ResponseSnippet string      `json:"response_snippet,omitempty"`
+}
+
 // RedirectMeasurements holds open redirect probe measurements.
 type RedirectMeasurements struct {
 	Probe            RoundResult `json:"probe"`

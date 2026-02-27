@@ -290,6 +290,26 @@ var contracts = []probeContract{
 				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
 		},
 	},
+	{name: "clickjacking", risk: 2,
+		callOutOfScope: func() (*ProbeResult, error) {
+			return VerifyClickjacking(ClickjackingConfig{URL: "http://evil.example.com/api", Method: "GET",
+				ProbeConfig: ProbeConfig{InScope: []string{"safe.example.com"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callLowRisk: func() (*ProbeResult, error) {
+			return VerifyClickjacking(ClickjackingConfig{URL: "http://localhost/api", Method: "GET",
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+	},
+	{name: "headerinjection", risk: 3,
+		callOutOfScope: func() (*ProbeResult, error) {
+			return VerifyHeaderInjection(HeaderInjectionConfig{URL: "http://evil.example.com/api", Param: "q", Method: "GET",
+				ProbeConfig: ProbeConfig{InScope: []string{"safe.example.com"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callLowRisk: func() (*ProbeResult, error) {
+			return VerifyHeaderInjection(HeaderInjectionConfig{URL: "http://localhost/api", Param: "q", Method: "GET",
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+	},
 	{name: "csvinjection", risk: 3,
 		callOutOfScope: func() (*ProbeResult, error) {
 			return VerifyCSVInjection(CSVInjectionConfig{SubmitURL: "http://evil.example.com/submit", ExportURL: "http://evil.example.com/export", Param: "name", Method: "POST",

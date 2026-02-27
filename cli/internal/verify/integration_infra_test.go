@@ -147,6 +147,91 @@ func TestIntegration_GraphQL(t *testing.T) {
 	}
 }
 
+func TestIntegration_Clickjacking(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Content-Security-Policy", "frame-ancestors 'none'")
+		w.WriteHeader(200)
+		fmt.Fprint(w, "ok")
+	}))
+
+	cfg := ClickjackingConfig{
+		URL:         ts.URL + "/page",
+		Method:      "GET",
+		ProbeConfig: baseProbeConfig(),
+	}
+
+	result, err := VerifyClickjacking(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	m, ok := result.Measurements.(ClickjackingMeasurements)
+	if !ok {
+		t.Fatalf("expected ClickjackingMeasurements, got %T", result.Measurements)
+	}
+	if !m.XFOPresent {
+		t.Fatal("expected XFOPresent == true")
+	}
+	if !m.CSPFAPresent {
+		t.Fatal("expected CSPFAPresent == true")
+	}
+}
+
+func TestIntegration_HeaderInjection(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		val := r.URL.Query().Get("q")
+		if val != "" {
+			w.Header().Set("X-Reflected", val)
+		}
+		w.WriteHeader(200)
+		fmt.Fprint(w, "ok")
+	}))
+
+	cfg := HeaderInjectionConfig{
+		URL:         ts.URL + "/api",
+		Param:       "q",
+		Method:      "GET",
+		ProbeConfig: baseProbeConfig(),
+	}
+
+	result, err := VerifyHeaderInjection(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	m, ok := result.Measurements.(HeaderInjectionMeasurements)
+	if !ok {
+		t.Fatalf("expected HeaderInjectionMeasurements, got %T", result.Measurements)
+	}
+	if m.Baseline.StatusCode != 200 {
+		t.Fatalf("expected baseline status 200, got %d", m.Baseline.StatusCode)
+	}
+	if m.Probe.StatusCode == 0 {
+		t.Fatal("expected Probe.StatusCode > 0")
+	}
+	if m.InjectedHeader != "X-Ensphere-Injected" {
+		t.Fatalf("expected InjectedHeader = X-Ensphere-Injected, got %q", m.InjectedHeader)
+	}
+	if m.PayloadUsed == "" {
+		t.Fatal("expected PayloadUsed to be non-empty")
+	}
+	// Go's net/http sanitizes CRLF in header values, so HeaderFound must be
+	// false against the test server. This validates the measurement is populated
+	// correctly; the AI interprets whether a real target is vulnerable.
+	if m.HeaderFound {
+		t.Fatal("expected HeaderFound == false (Go net/http sanitizes CRLF)")
+	}
+}
+
 func TestIntegration_CachePoisoning(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")

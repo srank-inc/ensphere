@@ -80,9 +80,21 @@ Read the Technology Profile from `ensphere-pentest/progress.md` for DB engine an
 **Step 6 — Non-SQLi Injection Testing**:
 - **Command injection**: test endpoints that perform file operations, generate reports, or interact with OS. Use `ensphere payloads cmdi --max-risk 3`
 - **LFI**: test file download/include endpoints, path parameters. Use `ensphere payloads lfi --max-risk 3`
-- **SSTI**: test endpoints where user input appears in server-rendered HTML. Use `ensphere payloads ssti`
+- **SSTI**: test endpoints where user input appears in server-rendered HTML. Use `ensphere payloads ssti` — includes Log4Shell (JNDI), Struts2 OGNL, and Spring SpEL payloads
 - **XXE**: test XML-accepting endpoints (check Content-Type headers from recon). Use `ensphere payloads xxe`
 - **Deserialization**: test endpoints accepting serialized data (Java objects, PHP serialize, Python pickle). Use `ensphere payloads deserialization`
+- **NoSQL injection**: test MongoDB/document-store endpoints. Use `ensphere verify nosql` and `ensphere payloads nosql`
+- **LDAP injection**: test endpoints that query directory services (login forms, user search). Use `ensphere payloads ldap`
+- **XPath injection**: test endpoints that query XML data stores. Use `ensphere payloads xpath`
+- **Header injection (CRLF)**: test parameters reflected in response headers or redirects. Use `ensphere verify headerinjection` and `ensphere payloads header_injection`
+- **File upload bypass**: test upload endpoints for extension, MIME, and magic byte validation. Use `ensphere payloads file_upload`
+
+**Step 7 — Misconfiguration & Header Probes** (no user input needed):
+- **Clickjacking**: check framing protection on sensitive pages. Use `ensphere verify clickjacking`
+- **CORS**: check origin reflection on API endpoints. Use `ensphere verify cors`
+- **CSRF**: check token and SameSite enforcement on state-changing endpoints. Use `ensphere verify csrf`
+
+Run `ensphere verify --help` for the full list of 25 probes — use any that match the target's attack surface.
 
 After Phase A-BB, proceed to **Phase B: Exploitation** (same as white-box path — the exploitation steps are identical regardless of how injection points were discovered).
 

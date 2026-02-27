@@ -4,7 +4,7 @@
 
 ### Layer 1 — Payload Database
 
-1059 curated payloads across 21 vuln types, compiled from YAML seeds to embedded SQLite. Agent queries `ensphere payloads <vuln_type> [filters]` for deterministic, context-indexed payloads instead of generating from training data.
+1154 curated payloads across 25 vuln types, compiled from YAML seeds to embedded SQLite. Agent queries `ensphere payloads <vuln_type> [filters]` for deterministic, context-indexed payloads instead of generating from training data.
 
 Payloads indexed by **context**, not framework:
 - **SQLi**: db_engine (postgres/mysql/mssql/sqlite/oracle), technique, injection_surface, encoding, string_boundary
@@ -140,7 +140,7 @@ cli/
       scanner.go                  # Multi-worker source code scanner
       model.go                    # ScanResult, Match structs
     sinks/
-      data/sinks.yaml             # 14 categories: sqli, xss, ssrf, cmdi, lfi, ssti, deserialization, xxe, nosql, csrf, jwt, cors, redirect, idor
+      data/sinks.yaml             # 18 categories: cmdi, cors, csrf, deserialization, file_upload, header_injection, idor, jwt, ldap, lfi, nosql, redirect, sqli, ssrf, ssti, xpath, xss, xxe
       embed.go                    # go:embed data/*
       query.go                    # query by category
       model.go                    # Sink pattern struct
@@ -148,7 +148,7 @@ cli/
       enums.go                    # Validation maps for all enum fields
   tools/
     seedgen/main.go               # YAML seeds → SQLite compiler (validates enums at build)
-assets/seeds/                     # 24 YAML seed files
+assets/seeds/                     # 28 YAML seed files
 skills/                           # Claude Code skill files
   SKILL.md                        # /ensphere entry point
   methodology/                    # 01-recon through 07-report

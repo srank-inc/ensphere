@@ -306,3 +306,73 @@ mappings:
     - framework: "ISO 27001"
       control_ids: ["A.8.20", "A.8.26"]
       description: "Network security and application security"
+
+  ldap:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A03:2021 - Injection"]
+      description: "LDAP injection falls under the Injection category"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4", "6.5.1"]
+      description: "Prevent LDAP injection in custom software"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC7.1"]
+      description: "Access controls and directory service security"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.26", "A.8.28"]
+      description: "Application security and secure directory access"
+
+  xpath:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A03:2021 - Injection"]
+      description: "XPath injection falls under the Injection category"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4", "6.5.1"]
+      description: "Prevent XPath injection in XML processing code"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC7.1"]
+      description: "Input validation and data access controls"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.26", "A.8.28"]
+      description: "Secure coding and application security testing"
+
+  header_injection:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A03:2021 - Injection"]
+      description: "HTTP header injection (CRLF) is an injection vulnerability"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4"]
+      description: "Prevent header injection in HTTP response generation"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC7.1"]
+      description: "Output encoding and response integrity controls"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.26"]
+      description: "Application security requirements for HTTP handling"
+
+  file_upload:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A04:2021 - Insecure Design", "A05:2021 - Security Misconfiguration"]
+      description: "Unrestricted file upload is both a design flaw and misconfiguration"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4", "6.5.8"]
+      description: "File upload validation and access control in custom software"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC6.6"]
+      description: "Input validation and data integrity controls"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.26", "A.8.9"]
+      description: "Application security and configuration management"
+
+  clickjacking:
+    - framework: "OWASP Top 10 2021"
+      control_ids: ["A05:2021 - Security Misconfiguration"]
+      description: "Missing clickjacking protection is a security misconfiguration"
+    - framework: "PCI-DSS v4.0"
+      control_ids: ["6.2.4"]
+      description: "Implement framing protections in custom software"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1"]
+      description: "UI security and frame protection controls"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.26"]
+      description: "Application security requirements for UI protection"

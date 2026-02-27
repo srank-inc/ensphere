@@ -14,6 +14,8 @@ var ValidVulnTypes = map[string]bool{
 	"prototype_pollution": true, "graphql": true, "jwt": true,
 	"cors": true, "race_condition": true, "request_smuggling": true,
 	"cache_poisoning": true,
+	"ldap": true, "xpath": true, "header_injection": true, "file_upload": true,
+	"clickjacking": true,
 }
 
 var ValidTechniques = map[string]bool{
@@ -63,6 +65,21 @@ var ValidTechniques = map[string]bool{
 	"unkeyed_header": true, "unkeyed_cookie": true, "fat_get": true,
 	// Auth verify techniques
 	"no_token": true, "expired_token": true, "method_override": true,
+	// LDAP injection techniques
+	"ldap_filter_injection": true, "ldap_blind_boolean": true, "ldap_blind_error": true,
+	// XPath injection techniques
+	"xpath_injection": true, "xpath_blind_boolean": true, "xpath_blind_error": true,
+	// Header injection techniques
+	"crlf_injection": true, "response_splitting": true, "email_header_injection": true,
+	// File upload techniques
+	"extension_bypass": true, "mime_bypass": true, "polyglot_file": true,
+	"zip_path_traversal": true, "content_type_mismatch": true,
+	// Clickjacking technique
+	"frame_header_check": true,
+	// Rate limit bypass / account enumeration techniques
+	"rate_limit_bypass": true, "account_enumeration": true,
+	// DOM clobbering (XSS variant)
+	"dom_clobbering": true,
 }
 
 var ValidDBEngines = map[string]bool{

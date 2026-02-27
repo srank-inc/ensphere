@@ -29,7 +29,9 @@ var payloadsCmd = &cobra.Command{
 	Short: "Query the curated payload database",
 	Long: `Query curated security testing payloads by vulnerability type and context filters.
 
-Supported vuln_types: sqli, xss, ssrf, csv_injection, cmdi, lfi, ssti, deserialization, xxe, idor, authz, redirect, csrf
+Supported vuln_types: auth_bypass, cache_poisoning, cmdi, cors, csrf, csv_injection, deserialization, file_upload, graphql, header_injection, idor, jwt, ldap, lfi, nosql, prototype_pollution, race_condition, redirect, request_smuggling, sqli, ssrf, ssti, xpath, xss, xxe
+
+Note: clickjacking is a verify-only type with no payloads (detection is header-based).
 
 Examples:
   ensphere payloads sqli --db postgres --technique blind_time

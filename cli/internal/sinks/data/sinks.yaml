@@ -481,3 +481,101 @@ categories:
       extensions: [.js, .ts, .py, .java]
       description: "Spreadsheet parsing — XLSX files are ZIP+XML, XXE possible"
       risk: 3
+
+  ldap:
+    - name: ldap_search
+      pattern: 'ldap\.(search|bind|compare)\s*\('
+      extensions: [.py, .rb, .js, .ts]
+      description: "LDAP search/bind/compare — check for user input in filter string"
+      risk: 4
+    - name: ldap_filter_concat
+      pattern: '\(\&\(.*=.*\+.*\)'
+      extensions: [.py, .js, .ts, .java, .go]
+      description: "LDAP filter with string concatenation — injection risk"
+      risk: 4
+    - name: ldap_java
+      pattern: '(DirContext|InitialDirContext|LdapContext)\.(search|lookup)\s*\('
+      extensions: [.java]
+      description: "Java LDAP search or lookup — check for parameterized filters"
+      risk: 4
+    - name: ldap_go
+      pattern: 'ldap\.(NewSearchRequest|Search)\s*\('
+      extensions: [.go]
+      description: "Go LDAP search — check for user input in filter"
+      risk: 3
+    - name: ldap_php
+      pattern: 'ldap_(search|bind|read)\s*\('
+      extensions: [.php]
+      description: "PHP LDAP functions — check for unescaped user input in filter"
+      risk: 4
+
+  xpath:
+    - name: xpath_evaluate
+      pattern: '(xpath|evaluate|selectNodes|selectSingleNode)\s*\('
+      extensions: [.js, .ts, .py, .java, .php, .rb]
+      description: "XPath evaluation — check for user input in query"
+      risk: 4
+    - name: xpath_compile
+      pattern: 'XPathFactory|XPath\.compile\s*\('
+      extensions: [.java]
+      description: "Java XPath compilation — check for dynamic query strings"
+      risk: 4
+    - name: xpath_lxml
+      pattern: '\.xpath\s*\('
+      extensions: [.py]
+      description: "Python lxml/ElementTree XPath — check for user input in expression"
+      risk: 4
+    - name: xpath_dom
+      pattern: 'document\.evaluate\s*\('
+      extensions: [.js, .ts]
+      description: "DOM XPath evaluation — check for user input in expression"
+      risk: 3
+
+  header_injection:
+    - name: set_header_dynamic
+      pattern: '(setHeader|addHeader|writeHead|set)\s*\(.*req\.'
+      extensions: [.js, .ts, .py, .java, .go]
+      description: "HTTP header set with request input — CRLF injection risk"
+      risk: 4
+    - name: redirect_dynamic
+      pattern: 'res\.redirect\s*\(.*req\.'
+      extensions: [.js, .ts]
+      description: "Redirect with user-controlled URL — header injection via CRLF"
+      risk: 3
+    - name: response_header_format
+      pattern: 'Header\(\)\.Set\s*\(.*r\.'
+      extensions: [.go]
+      description: "Go response header set with request input"
+      risk: 3
+    - name: email_header
+      pattern: '(send_mail|sendmail|MIMEText|MIMEMultipart)\s*\('
+      extensions: [.py, .php]
+      description: "Email sending function — check for CRLF in headers"
+      risk: 3
+
+  file_upload:
+    - name: multer_upload
+      pattern: 'multer\s*\(|upload\.(single|array|fields)\s*\('
+      extensions: [.js, .ts]
+      description: "Multer file upload — check for extension/MIME validation"
+      risk: 3
+    - name: file_upload_handler
+      pattern: '(formidable|busboy|multiparty)\s*\('
+      extensions: [.js, .ts]
+      description: "File upload handler — check for file type validation"
+      risk: 3
+    - name: move_uploaded_file
+      pattern: 'move_uploaded_file\s*\('
+      extensions: [.php]
+      description: "PHP file upload move — check for extension and path validation"
+      risk: 4
+    - name: file_save
+      pattern: '(file\.save|request\.files|uploaded_file)\s*'
+      extensions: [.py]
+      description: "Python file upload handling — check for filename sanitization"
+      risk: 3
+    - name: storage_upload
+      pattern: '(putObject|upload|writeFile)\s*\(.*filename'
+      extensions: [.js, .ts, .py, .go]
+      description: "Cloud storage upload with dynamic filename — check for path traversal"
+      risk: 3

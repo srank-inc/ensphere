@@ -54,7 +54,7 @@ make install-all  # binary + skill files
 
 ### payloads — Query payload database
 
-1059 payloads across 21 vulnerability types. YAML seeds compiled to SQLite, queried at runtime.
+1154 payloads across 25 vulnerability types. YAML seeds compiled to SQLite, queried at runtime.
 
 ```bash
 ensphere payloads sqli --db postgres --technique blind_time
@@ -67,7 +67,7 @@ JSON output: `query`, `count`, `results[]` (payload, placeholders, evidence_type
 
 ### verify — Targeted verification probes
 
-23 probe types. All verify commands output JSON (schema v2: measurements only, no status/confidence), log evidence to `./evidence.jsonl`, and use exit codes: 0 = probes completed, 2 = scope/usage error, 3 = runtime failure. All require `--in-scope`.
+25 probe types. All verify commands output JSON (schema v2: measurements only, no status/confidence), log evidence to `./evidence.jsonl`, and use exit codes: 0 = probes completed, 2 = scope/usage error, 3 = runtime failure. All require `--in-scope`.
 
 **SQLi** — Techniques: `blind_time` (default), `blind_boolean`, `error_based`
 ```bash
@@ -236,11 +236,11 @@ ensphere sinks              # list categories with counts
 ensphere sinks sqli         # patterns for category
 ```
 
-Categories: `sqli`, `xss`, `ssrf`, `cmdi`, `lfi`, `ssti`, `deserialization`, `xxe`, `nosql`, `csrf`, `jwt`, `cors`, `redirect`, `idor`. Each pattern: regex, file extensions, description, risk.
+Categories: `cmdi`, `cors`, `csrf`, `deserialization`, `file_upload`, `header_injection`, `idor`, `jwt`, `ldap`, `lfi`, `nosql`, `redirect`, `sqli`, `ssrf`, `ssti`, `xpath`, `xss`, `xxe`. Each pattern: regex, file extensions, description, risk.
 
 ### compliance — Compliance mapping
 
-Maps 22 vuln types to OWASP Top 10, PCI-DSS v4.0, SOC 2, ISO 27001.
+Maps 27 vuln types to OWASP Top 10, PCI-DSS v4.0, SOC 2, ISO 27001.
 
 ```bash
 ensphere compliance sqli

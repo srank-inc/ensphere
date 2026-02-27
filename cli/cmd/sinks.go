@@ -15,7 +15,7 @@ var sinksCmd = &cobra.Command{
 	Short: "Code sink patterns for vulnerability scanning",
 	Long: `List dangerous code patterns (sinks) by vulnerability category.
 
-Categories: sqli, xss, ssrf, cmdi, lfi, ssti, deserialization, xxe
+Categories: cmdi, cors, csrf, deserialization, file_upload, header_injection, idor, jwt, ldap, lfi, nosql, redirect, sqli, ssrf, ssti, xpath, xss, xxe
 
 Examples:
   ensphere sinks              # list all categories with pattern counts
