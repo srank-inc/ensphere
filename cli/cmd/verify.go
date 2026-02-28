@@ -34,7 +34,9 @@ Available subcommands:
   csvinjection    Verify CSV injection
   authz           Verify authorization bypass
   clickjacking    Verify clickjacking protection (X-Frame-Options, CSP frame-ancestors)
-  headerinjection Verify CRLF header injection`,
+  headerinjection Verify CRLF header injection
+  websocket       Verify WebSocket security
+  grpc            Verify gRPC security`,
 }
 
 func init() {

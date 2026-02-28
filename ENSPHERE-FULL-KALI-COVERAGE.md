@@ -34,11 +34,11 @@ Ensphere is an autonomous penetration testing framework that combines Claude Cod
 |-------|-----------|---------|
 | **Methodology** | 8 markdown skill files (sessions 01-08) | Tells the AI *what to do* — recon, injection, auth, authz, XSS, SSRF, cloud, report |
 | **Payloads** | Curated SQLite database (1154 payloads, 25 vuln types, 65+ techniques) | Provides battle-tested attack strings instead of LLM-hallucinated payloads |
-| **Verification** | 25 Go-based probes (SQLi, XSS, IDOR, SSRF, Auth, RLS, CMDi, LFI, SSTI, XXE, Deserialization, CSRF, NoSQL, JWT, CORS, Prototype Pollution, GraphQL, Race, Smuggling, Cache Poisoning, Redirect, CSV Injection, AuthZ, Clickjacking, Header Injection) | Confirms findings with deterministic multi-round testing |
+| **Verification** | 27 Go-based probes (SQLi, XSS, IDOR, SSRF, Auth, RLS, CMDi, LFI, SSTI, XXE, Deserialization, CSRF, NoSQL, JWT, CORS, Prototype Pollution, GraphQL, Race, Smuggling, Cache Poisoning, Redirect, CSV Injection, AuthZ, Clickjacking, Header Injection, WebSocket, gRPC) | Confirms findings with deterministic multi-round testing |
 | **Templates** | 5 Python exploit scripts (IDOR, SQLi, SSRF, auth replay, upload bypass) | Pre-built exploit scaffolds |
 | **Scanner** | Concurrent regex-based code scanner with sink pattern database | Finds dangerous code patterns across 18 categories and multiple languages |
 | **CVSS** | Full v3.1 + v4.0 calculator (274-entry MacroVector lookup table for v4.0) | Standardized severity scoring per FIRST specification |
-| **Compliance** | OWASP Top 10 2025, PCI-DSS v4.0.1, SOC 2, ISO 27001 mappings for 36 vuln types | Maps findings to compliance frameworks |
+| **Compliance** | OWASP Top 10 2025, PCI-DSS v4.0.1, SOC 2, ISO 27001, OWASP API Security Top 10 2023 mappings for 40 vuln types | Maps findings to compliance frameworks |
 | **Evidence** | JSONL writer with auto-redaction of secrets (JWTs, Bearer tokens) | Audit trail with sequential EVID-XXX IDs |
 | **Checklists** | 4 framework-specific overlays (Next.js, Supabase RLS, tRPC, Cloudflare R2) | Targeted security checks per tech stack |
 
@@ -986,9 +986,9 @@ Even with full Kali coverage, some penetration testing activities are fundamenta
 |-----------|--------------|---------------|
 | **Methodology files** | 8 sessions (recon → injection → auth → authz → XSS → SSRF → cloud → report) | Additional session tracks: network exploitation, privilege escalation, Active Directory, lateral movement, post-exploitation. Could be structured as optional "expansion packs" that activate based on engagement scope. |
 | **Payload database** | 25 vuln types, 1154 payloads (web/application layer) | New categories: network service payloads (SSH, SMB, FTP attack strings), privilege escalation commands per OS/kernel version, AD attack queries, cloud-specific exploitation payloads |
-| **Verification probes** | 25 probes (SQLi, XSS, IDOR, SSRF, Auth, RLS, CMDi, LFI, SSTI, XXE, Deserialization, CSRF, NoSQL, JWT, CORS, Prototype Pollution, GraphQL, Race, Smuggling, Cache Poisoning, Redirect, CSV Injection, AuthZ, Clickjacking, Header Injection) | New probes: `ensphere verify service` (test network service auth), `ensphere verify privesc` (confirm privilege escalation), `ensphere verify ad` (test AD permissions), `ensphere verify cloud` (test cloud metadata access) |
+| **Verification probes** | 27 probes (SQLi, XSS, IDOR, SSRF, Auth, RLS, CMDi, LFI, SSTI, XXE, Deserialization, CSRF, NoSQL, JWT, CORS, Prototype Pollution, GraphQL, Race, Smuggling, Cache Poisoning, Redirect, CSV Injection, AuthZ, Clickjacking, Header Injection, WebSocket, gRPC) | New probes: `ensphere verify service` (test network service auth), `ensphere verify privesc` (confirm privilege escalation), `ensphere verify ad` (test AD permissions), `ensphere verify cloud` (test cloud metadata access) |
 | **Evidence system** | JSONL with secret redaction | Expand redaction to cover AD hashes, cloud credentials, internal IP addresses. Add screenshot support for post-exploitation proof. |
-| **Compliance mapping** | 4 frameworks, 36 vuln types | Add NIST 800-53, HIPAA. Expand existing frameworks to cover network/infrastructure controls. |
+| **Compliance mapping** | 5 frameworks, 40 vuln types | Add NIST 800-53, HIPAA. Expand existing frameworks to cover network/infrastructure controls. |
 | **CLI binary** | Runs on macOS/Linux | Kali Linux becomes the primary deployment target for full-scope engagements. The binary itself is cross-platform (Go), but the methodology would reference Kali-specific tools. |
 | **Runtime environment** | Claude Code on developer machine | Claude Code on Kali Linux (VM, bare metal, or WSL2). Needs network access to target environment. May need VPN or network pivoting capabilities. |
 

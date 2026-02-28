@@ -66,12 +66,16 @@ Test files are organized by concern:
 |------|---------|---------|
 | `verify/helpers_test.go` | verify | Shared test utilities (newTestServer, baseProbeConfig, assertScopeErr, handler factories) |
 | `verify/probe_test.go` | verify | Core infrastructure (CheckScope, CheckMaxRisk, HTTPProbe) |
-| `verify/contracts_test.go` | verify | Safety gate contracts for all 23 probes (scope, max-risk, technique validation) |
+| `verify/contracts_test.go` | verify | Safety gate contracts for all 27 probes (scope, max-risk, technique validation) |
 | `verify/integration_injection_test.go` | verify | Integration: sqli, xss, cmdi, lfi, ssti, xxe, nosql, deserialization, csvinjection |
 | `verify/integration_auth_test.go` | verify | Integration: auth, authz, rls, jwt, cors, csrf, idor |
 | `verify/integration_infra_test.go` | verify | Integration: ssrf, redirect, protopollution, graphql, cachepoisoning |
 | `verify/smuggling_test.go` | verify | Smuggling: buildSmugglingPayload + rawHTTPProbe |
 | `verify/race_test.go` | verify | Race: concurrent burst verification |
+| `verify/websocket_test.go` | verify | WebSocket: computeWSAccept, generateWSKey, parseHTTPStatus |
+| `verify/grpc_test.go` | verify | gRPC: extractServiceNames, isPrintable |
+| `verify/integration_websocket_test.go` | verify | Integration: WebSocket upgrade, origin check, hijack |
+| `verify/integration_grpc_test.go` | verify | Integration: gRPC plaintext detection, reflection probe |
 | `evidence/evidence_test.go` | evidence | Hash chain integrity, redaction, read/write/filter, NextID (empty/missing/existing) |
 | `payloads/drift_test.go` | payloads | Docs drift guard (payload count + vuln type canary values) |
 
@@ -81,7 +85,7 @@ Test files are organized by concern:
 - No `t.Parallel()` in timing-sensitive or raw-TCP tests
 - Use `newTestServer(t, handler)` for all test HTTP servers (IPv4-only, auto-cleanup); never use `httptest.NewServer` directly
 - Use `t.Cleanup()` for net.Listener, temp files
-- Drift test canary values (1059 payloads, 21 vuln types) must be updated alongside docs when payloads change
+- Drift test canary values (1154 payloads, 25 DB vuln types) must be updated alongside docs when payloads change
 
 ## Conventions
 

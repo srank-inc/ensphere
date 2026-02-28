@@ -331,6 +331,38 @@ type AuthZMeasurements struct {
 	HashesMatch     bool        `json:"hashes_match"`
 }
 
+// OriginCheckResult captures the result of a single origin-specific WebSocket upgrade attempt.
+type OriginCheckResult struct {
+	Origin        string `json:"origin"`
+	UpgradeStatus int    `json:"upgrade_status"`
+	UpgradeSuccess bool  `json:"upgrade_success"`
+	ElapsedMs     int64  `json:"elapsed_ms"`
+}
+
+// WebSocketMeasurements holds WebSocket security probe measurements.
+type WebSocketMeasurements struct {
+	Technique      string              `json:"technique"`
+	UpgradeStatus  int                 `json:"upgrade_status"`
+	UpgradeSuccess bool                `json:"upgrade_success"`
+	OriginResults  []OriginCheckResult `json:"origin_results,omitempty"`
+	Baseline       RoundResult         `json:"baseline"`
+	ProbeRounds    []RoundResult       `json:"probe_rounds"`
+	FramesSent     int                 `json:"frames_sent"`
+	FramesReceived int                 `json:"frames_received"`
+	PayloadUsed    string              `json:"payload_used"`
+}
+
+// GRPCMeasurements holds gRPC security probe measurements.
+type GRPCMeasurements struct {
+	Technique         string   `json:"technique"`
+	ReflectionEnabled bool     `json:"reflection_enabled"`
+	ServicesFound     []string `json:"services_found"`
+	TLSAccepted       bool    `json:"tls_accepted"`
+	PlaintextAccepted bool    `json:"plaintext_accepted"`
+	TLSRequired       bool    `json:"tls_required"`
+	ElapsedMs         int64   `json:"elapsed_ms"`
+}
+
 // Timer tracks probe duration.
 type Timer struct {
 	start time.Time

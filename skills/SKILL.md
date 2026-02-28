@@ -415,6 +415,7 @@ ensphere compliance --list     # list all vuln_types with framework counts
 - PCI-DSS v4.0.1
 - SOC 2 Trust Services Criteria
 - ISO 27001 (Annex A)
+- OWASP API Security Top 10 (2023)
 
 Output is JSON with `vuln_type`, `framework_count`, and `mappings[]` (each with `framework`, `control_ids`, `description`).
 

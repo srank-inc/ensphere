@@ -68,7 +68,7 @@ JSON output: `query`, `count`, `results[]` (payload, placeholders, evidence_type
 
 ### verify — Targeted verification probes
 
-25 probe types. All verify commands output JSON (schema v2: measurements only, no status/confidence), log evidence to `./evidence.jsonl`, and use exit codes: 0 = probes completed, 2 = scope/usage error, 3 = runtime failure. All require `--in-scope`.
+27 probe types. All verify commands output JSON (schema v2: measurements only, no status/confidence), log evidence to `./evidence.jsonl`, and use exit codes: 0 = probes completed, 2 = scope/usage error, 3 = runtime failure. All require `--in-scope`.
 
 **SQLi** — Techniques: `blind_time` (default), `blind_boolean`, `error_based`
 ```bash
@@ -241,7 +241,7 @@ Categories: `cmdi`, `cors`, `csrf`, `deserialization`, `file_upload`, `header_in
 
 ### compliance — Compliance mapping
 
-Maps 36 vuln types (including 8 cloud categories) to OWASP Top 10 2025, PCI-DSS v4.0.1, SOC 2, ISO 27001.
+Maps 40 vuln types (including 8 cloud categories) to OWASP Top 10 2025, PCI-DSS v4.0.1, SOC 2, ISO 27001, OWASP API Security Top 10 2023.
 
 ```bash
 ensphere compliance sqli

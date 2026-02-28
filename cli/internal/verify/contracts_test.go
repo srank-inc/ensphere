@@ -320,6 +320,34 @@ var contracts = []probeContract{
 				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
 		},
 	},
+	{name: "websocket", risk: 2,
+		callOutOfScope: func() (*ProbeResult, error) {
+			return VerifyWebSocket(WebSocketConfig{URL: "ws://evil.example.com/ws", Technique: "ws_injection", Payload: "test",
+				ProbeConfig: ProbeConfig{InScope: []string{"safe.example.com"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callLowRisk: func() (*ProbeResult, error) {
+			return VerifyWebSocket(WebSocketConfig{URL: "ws://localhost/ws", Technique: "ws_injection", Payload: "test",
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callBadTechnique: func() (*ProbeResult, error) {
+			return VerifyWebSocket(WebSocketConfig{URL: "ws://localhost/ws", Technique: "INVALID", Payload: "test",
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+	},
+	{name: "grpc", risk: 2,
+		callOutOfScope: func() (*ProbeResult, error) {
+			return VerifyGRPC(GRPCConfig{URL: "http://evil.example.com:50051", Technique: "grpc_reflection",
+				ProbeConfig: ProbeConfig{InScope: []string{"safe.example.com"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callLowRisk: func() (*ProbeResult, error) {
+			return VerifyGRPC(GRPCConfig{URL: "http://localhost:50051", Technique: "grpc_reflection",
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callBadTechnique: func() (*ProbeResult, error) {
+			return VerifyGRPC(GRPCConfig{URL: "http://localhost:50051", Technique: "INVALID",
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+	},
 }
 
 func TestContracts_ScopeEnforcement(t *testing.T) {

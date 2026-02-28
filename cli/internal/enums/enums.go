@@ -22,6 +22,10 @@ var ValidVulnTypes = map[string]bool{
 	"cloud_secrets": true, "iac_misconfig": true,
 	// OWASP A10:2025 — Mishandling of Exceptional Conditions (no payloads — compliance mapping and evidence logging)
 	"error_handling": true,
+	// OWASP API Security Top 10 2023 — compliance mapping and evidence logging only (no payloads)
+	"property_authz": true, "api_inventory": true,
+	// Transport-level — compliance mapping and verification probes (no payloads)
+	"websocket": true, "grpc": true,
 }
 
 var ValidTechniques = map[string]bool{
@@ -86,6 +90,10 @@ var ValidTechniques = map[string]bool{
 	"rate_limit_bypass": true, "account_enumeration": true,
 	// DOM clobbering (XSS variant)
 	"dom_clobbering": true,
+	// WebSocket techniques
+	"ws_injection": true, "ws_hijack": true, "ws_origin_check": true,
+	// gRPC techniques
+	"grpc_reflection": true, "grpc_plaintext": true,
 }
 
 var ValidDBEngines = map[string]bool{
@@ -102,6 +110,7 @@ var ValidInjectionSurfaces = map[string]bool{
 	"json_body": true, "form_body": true,
 	"xml_body": true, "file_upload": true,
 	"websocket": true, "graphql_query": true,
+	"grpc_unary": true,
 }
 
 var ValidEncodings = map[string]bool{

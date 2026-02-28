@@ -3,6 +3,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A05:2025 - Injection"]
       description: "SQL injection falls under the Injection category"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API1:2023 - Broken Object Level Authorization", "API8:2023 - Security Misconfiguration"]
+      description: "Object-level authz bypass via injection + input validation misconfiguration"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4"]
       description: "Software engineering techniques to prevent injection attacks"
@@ -17,6 +20,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A05:2025 - Injection"]
       description: "Cross-site scripting is classified under Injection"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration"]
+      description: "Missing output encoding is a security misconfiguration"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4"]
       description: "Software engineering techniques to prevent XSS attacks"
@@ -31,6 +37,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A01:2025 - Broken Access Control"]
       description: "SSRF is classified under Broken Access Control (consolidated from standalone A10:2021)"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API7:2023 - Server Side Request Forgery"]
+      description: "Dedicated SSRF category in API Security Top 10"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4", "1.3.1"]
       description: "Network segmentation and custom code security"
@@ -45,6 +54,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A05:2025 - Injection"]
       description: "Command injection falls under the Injection category"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration"]
+      description: "Input handling misconfiguration"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4"]
       description: "Software engineering techniques to prevent command injection"
@@ -59,6 +71,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A01:2025 - Broken Access Control"]
       description: "Local file inclusion is a path traversal access control issue"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API1:2023 - Broken Object Level Authorization"]
+      description: "Path traversal bypasses object-level access controls"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4", "7.2.1"]
       description: "Prevent path traversal and enforce access control model"
@@ -73,6 +88,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A05:2025 - Injection"]
       description: "Server-side template injection falls under Injection"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration"]
+      description: "Misconfigured server-side processing"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4"]
       description: "Prevent injection vulnerabilities in custom code"
@@ -87,6 +105,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A08:2025 - Software or Data Integrity Failures"]
       description: "Insecure deserialization is a data integrity issue"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration", "API10:2023 - Unsafe Consumption of APIs"]
+      description: "Misconfiguration and unsafe data consumption"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4"]
       description: "Software engineering techniques to validate data integrity"
@@ -101,6 +122,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A02:2025 - Security Misconfiguration"]
       description: "XXE often results from misconfigured XML parsers"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration"]
+      description: "Misconfigured XML parser"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4", "2.2.1"]
       description: "Secure XML parser configuration and software engineering techniques"
@@ -115,6 +139,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A01:2025 - Broken Access Control"]
       description: "IDOR is a direct access control vulnerability"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API1:2023 - Broken Object Level Authorization"]
+      description: "Primary example of broken object-level authorization"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4", "7.2.1", "7.2.2"]
       description: "Access control model and role-based access enforcement"
@@ -129,6 +156,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A01:2025 - Broken Access Control"]
       description: "Authorization bypass is a broken access control issue"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API1:2023 - Broken Object Level Authorization", "API5:2023 - Broken Function Level Authorization"]
+      description: "Object-level and function-level authorization bypass"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["7.2.1", "7.2.2", "6.2.4"]
       description: "Access control model, role-based access, and software engineering techniques"
@@ -143,6 +173,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A01:2025 - Broken Access Control"]
       description: "Open redirects enable phishing and access control bypass"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration"]
+      description: "Misconfigured URL validation"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4"]
       description: "Validate redirect targets in custom software"
@@ -157,6 +190,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A01:2025 - Broken Access Control"]
       description: "CSRF exploits lack of request origin validation"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration"]
+      description: "Missing CSRF protection is a security misconfiguration"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4"]
       description: "Software engineering techniques to prevent CSRF"
@@ -171,6 +207,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A05:2025 - Injection"]
       description: "CSV/formula injection is an injection vulnerability"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration"]
+      description: "Misconfigured output encoding"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4"]
       description: "Output encoding in exported data"
@@ -185,6 +224,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A05:2025 - Injection"]
       description: "NoSQL injection falls under the Injection category"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API1:2023 - Broken Object Level Authorization", "API8:2023 - Security Misconfiguration"]
+      description: "Authorization bypass and input validation misconfiguration"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4"]
       description: "Software engineering techniques to prevent NoSQL injection"
@@ -199,6 +241,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A07:2025 - Authentication Failures"]
       description: "Authentication bypass is an auth failure"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API2:2023 - Broken Authentication"]
+      description: "Broken authentication"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["8.2.1", "8.3.1", "6.2.4"]
       description: "Unique user identification, strong authentication, and secure software engineering"
@@ -213,6 +258,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A02:2025 - Security Misconfiguration"]
       description: "Cache poisoning exploits misconfigured caching layers"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration"]
+      description: "Misconfigured caching"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4"]
       description: "Secure configuration of caching infrastructure"
@@ -227,6 +275,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A02:2025 - Security Misconfiguration"]
       description: "CORS misconfiguration is a security configuration failure"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration"]
+      description: "Misconfigured cross-origin policy"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4", "1.3.1"]
       description: "Secure cross-origin policy configuration"
@@ -241,6 +292,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A01:2025 - Broken Access Control", "A02:2025 - Security Misconfiguration"]
       description: "GraphQL abuse via introspection, batching, or excessive nesting"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API1:2023 - Broken Object Level Authorization", "API4:2023 - Unrestricted Resource Consumption", "API8:2023 - Security Misconfiguration"]
+      description: "Access control, resource consumption, and introspection misconfiguration"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4", "7.2.1"]
       description: "Software engineering techniques and API access control model"
@@ -255,6 +309,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A07:2025 - Authentication Failures"]
       description: "JWT manipulation is an authentication/cryptographic failure"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API2:2023 - Broken Authentication"]
+      description: "Authentication failure"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["8.2.1", "8.3.1", "6.2.4"]
       description: "Strong authentication and cryptographic controls"
@@ -269,6 +326,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A05:2025 - Injection"]
       description: "Prototype pollution is a JavaScript object injection"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration"]
+      description: "Misconfigured object handling"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4"]
       description: "Prevent object injection in client-side code"
@@ -283,6 +343,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A06:2025 - Insecure Design"]
       description: "Race conditions are a design flaw in concurrent processing"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API4:2023 - Unrestricted Resource Consumption", "API6:2023 - Unrestricted Access to Sensitive Business Flows"]
+      description: "Resource consumption and business flow abuse"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4"]
       description: "Secure transaction processing and concurrency control"
@@ -297,6 +360,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A02:2025 - Security Misconfiguration"]
       description: "Request smuggling exploits misconfigured HTTP processing"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration"]
+      description: "Misconfigured HTTP processing"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4", "1.3.1"]
       description: "Secure HTTP proxy and load balancer configuration"
@@ -311,6 +377,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A05:2025 - Injection"]
       description: "LDAP injection falls under the Injection category"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration"]
+      description: "Misconfigured input handling"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4"]
       description: "Software engineering techniques to prevent LDAP injection"
@@ -325,6 +394,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A05:2025 - Injection"]
       description: "XPath injection falls under the Injection category"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration"]
+      description: "Misconfigured XML query handling"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4"]
       description: "Software engineering techniques to prevent XPath injection"
@@ -339,6 +411,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A05:2025 - Injection"]
       description: "HTTP header injection (CRLF) is an injection vulnerability"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration"]
+      description: "Misconfigured HTTP response generation"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4"]
       description: "Prevent header injection in HTTP response generation"
@@ -353,6 +428,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A06:2025 - Insecure Design", "A02:2025 - Security Misconfiguration"]
       description: "Unrestricted file upload is both a design flaw and misconfiguration"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration"]
+      description: "Misconfigured upload validation"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4", "6.3.1"]
       description: "Software engineering techniques and vulnerability management for file uploads"
@@ -367,6 +445,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A02:2025 - Security Misconfiguration"]
       description: "Missing clickjacking protection is a security misconfiguration"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration"]
+      description: "Missing framing protection"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4"]
       description: "Implement framing protections in custom software"
@@ -493,6 +574,9 @@ mappings:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A10:2025 - Mishandling of Exceptional Conditions"]
       description: "Verbose error messages, fail-open behavior, unhandled exceptions, missing error pages"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration"]
+      description: "Verbose errors are a security misconfiguration"
     - framework: "PCI-DSS v4.0.1"
       control_ids: ["6.2.4", "2.2.1"]
       description: "Software engineering techniques to handle errors securely; configuration standards for error pages"
@@ -502,3 +586,71 @@ mappings:
     - framework: "ISO 27001"
       control_ids: ["A.8.9", "A.8.26"]
       description: "Configuration management for error handling and application security requirements"
+
+  property_authz:
+    - framework: "OWASP Top 10 2025"
+      control_ids: ["A01:2025 - Broken Access Control"]
+      description: "Object property-level authorization is an access control issue"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API3:2023 - Broken Object Property Level Authorization"]
+      description: "Broken object property level authorization"
+    - framework: "PCI-DSS v4.0.1"
+      control_ids: ["6.2.4", "7.2.1"]
+      description: "Software engineering techniques and access control model"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC6.3"]
+      description: "Logical access and role-based access controls"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.3", "A.8.26"]
+      description: "Information access restriction and application security"
+
+  api_inventory:
+    - framework: "OWASP Top 10 2025"
+      control_ids: ["A02:2025 - Security Misconfiguration"]
+      description: "Improper API inventory management is a security misconfiguration"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API9:2023 - Improper Inventory Management"]
+      description: "Improper inventory management"
+    - framework: "PCI-DSS v4.0.1"
+      control_ids: ["6.3.2", "2.2.1"]
+      description: "Software inventory and configuration standards"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC7.1"]
+      description: "Logical access controls and system monitoring"
+    - framework: "ISO 27001"
+      control_ids: ["A.5.9", "A.8.9"]
+      description: "Inventory of information assets and configuration management"
+
+  websocket:
+    - framework: "OWASP Top 10 2025"
+      control_ids: ["A01:2025 - Broken Access Control"]
+      description: "Cross-origin WebSocket hijacking is an access control issue"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration"]
+      description: "Missing origin validation is a security misconfiguration"
+    - framework: "PCI-DSS v4.0.1"
+      control_ids: ["6.2.4"]
+      description: "Software engineering techniques for WebSocket security"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC6.6"]
+      description: "Logical access and system boundary protection"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.26"]
+      description: "Application security requirements for WebSocket handling"
+
+  grpc:
+    - framework: "OWASP Top 10 2025"
+      control_ids: ["A02:2025 - Security Misconfiguration"]
+      description: "gRPC reflection and plaintext transport are security misconfigurations"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API8:2023 - Security Misconfiguration", "API9:2023 - Improper Inventory Management"]
+      description: "Reflection exposure and improper service inventory"
+    - framework: "PCI-DSS v4.0.1"
+      control_ids: ["6.2.4", "2.2.1"]
+      description: "Software engineering techniques and configuration standards"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC7.1"]
+      description: "Logical access controls and system monitoring"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.9", "A.8.26"]
+      description: "Configuration management and application security"

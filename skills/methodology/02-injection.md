@@ -94,7 +94,7 @@ Read the Technology Profile from `ensphere-pentest/progress.md` for DB engine an
 - **CORS**: check origin reflection on API endpoints. Use `ensphere verify cors`
 - **CSRF**: check token and SameSite enforcement on state-changing endpoints. Use `ensphere verify csrf`
 
-Run `ensphere verify --help` for the full list of 25 probes — use any that match the target's attack surface.
+Run `ensphere verify --help` for the full list of 27 probes — use any that match the target's attack surface.
 
 After Phase A-BB, proceed to **Phase B: Exploitation** (same as white-box path — the exploitation steps are identical regardless of how injection points were discovered).
 

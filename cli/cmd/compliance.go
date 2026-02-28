@@ -17,7 +17,7 @@ var complianceCmd = &cobra.Command{
 	Short: "Compliance framework mappings for vulnerability types",
 	Long: `Map vulnerability types to compliance framework controls.
 
-Frameworks: OWASP Top 10 2025, PCI-DSS v4.0.1, SOC 2, ISO 27001
+Frameworks: OWASP Top 10 2025, OWASP API Security Top 10 2023, PCI-DSS v4.0.1, SOC 2, ISO 27001
 
 Examples:
   ensphere compliance sqli       # compliance mappings for SQL injection
