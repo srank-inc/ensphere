@@ -1,4 +1,4 @@
-# Session 07: Executive Report
+# Session 08: Executive Report
 
 Synthesize all category reports into a final security assessment.
 
@@ -21,6 +21,7 @@ Synthesize all category reports into a final security assessment.
    - `ensphere-pentest/04-authz/report.md`
    - `ensphere-pentest/05-xss/report.md`
    - `ensphere-pentest/06-ssrf/report.md`
+   - `ensphere-pentest/07-cloud/report.md`
 
 2. Read external scan results (if they exist):
    - `ensphere-pentest/01-recon/nmap.txt`
@@ -29,17 +30,18 @@ Synthesize all category reports into a final security assessment.
 
 3. Read `ensphere-pentest/config.md` for target details and authorization statement.
 
-4. Read all evidence files from sessions 02-06:
+4. Read all evidence files from sessions 02-07:
    - `ensphere-pentest/02-injection/evidence.jsonl`
    - `ensphere-pentest/03-auth/evidence.jsonl`
    - `ensphere-pentest/04-authz/evidence.jsonl`
    - `ensphere-pentest/05-xss/evidence.jsonl`
    - `ensphere-pentest/06-ssrf/evidence.jsonl`
+   - `ensphere-pentest/07-cloud/evidence.jsonl`
    Use `ensphere evidence query --file <path>` to read entries from each.
 
 ## Report Template
 
-Write to `ensphere-pentest/07-report/report.md`:
+Write to `ensphere-pentest/08-report/report.md`:
 
 ```markdown
 # Security Assessment Report
@@ -56,7 +58,7 @@ Write to `ensphere-pentest/07-report/report.md`:
 ## Executive Summary
 - **Target**: [URL from config]
 - **Assessment Date**: [current date]
-- **Scope**: Authentication, authorization, injection, XSS, SSRF
+- **Scope**: Authentication, authorization, injection, XSS, SSRF, cloud security
 
 ## Assessment Mode Notes (Black-Box Only)
 
@@ -88,6 +90,7 @@ Include this section ONLY when Assessment Mode is BLACK_BOX.
 | Authorization | N | N | N | N | N |
 | XSS | N | N | N | N | N |
 | SSRF | N | N | N | N | N |
+| Cloud | N | N | N | N | N |
 | **Total** | **N** | **N** | **N** | **N** | **N** |
 
 ## Remediation Timeline
@@ -104,7 +107,7 @@ Include this section ONLY when Assessment Mode is BLACK_BOX.
 [For each EXPLOITED and POTENTIAL vulnerability across all categories, ordered by CVSS score descending:]
 
 ### VULN-{NNN}: [Title]
-- **Category**: [Injection/Auth/Authz/XSS/SSRF]
+- **Category**: [Injection/Auth/Authz/XSS/SSRF/Cloud]
 - **Severity**: [Critical/High/Medium/Low]
 - **CVSS v4.0**: [score] [severity] `[vector string]`
 - **CVSS v3.1**: [score] [severity] `[vector string]`
@@ -148,28 +151,28 @@ Include when Assessment Mode is BLACK_BOX:
 
 ## Appendix B: Compliance Summary
 
-### OWASP Top 10 2021
+### OWASP Top 10 2025
 | Control ID | Control Name | Status | Related Findings |
 |------------|-------------|--------|-----------------|
 | A01 | Broken Access Control | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A02 | Cryptographic Failures | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A03 | Injection | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A04 | Insecure Design | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A05 | Security Misconfiguration | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A06 | Vulnerable Components | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A07 | Auth Failures | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A08 | Software/Data Integrity | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A09 | Logging Failures | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A10 | SSRF | PASS/FAIL/NOT TESTED | VULN-IDs |
+| A02 | Security Misconfiguration | PASS/FAIL/NOT TESTED | VULN-IDs |
+| A03 | Software Supply Chain Failures | PASS/FAIL/NOT TESTED | VULN-IDs |
+| A04 | Cryptographic Failures | PASS/FAIL/NOT TESTED | VULN-IDs |
+| A05 | Injection | PASS/FAIL/NOT TESTED | VULN-IDs |
+| A06 | Insecure Design | PASS/FAIL/NOT TESTED | VULN-IDs |
+| A07 | Authentication Failures | PASS/FAIL/NOT TESTED | VULN-IDs |
+| A08 | Software or Data Integrity Failures | PASS/FAIL/NOT TESTED | VULN-IDs |
+| A09 | Security Logging and Alerting Failures | PASS/FAIL/NOT TESTED | VULN-IDs |
+| A10 | Mishandling of Exceptional Conditions | PASS/FAIL/NOT TESTED | VULN-IDs |
 
-### PCI-DSS v4.0
+### PCI-DSS v4.0.1
 | Control ID | Control Name | Status | Related Findings |
 |------------|-------------|--------|-----------------|
 | 6.2.4 | Software Engineering Techniques | PASS/FAIL/NOT TESTED | VULN-IDs |
-| 6.5.1 | Injection Flaws | PASS/FAIL/NOT TESTED | VULN-IDs |
-| 6.5.7 | Cross-Site Scripting | PASS/FAIL/NOT TESTED | VULN-IDs |
-| 6.5.8 | Improper Access Control | PASS/FAIL/NOT TESTED | VULN-IDs |
-| 6.5.10 | Authentication Flaws | PASS/FAIL/NOT TESTED | VULN-IDs |
+| 7.2.1 | Access Control Model | PASS/FAIL/NOT TESTED | VULN-IDs |
+| 7.2.2 | Role-Based Access Assignment | PASS/FAIL/NOT TESTED | VULN-IDs |
+| 8.2.1 | Unique User Identification | PASS/FAIL/NOT TESTED | VULN-IDs |
+| 8.3.1 | Strong Authentication | PASS/FAIL/NOT TESTED | VULN-IDs |
 
 ### SOC 2
 | Control ID | Control Name | Status | Related Findings |
@@ -221,12 +224,13 @@ Include in each finding the affected framework controls (OWASP Top 10, PCI-DSS, 
 
 ## Evidence Cross-Referencing
 
-1. Read all `evidence.jsonl` files from sessions 02-06 using `ensphere evidence query --file <path>`
+1. Read all `evidence.jsonl` files from sessions 02-07 using `ensphere evidence query --file <path>`
 2. Assign sequential EVID-{NNN} starting from EVID-001 across all sessions
 3. Cross-reference each evidence entry with its corresponding VULN-{NNN} finding
 4. Populate Appendix A with all evidence entries
 
 ## Rules
+- Sessions marked SKIPPED in progress.md still have a report.md — read it for the skip reason and note it in Assessment Coverage
 - Only include EXPLOITED and POTENTIAL findings — not false positives
 - VULN-ID assignment: sequential, ordered by CVSS score descending
 - Order by severity (Critical → High → Medium → Low)

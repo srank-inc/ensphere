@@ -16,6 +16,12 @@ var ValidVulnTypes = map[string]bool{
 	"cache_poisoning": true,
 	"ldap": true, "xpath": true, "header_injection": true, "file_upload": true,
 	"clickjacking": true,
+	// Cloud security vuln types (no payloads — used for compliance mapping and evidence logging)
+	"cloud_iam": true, "cloud_storage": true, "cloud_network": true,
+	"cloud_compute": true, "cloud_logging": true, "cloud_k8s": true,
+	"cloud_secrets": true, "iac_misconfig": true,
+	// OWASP A10:2025 — Mishandling of Exceptional Conditions (no payloads — compliance mapping and evidence logging)
+	"error_handling": true,
 }
 
 var ValidTechniques = map[string]bool{

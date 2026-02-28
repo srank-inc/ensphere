@@ -25,7 +25,7 @@ git clone https://github.com/srank/ensphere.git && cd ensphere
 Each session covers one vulnerability category. Run `/clear` between sessions. Progress persists in `ensphere-pentest/`.
 
 ```
-01-recon → 02-injection → 03-auth → 04-authz → 05-xss → 06-ssrf → 07-report
+01-recon → 02-injection → 03-auth → 04-authz → 05-xss → 06-ssrf → 07-cloud → 08-report
 ```
 
 | # | Category | Scope |
@@ -36,7 +36,8 @@ Each session covers one vulnerability category. Run `/clear` between sessions. P
 | 04 | Authz | IDOR, privilege escalation, workflow bypass, role confusion |
 | 05 | XSS | Reflected, stored, DOM-based |
 | 06 | SSRF | Classic, blind, semi-blind, stored SSRF with redirect chains |
-| 07 | Report | Executive summary with risk ratings from all sessions |
+| 07 | Cloud | AWS, Azure, GCP, K8s config audit + IaC scanning (Prowler, Trivy) |
+| 08 | Report | Executive summary with risk ratings from all sessions |
 
 First run prompts creation of `ensphere-pentest/config.md` (target URL, credentials, scope, authorization). Template: [`templates/config.md`](templates/config.md).
 
@@ -240,7 +241,7 @@ Categories: `cmdi`, `cors`, `csrf`, `deserialization`, `file_upload`, `header_in
 
 ### compliance — Compliance mapping
 
-Maps 27 vuln types to OWASP Top 10, PCI-DSS v4.0, SOC 2, ISO 27001.
+Maps 36 vuln types (including 8 cloud categories) to OWASP Top 10 2025, PCI-DSS v4.0.1, SOC 2, ISO 27001.
 
 ```bash
 ensphere compliance sqli

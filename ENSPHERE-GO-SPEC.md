@@ -127,7 +127,7 @@ cli/
       list.go                     # ListChecklists
       model.go                    # Checklist metadata struct
     compliance/
-      data/mappings.yaml          # OWASP Top 10, PCI-DSS v4.0, SOC 2, ISO 27001
+      data/mappings.yaml          # OWASP Top 10 2025, PCI-DSS v4.0.1, SOC 2, ISO 27001
       embed.go                    # go:embed data/*
       query.go                    # query mappings by vuln_type
       model.go                    # Mapping struct
@@ -151,7 +151,7 @@ cli/
 assets/seeds/                     # 28 YAML seed files
 skills/                           # Claude Code skill files
   SKILL.md                        # /ensphere entry point
-  methodology/                    # 01-recon through 07-report
+  methodology/                    # 01-recon through 08-report
   checklists/                     # 4 framework checklists
 ```
 
@@ -211,7 +211,7 @@ All validated at build time by `enums.ValidateSeedPayload()` in seedgen.
 
 | Field | Values |
 |-------|--------|
-| vuln_type | sqli, xss, ssrf, csv_injection, cmdi, lfi, ssti, deserialization, xxe, idor, authz, redirect, csrf, nosql, auth_bypass, prototype_pollution, graphql, jwt, cors, race_condition, request_smuggling, cache_poisoning |
+| vuln_type | sqli, xss, ssrf, csv_injection, cmdi, lfi, ssti, deserialization, xxe, idor, authz, redirect, csrf, nosql, auth_bypass, prototype_pollution, graphql, jwt, cors, race_condition, request_smuggling, cache_poisoning, ldap, xpath, header_injection, file_upload, clickjacking, cloud_iam, cloud_storage, cloud_network, cloud_compute, cloud_logging, cloud_k8s, cloud_secrets, iac_misconfig, error_handling (cloud_*, iac_*, and error_handling have no payloads — compliance mapping and evidence logging only) |
 | db_engine | postgres, mysql, mssql, sqlite, oracle |
 | runtime | node, jvm, python, php, dotnet, ruby, go |
 | technique | blind_time, blind_boolean, error_based, union, dns, oob, metadata_access, internal_service, protocol_smuggling, port_scan, cross_tenant, formula_injection, open_redirect, path_traversal, server_action, webhook_spoof, rls_bypass, reflected, stored, dom, polyglot, command_injection, command_chaining, argument_injection, nosql_injection, operator_injection, js_injection, where_time, directory_traversal, null_byte, wrapper, sandbox_escape, expression_eval, xxe_file_read, xxe_ssrf, xxe_oob, xxe_dos, open_redirect_param, open_redirect_path, deserialization_rce, deserialization_read, time_based, dns_oob, jwt_manipulation, default_credential, forced_browsing, auth_bypass, session_fixation, idor_numeric, idor_uuid, idor_path, bola, privilege_escalation, form_auto_submit, xhr_cross_origin, fetch_cross_origin, image_tag, origin_validation, proto_assignment, constructor_pollution, json_merge, introspection, batch_query, nested_query_dos, field_suggestion, alias_dos, alg_none, alg_confusion, kid_injection, jwk_injection, jku_spoofing, origin_reflection, null_origin, subdomain_wildcard, credential_leak, toctou, parallel_request, double_spend, cl_te, te_cl, te_te, h2_downgrade, unkeyed_header, unkeyed_cookie, fat_get, no_token, expired_token, method_override |

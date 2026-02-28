@@ -32,13 +32,13 @@ Ensphere is an autonomous penetration testing framework that combines Claude Cod
 
 | Layer | Component | Purpose |
 |-------|-----------|---------|
-| **Methodology** | 7 markdown skill files (sessions 01-07) | Tells the AI *what to do* — recon, injection, auth, authz, XSS, SSRF, report |
+| **Methodology** | 8 markdown skill files (sessions 01-08) | Tells the AI *what to do* — recon, injection, auth, authz, XSS, SSRF, cloud, report |
 | **Payloads** | Curated SQLite database (1154 payloads, 25 vuln types, 65+ techniques) | Provides battle-tested attack strings instead of LLM-hallucinated payloads |
 | **Verification** | 25 Go-based probes (SQLi, XSS, IDOR, SSRF, Auth, RLS, CMDi, LFI, SSTI, XXE, Deserialization, CSRF, NoSQL, JWT, CORS, Prototype Pollution, GraphQL, Race, Smuggling, Cache Poisoning, Redirect, CSV Injection, AuthZ, Clickjacking, Header Injection) | Confirms findings with deterministic multi-round testing |
 | **Templates** | 5 Python exploit scripts (IDOR, SQLi, SSRF, auth replay, upload bypass) | Pre-built exploit scaffolds |
 | **Scanner** | Concurrent regex-based code scanner with sink pattern database | Finds dangerous code patterns across 18 categories and multiple languages |
 | **CVSS** | Full v3.1 + v4.0 calculator (274-entry MacroVector lookup table for v4.0) | Standardized severity scoring per FIRST specification |
-| **Compliance** | OWASP Top 10, PCI-DSS v4.0, SOC 2, ISO 27001 mappings for 27 vuln types | Maps findings to compliance frameworks |
+| **Compliance** | OWASP Top 10 2025, PCI-DSS v4.0.1, SOC 2, ISO 27001 mappings for 36 vuln types | Maps findings to compliance frameworks |
 | **Evidence** | JSONL writer with auto-redaction of secrets (JWTs, Bearer tokens) | Audit trail with sequential EVID-XXX IDs |
 | **Checklists** | 4 framework-specific overlays (Next.js, Supabase RLS, tRPC, Cloudflare R2) | Targeted security checks per tech stack |
 
@@ -732,14 +732,14 @@ Step 6: Privilege escalation
 
 | Framework | Current (Web App Only) | Full Kali Coverage | Key Gaps Closed |
 |-----------|----------------------|-------------------|-----------------|
-| **OWASP Top 10 (2021)** | ~90% | ~95% | A09 (Security Logging and Monitoring Failures) — network monitoring |
-| **PCI-DSS v4.0** | ~30% (Req 6 only) | ~80% | Req 1 (network controls), Req 2 (secure config), Req 7-8 (access/auth), Req 10-11 (monitoring/testing) |
+| **OWASP Top 10 (2025)** | ~90% | ~95% | A09 (Security Logging and Alerting Failures) — network monitoring |
+| **PCI-DSS v4.0.1** | ~30% (Req 6 only) | ~80% | Req 1 (network controls), Req 2 (secure config), Req 7-8 (access/auth), Req 10-11 (monitoring/testing) |
 | **ISO 27001:2022 (Annex A)** | ~25% | ~70% | A.8 Technological controls (8.8 vulnerability management, 8.9 configuration management, 8.16 monitoring, 8.20-8.24 network security) |
 | **NIST 800-53 Rev 5** | ~15% | ~60% | AC (Access Control), AU (Audit), CM (Configuration Management), IA (Identification and Authentication), SC (System and Communications Protection) |
 | **SOC 2 TSC** | ~30% | ~75% | CC6 (Logical and Physical Access Controls), CC7 (System Operations), CC8 (Change Management) |
 | **HIPAA** | Not covered | ~50% | Access controls (164.312(a)), Audit controls (164.312(b)), Transmission security (164.312(e)) |
 
-### PCI-DSS v4.0 — The 12 Principal Requirements
+### PCI-DSS v4.0.1 — The 12 Principal Requirements
 
 Organized into 6 goals:
 
@@ -972,7 +972,7 @@ Even with full Kali coverage, some penetration testing activities are fundamenta
 | **Documentation quality** | Produces client-ready reports with exact reproduction steps |
 | **Payload selection** | Queries curated databases, selects context-appropriate payloads without relying on memory |
 | **Evidence management** | Structured evidence collection with auto-redaction — never accidentally leaks secrets in reports |
-| **Cross-session knowledge** | Findings from Session 01 inform Session 02 through 07 — builds context across the entire engagement |
+| **Cross-session knowledge** | Findings from Session 01 inform Session 02 through 08 — builds context across the entire engagement |
 | **Speed** | Full web application assessment in hours, not weeks |
 | **Consistency** | Same methodology, same thoroughness, every time |
 
@@ -984,11 +984,11 @@ Even with full Kali coverage, some penetration testing activities are fundamenta
 
 | Component | Current State | What's Needed |
 |-----------|--------------|---------------|
-| **Methodology files** | 7 sessions (recon → injection → auth → authz → XSS → SSRF → report) | Additional session tracks: network exploitation, privilege escalation, Active Directory, cloud/container, lateral movement, post-exploitation. Could be structured as optional "expansion packs" that activate based on engagement scope. |
+| **Methodology files** | 8 sessions (recon → injection → auth → authz → XSS → SSRF → cloud → report) | Additional session tracks: network exploitation, privilege escalation, Active Directory, lateral movement, post-exploitation. Could be structured as optional "expansion packs" that activate based on engagement scope. |
 | **Payload database** | 25 vuln types, 1154 payloads (web/application layer) | New categories: network service payloads (SSH, SMB, FTP attack strings), privilege escalation commands per OS/kernel version, AD attack queries, cloud-specific exploitation payloads |
 | **Verification probes** | 25 probes (SQLi, XSS, IDOR, SSRF, Auth, RLS, CMDi, LFI, SSTI, XXE, Deserialization, CSRF, NoSQL, JWT, CORS, Prototype Pollution, GraphQL, Race, Smuggling, Cache Poisoning, Redirect, CSV Injection, AuthZ, Clickjacking, Header Injection) | New probes: `ensphere verify service` (test network service auth), `ensphere verify privesc` (confirm privilege escalation), `ensphere verify ad` (test AD permissions), `ensphere verify cloud` (test cloud metadata access) |
 | **Evidence system** | JSONL with secret redaction | Expand redaction to cover AD hashes, cloud credentials, internal IP addresses. Add screenshot support for post-exploitation proof. |
-| **Compliance mapping** | 4 frameworks, 27 vuln types | Add NIST 800-53, HIPAA. Expand existing frameworks to cover network/infrastructure controls. |
+| **Compliance mapping** | 4 frameworks, 36 vuln types | Add NIST 800-53, HIPAA. Expand existing frameworks to cover network/infrastructure controls. |
 | **CLI binary** | Runs on macOS/Linux | Kali Linux becomes the primary deployment target for full-scope engagements. The binary itself is cross-platform (Go), but the methodology would reference Kali-specific tools. |
 | **Runtime environment** | Claude Code on developer machine | Claude Code on Kali Linux (VM, bare metal, or WSL2). Needs network access to target environment. May need VPN or network pivoting capabilities. |
 
@@ -1080,10 +1080,10 @@ The web application foundation is built. The architecture extends naturally. The
 - [Kali Linux Tools Directory](https://www.kali.org/tools/)
 
 ### Compliance Frameworks
-- [PCI DSS v4.0 — PCI Security Standards Council](https://www.pcisecuritystandards.org/)
+- [PCI DSS v4.0.1 — PCI Security Standards Council](https://www.pcisecuritystandards.org/)
 - [NIST SP 800-53 Rev 5 — Security and Privacy Controls](https://csf.tools/reference/nist-sp-800-53/r5/)
 - [ISO/IEC 27001:2022 — Information Security Management](https://www.iso.org/standard/27001)
-- [OWASP Top 10 (2021)](https://owasp.org/www-project-top-ten/)
+- [OWASP Top 10 (2025)](https://owasp.org/Top10/2025/)
 - [MITRE ATT&CK Framework](https://attack.mitre.org/)
 
 ### Vulnerability References

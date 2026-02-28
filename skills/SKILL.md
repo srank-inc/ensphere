@@ -28,15 +28,16 @@ When the user says "ensphere" (with or without a session number):
    - Tell the user: "No assessment in progress. Want to start with **Session 01 — Recon**?"
    - Wait for confirmation before proceeding
 4. **If progress exists**, read it and determine status:
-   - If ALL sessions are DONE: "All 7 sessions complete. Want to review the final report or restart?"
+   - If ALL sessions are DONE or SKIPPED: "All 8 sessions complete. Want to review the final report or restart?"
    - If a session is IN_PROGRESS: "Session {NN} ({category}) is in progress. Resuming."
-   - If the next session is PENDING: Show a summary of completed sessions and their key findings, then ask: "Next up: **Session {NN} — {category}**. Ready to proceed?"
+   - If the next session is PENDING: Show a summary of completed/skipped sessions and their key findings, then ask: "Next up: **Session {NN} — {category}**. Ready to proceed?"
    - Wait for the user's confirmation before starting
 5. If the user provided a specific session number (e.g., "ensphere 03"), skip to that session after confirming
 6. Read the prior session's report if it exists (e.g., `ensphere-pentest/01-recon/report.md` before any exploit session)
 7. Read the methodology file for this session (see Session Map below)
 8. If a plan exists at `ensphere-pentest/{NN}-{name}/plan.md`, resume from it
-9. Execute the methodology
+9. If a checkpoint exists at `ensphere-pentest/{NN}-{name}/checkpoint.md`, read it — this is the intra-session save point from a prior context window. Resume from the exact phase/step recorded there, skipping already-completed work.
+10. Execute the methodology
 
 ### End Protocol
 1. Write findings to `ensphere-pentest/{NN}-{name}/report.md`
@@ -57,6 +58,7 @@ If `ensphere-pentest/config.md` doesn't exist, prompt the user to create it:
 ## Target
 - URL: https://localhost:3000
 - Source code: yes | no
+- Cloud: none | aws | gcp | azure | kubernetes | (comma-separated if multiple)
 
 ## Authentication
 - Login URL: /login
@@ -93,6 +95,8 @@ Maintain `ensphere-pentest/progress.md`:
 | Session | Category       | Status  | Findings |
 |---------|---------------|---------|----------|
 | 01      | Recon          | DONE    | 45 endpoints, 3 roles mapped |
+| 02      | Injection      | DONE    | 2 SQLi confirmed |
+| 03      | Auth           | SKIPPED | No authentication mechanism |
 | ...     | ...            | ...     | ...      |
 ```
 
@@ -106,7 +110,8 @@ Maintain `ensphere-pentest/progress.md`:
 | 04 | [methodology/04-authz.md](methodology/04-authz.md) | Authorization (IDOR, privilege escalation, workflow bypass) |
 | 05 | [methodology/05-xss.md](methodology/05-xss.md) | Cross-site scripting (reflected, stored, DOM) |
 | 06 | [methodology/06-ssrf.md](methodology/06-ssrf.md) | Server-side request forgery |
-| 07 | [methodology/07-report.md](methodology/07-report.md) | Executive summary synthesis |
+| 07 | [methodology/07-cloud.md](methodology/07-cloud.md) | Cloud security (AWS, Azure, GCP, K8s, IaC) |
+| 08 | [methodology/08-report.md](methodology/08-report.md) | Executive summary synthesis |
 
 ## Universal Rules
 
@@ -133,6 +138,67 @@ All findings must include: exact endpoint, full payload, response evidence, and 
 ### Attacker Perspective
 Analyze as an external attacker with NO internal network access, VPN, or admin privileges.
 Focus on vulnerabilities exploitable via public internet.
+
+### Session Applicability
+
+Not every session applies to every target. After Session 01 (Recon), use the Technology Profile and recon findings to determine whether each subsequent session has attack surface. **If a session's entire category is inapplicable, skip it** — write a brief report explaining why, mark it SKIPPED in `progress.md`, and move to the next session.
+
+| Session | Skip when |
+|---------|-----------|
+| 02 Injection | No server-side processing (static site), no database, no user input reaches backend |
+| 03 Auth | No authentication mechanism (fully public application) |
+| 04 Authz | No role-based access, single-role application, no object-level resources |
+| 05 XSS | No user input reflected or stored in HTML responses (pure API with no rendered views) |
+| 06 SSRF | No server-side URL fetching, no outbound request sinks found in recon |
+| 07 Cloud | No cloud providers in scope, no cloud CLI credentials, no IaC files (see 07-cloud.md Phase 0) |
+
+**Rules:**
+- Session 01 (Recon) and Session 08 (Report) always run — never skip
+- When in doubt, **run the session** — behavioral probing may discover attack surface that recon missed
+- A skipped session still gets a `report.md` (e.g., "No authentication mechanism detected — session skipped") so Session 08 can reference all sessions
+- The End Protocol plan for the next session should note applicability concerns based on current findings
+- The user can always force a session with `ensphere <number>` regardless of applicability
+
+### Checkpoint (Intra-Session Save)
+
+Context windows expire. When they do, work-in-progress must survive. The checkpoint file is the intra-session save point — it records exactly where the AI stopped so the next instance resumes without re-testing or re-reading.
+
+**File:** `ensphere-pentest/{NN}-{name}/checkpoint.md`
+
+**When to write/update:**
+- At the start of each phase (Phase 0, A, A-IaC, B)
+- At the start of each numbered step within a phase
+- After completing a step with significant findings
+- Before any operation that might exhaust the context window (large scans, many endpoints)
+
+**When to delete:** At the end of a session, after `report.md` is written and `progress.md` is updated to DONE. A completed session needs no checkpoint.
+
+**Format:**
+```markdown
+# Checkpoint — Session {NN}: {Category}
+
+## Position
+Phase: {current phase}
+Step: {N} of {total}
+
+## Completed
+- {Phase/step}: {brief result}
+- {Phase/step}: {brief result}
+
+## Remaining
+- {target/endpoint}: {why it matters}
+- {target/endpoint}: {why it matters}
+
+## Context
+- {key observations that inform remaining work}
+- {e.g., "WAF blocking payloads with angle brackets — need encoding bypass"}
+```
+
+**Resume behavior:** When a new AI instance reads a checkpoint, it:
+1. Skips all completed phases/steps entirely
+2. Reads `evidence.jsonl` for detailed results of completed probes
+3. Starts execution at the recorded position
+4. Continues with the remaining targets listed
 
 ### Assessment Modes
 
@@ -345,8 +411,8 @@ ensphere compliance --list     # list all vuln_types with framework counts
 ```
 
 ### Frameworks
-- OWASP Top 10 (2021)
-- PCI-DSS v4.0
+- OWASP Top 10 (2025)
+- PCI-DSS v4.0.1
 - SOC 2 Trust Services Criteria
 - ISO 27001 (Annex A)
 

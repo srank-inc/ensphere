@@ -35,7 +35,7 @@ Go CLI binary (`ensphere`) + Claude Code skill files (`skills/`). CLI commands a
 | `cli/tools/seedgen/` | YAML → SQLite compiler |
 | `assets/seeds/` | YAML payload seed files |
 | `skills/` | Claude Code skill files |
-| `skills/methodology/` | Session methodology (01-07) |
+| `skills/methodology/` | Session methodology (01-08) |
 | `skills/checklists/` | Security checklists |
 | `skills/shared/` | Evidence standards and proof-level definitions |
 
