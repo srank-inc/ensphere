@@ -320,6 +320,26 @@ var contracts = []probeContract{
 				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
 		},
 	},
+	{name: "propertyauthz", risk: 2,
+		callOutOfScope: func() (*ProbeResult, error) {
+			return VerifyPropertyAuthZ(PropertyAuthZConfig{URL: "http://evil.example.com/api", Method: "GET", HighPrivToken: "high", LowPrivToken: "low",
+				ProbeConfig: ProbeConfig{InScope: []string{"safe.example.com"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callLowRisk: func() (*ProbeResult, error) {
+			return VerifyPropertyAuthZ(PropertyAuthZConfig{URL: "http://localhost/api", Method: "GET", HighPrivToken: "high", LowPrivToken: "low",
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+	},
+	{name: "ratelimit", risk: 2,
+		callOutOfScope: func() (*ProbeResult, error) {
+			return VerifyRateLimit(RateLimitConfig{URL: "http://evil.example.com/api", Method: "POST", BurstCount: 5,
+				ProbeConfig: ProbeConfig{InScope: []string{"safe.example.com"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callLowRisk: func() (*ProbeResult, error) {
+			return VerifyRateLimit(RateLimitConfig{URL: "http://localhost/api", Method: "POST", BurstCount: 5,
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+	},
 	{name: "websocket", risk: 2,
 		callOutOfScope: func() (*ProbeResult, error) {
 			return VerifyWebSocket(WebSocketConfig{URL: "ws://evil.example.com/ws", Technique: "ws_injection", Payload: "test",

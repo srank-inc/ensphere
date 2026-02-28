@@ -25,7 +25,7 @@ git clone https://github.com/srank/ensphere.git && cd ensphere
 Each session covers one vulnerability category. Run `/clear` between sessions. Progress persists in `ensphere-pentest/`.
 
 ```
-01-recon → 02-injection → 03-auth → 04-authz → 05-xss → 06-ssrf → 07-cloud → 08-report
+01-recon → 02-injection → 03-auth → 04-authz → 05-xss → 06-ssrf → 07-cloud → 09-api → 08-report
 ```
 
 | # | Category | Scope |
@@ -36,7 +36,8 @@ Each session covers one vulnerability category. Run `/clear` between sessions. P
 | 04 | Authz | IDOR, privilege escalation, workflow bypass, role confusion |
 | 05 | XSS | Reflected, stored, DOM-based |
 | 06 | SSRF | Classic, blind, semi-blind, stored SSRF with redirect chains |
-| 07 | Cloud | AWS, Azure, GCP, K8s config audit + IaC scanning (Prowler, Trivy) |
+| 07 | Cloud | AWS, Azure, GCP, K8s config audit + IaC scanning (Prowler, Trivy). Sub-files: 07a-aws, 07b-gcp, 07c-azure, 07d-k8s |
+| 09 | API | Rate limiting, property-level authz, mass assignment, pagination abuse, webhook SSRF |
 | 08 | Report | Executive summary with risk ratings from all sessions |
 
 First run prompts creation of `ensphere-pentest/config.md` (target URL, credentials, scope, authorization). Template: [`templates/config.md`](templates/config.md).
@@ -55,7 +56,7 @@ make install-all  # binary + skill files
 
 ### payloads — Query payload database
 
-1154 payloads across 25 vulnerability types. YAML seeds compiled to SQLite, queried at runtime.
+1188 payloads across 26 vulnerability types. YAML seeds compiled to SQLite, queried at runtime.
 
 ```bash
 ensphere payloads sqli --db postgres --technique blind_time
@@ -68,7 +69,7 @@ JSON output: `query`, `count`, `results[]` (payload, placeholders, evidence_type
 
 ### verify — Targeted verification probes
 
-27 probe types. All verify commands output JSON (schema v2: measurements only, no status/confidence), log evidence to `./evidence.jsonl`, and use exit codes: 0 = probes completed, 2 = scope/usage error, 3 = runtime failure. All require `--in-scope`.
+29 probe types. All verify commands output JSON (schema v2: measurements only, no status/confidence), log evidence to `./evidence.jsonl`, and use exit codes: 0 = probes completed, 2 = scope/usage error, 3 = runtime failure. All require `--in-scope`.
 
 **SQLi** — Techniques: `blind_time` (default), `blind_boolean`, `error_based`
 ```bash
@@ -185,6 +186,36 @@ ensphere verify csvinjection --submit-url "http://target/api/items" --export-url
 ensphere verify authz --url "http://target/api/admin" --low-token "user-jwt" --high-token "admin-jwt" --in-scope *.target.com
 ```
 
+**Rate Limit** — Sequential burst measurement. Counts success (2xx) vs throttled (429/503) responses
+```bash
+ensphere verify ratelimit --url "http://target/api/login" --method POST --burst-count 100 --window-sec 10 --in-scope *.target.com
+```
+
+**Property AuthZ** — Field-level authorization comparison between privilege levels
+```bash
+ensphere verify propertyauthz --url "http://target/api/users/me" --high-token "admin-jwt" --low-token "user-jwt" --watch-fields "ssn,salary" --in-scope *.target.com
+```
+
+### callback — OOB callback listener
+
+Receives out-of-band callbacks for blind SSRF, XXE, and SSTI confirmation. Token-based path routing for correlation.
+
+```bash
+ensphere callback --port 8888 --wait 30 --external-url "https://abc.ngrok.app" --evidence ./evidence.jsonl
+```
+
+### cloud — Cloud security verification
+
+Probes cloud infrastructure via provider CLIs (aws, gcloud, az). No SDK dependencies.
+
+```bash
+ensphere cloud storage --provider aws --bucket my-bucket --in-scope "aws://123456789012"
+ensphere cloud iam --provider aws --principal arn:aws:iam::123:user/alice --in-scope "aws://123456789012"
+ensphere cloud network --provider aws --in-scope "aws://123456789012" --vpc-id vpc-abc123
+ensphere cloud parse-prowler ./prowler-output.json --evidence ./evidence.jsonl
+ensphere cloud parse-trivy ./trivy-results.json --evidence ./evidence.jsonl
+```
+
 ### template — Exploit templates
 
 Python 3 scripts using only stdlib (urllib, json, time, sys, uuid).
@@ -202,6 +233,14 @@ ensphere template sqli-time-postgres --out ./poc/sqli
 | `ssrf-probe` | SSRF | Internal URL probing with 9 bypass variants |
 | `auth-header-replay` | AuthZ | Token replay across users/tenants |
 | `upload-polyglot-check` | Upload | Mismatched content-type/extension bypass tests |
+| `xss-reflected-poc` | XSS | Reflected XSS with DOM confirmation |
+| `nosql-extraction` | NoSQL | Operator injection data extraction |
+| `jwt-forge` | JWT | Algorithm none / confusion token forging |
+| `cmdi-reverse-check` | CMDi | Blind command injection with callback verification |
+| `deserialization-java` | Deser | Java deserialization RCE chain testing |
+| `ssti-rce` | SSTI | Multi-engine template injection to RCE |
+| `lfi-to-rce` | LFI | Path traversal escalation to code execution |
+| `xxe-oob-extract` | XXE | OOB data exfiltration via external entities |
 
 ### scan — Code scanning
 
@@ -237,7 +276,7 @@ ensphere sinks              # list categories with counts
 ensphere sinks sqli         # patterns for category
 ```
 
-Categories: `cmdi`, `cors`, `csrf`, `deserialization`, `file_upload`, `header_injection`, `idor`, `jwt`, `ldap`, `lfi`, `nosql`, `redirect`, `sqli`, `ssrf`, `ssti`, `xpath`, `xss`, `xxe`. Each pattern: regex, file extensions, description, risk.
+Categories: `cmdi`, `cors`, `csrf`, `deserialization`, `file_upload`, `header_injection`, `idor`, `jwt`, `ldap`, `lfi`, `nosql`, `redirect`, `sqli`, `ssrf`, `ssti`, `xpath`, `xss`, `xxe`, `iac_terraform`, `iac_cloudformation`, `iac_dockerfile`, `iac_kubernetes`. Each pattern: regex, file extensions (or filenames for Dockerfile), description, risk.
 
 ### compliance — Compliance mapping
 
@@ -262,6 +301,15 @@ ensphere checklist --list         # JSON with item counts
 | `supabase-rls` | 10 | RLS bypass, PostgREST, JWT claims, Storage ACL, Realtime isolation |
 | `trpc` | 8 | Auth middleware gaps, Zod validation, batch abuse, cross-tenant |
 | `cloudflare-r2` | 6 | Presigned URL scope, public buckets, CORS, SSE-C, enumeration |
+| `django` | 10 | ORM injection, pickle deserialization, CSRF exempt, admin exposure, CORS |
+| `rails` | 12 | Mass assignment, ActiveRecord injection, Marshal, redirect_to |
+| `spring-boot` | 12 | Actuator endpoints, SpEL injection, Thymeleaf SSTI, Jackson deser |
+| `express-js` | 12 | NoSQL injection, prototype pollution, path traversal, JWT, Helmet |
+| `laravel` | 10 | Mass assignment, Eloquent injection, Blade XSS, debug mode |
+| `fastapi` | 10 | Depends() auth, Pydantic bypass, CORS, OpenAPI exposure |
+| `aws-s3` | 12 | Public access blocks, encryption, versioning, logging, presigned URLs |
+| `aws-iam` | 12 | Least privilege, MFA, key rotation, role trust, permission boundaries |
+| `k8s-pod-security` | 10 | Privileged containers, hostNetwork, root user, capabilities, seccomp |
 
 ## Requirements
 

@@ -352,6 +352,41 @@ type WebSocketMeasurements struct {
 	PayloadUsed    string              `json:"payload_used"`
 }
 
+// PropertyAuthZMeasurements holds property-level authorization probe measurements.
+type PropertyAuthZMeasurements struct {
+	HighPriv           RoundResult        `json:"high_priv"`
+	LowPriv            RoundResult        `json:"low_priv"`
+	HighPrivFields     []string           `json:"high_priv_fields"`
+	LowPrivFields      []string           `json:"low_priv_fields"`
+	SharedFields       []string           `json:"shared_fields"`
+	HighPrivOnlyFields []string           `json:"high_priv_only_fields"`
+	LowPrivOnlyFields  []string           `json:"low_priv_only_fields"`
+	WatchFieldResults  []WatchFieldResult `json:"watch_field_results,omitempty"`
+	BodyLengthDelta    int                `json:"body_length_delta"`
+	HashesMatch        bool               `json:"hashes_match"`
+}
+
+// WatchFieldResult reports whether a specific field is present in each response.
+type WatchFieldResult struct {
+	Name       string `json:"name"`
+	InHighPriv bool   `json:"in_high_priv"`
+	InLowPriv  bool   `json:"in_low_priv"`
+}
+
+// RateLimitMeasurements holds rate limit probe measurements.
+type RateLimitMeasurements struct {
+	BurstCount      int           `json:"burst_count"`
+	WindowSec       int           `json:"window_sec"`
+	SuccessCount    int           `json:"success_count"`
+	ThrottledCount  int           `json:"throttled_count"`
+	FirstThrottleAt int           `json:"first_throttle_at"`
+	StatusCodes     map[int]int   `json:"status_codes"`
+	Rounds          []RoundResult `json:"rounds"`
+	MinMs           int64         `json:"min_ms"`
+	MaxMs           int64         `json:"max_ms"`
+	AvgMs           int64         `json:"avg_ms"`
+}
+
 // GRPCMeasurements holds gRPC security probe measurements.
 type GRPCMeasurements struct {
 	Technique         string   `json:"technique"`

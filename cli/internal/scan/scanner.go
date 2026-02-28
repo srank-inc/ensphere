@@ -28,6 +28,7 @@ type compiledPattern struct {
 	category   string
 	risk       int
 	extensions map[string]bool
+	filenames  map[string]bool
 }
 
 // RunScan scans a directory for sink patterns and returns results.
@@ -48,6 +49,7 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 	// Compile patterns
 	var compiled []compiledPattern
 	extUnion := make(map[string]bool)
+	filenameUnion := make(map[string]bool)
 
 	for cat, patterns := range allPatterns {
 		if len(categoryFilter) > 0 && !categoryFilter[cat] {
@@ -67,12 +69,18 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 				exts[ext] = true
 				extUnion[ext] = true
 			}
+			fnames := make(map[string]bool)
+			for _, fn := range p.Filenames {
+				fnames[fn] = true
+				filenameUnion[fn] = true
+			}
 			compiled = append(compiled, compiledPattern{
 				re:         re,
 				name:       p.Name,
 				category:   cat,
 				risk:       p.Risk,
 				extensions: exts,
+				filenames:  fnames,
 			})
 		}
 	}
@@ -127,7 +135,7 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 			}
 		}
 		ext := filepath.Ext(path)
-		if extUnion[ext] {
+		if extUnion[ext] || filenameUnion[filepath.Base(path)] {
 			files = append(files, path)
 		}
 		return nil
@@ -234,8 +242,12 @@ func scanFile(path, baseDir string, patterns []compiledPattern) []ScanMatch {
 
 	var matches []ScanMatch
 	for lineIdx, line := range lines {
+		baseName := filepath.Base(path)
 		for _, p := range patterns {
-			if len(p.extensions) > 0 && !p.extensions[ext] {
+			if len(p.extensions) > 0 && !p.extensions[ext] && !p.filenames[baseName] {
+				continue
+			}
+			if len(p.extensions) == 0 && len(p.filenames) > 0 && !p.filenames[baseName] {
 				continue
 			}
 			loc := p.re.FindStringIndex(line)

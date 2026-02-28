@@ -55,3 +55,25 @@ func CheckScope(rawURL string, inScopePatterns []string) error {
 
 	return &ScopeError{Msg: fmt.Sprintf("URL hostname %q is not in scope (patterns: %s)", hostname, strings.Join(inScopePatterns, ", "))}
 }
+
+// CheckCloudScope validates cloud resource identifiers against in-scope patterns.
+// Format: "aws://ACCOUNT_ID", "gcp://PROJECT_ID", "azure://SUBSCRIPTION_ID"
+func CheckCloudScope(provider, resourceID string, inScopePatterns []string) error {
+	if len(inScopePatterns) == 0 {
+		return &ScopeError{Msg: "no in-scope patterns provided"}
+	}
+	prefix := provider + "://"
+	for _, p := range inScopePatterns {
+		p = strings.TrimSpace(p)
+		if strings.HasPrefix(p, prefix) {
+			scopeID := strings.TrimPrefix(p, prefix)
+			if scopeID == resourceID || scopeID == "*" {
+				return nil
+			}
+			if matched, _ := filepath.Match(scopeID, resourceID); matched {
+				return nil
+			}
+		}
+	}
+	return &ScopeError{Msg: fmt.Sprintf("resource %s://%s not in scope", provider, resourceID)}
+}

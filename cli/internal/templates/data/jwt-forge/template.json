@@ -1,0 +1,15 @@
+{
+  "name": "jwt-forge",
+  "description": "JWT algorithm none attack — strip signature, set alg=none, compare forged vs original token responses",
+  "vuln_type": "jwt",
+  "technique": "alg_none",
+  "risk": 3,
+  "run_command": "python3 exploit.py",
+  "success_signals": ["status_code:200_with_forged", "body_hash:matches_original"],
+  "params": [
+    {"name": "TARGET_URL", "description": "Authenticated endpoint that validates JWT", "example": "http://localhost:3000/api/me", "required": true},
+    {"name": "TOKEN", "description": "Valid JWT token to forge", "example": "eyJhbGciOiJIUzI1NiIs...", "required": true},
+    {"name": "AUTH_HEADER", "description": "Authorization header prefix", "example": "Bearer", "required": false}
+  ],
+  "files": ["exploit.py", "README.md"]
+}

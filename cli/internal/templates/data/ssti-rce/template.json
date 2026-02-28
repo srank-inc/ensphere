@@ -1,0 +1,15 @@
+{
+  "name": "ssti-rce",
+  "description": "Server-side template injection — inject math expressions across multiple template engines and check for computed results",
+  "vuln_type": "ssti",
+  "technique": "expression_eval",
+  "risk": 3,
+  "run_command": "python3 exploit.py",
+  "success_signals": ["computed_result_found:true", "engine_detected"],
+  "params": [
+    {"name": "TARGET_URL", "description": "URL of the page/endpoint to test", "example": "http://localhost:3000/render", "required": true},
+    {"name": "PARAM", "description": "Parameter name to inject template expressions into", "example": "name", "required": true},
+    {"name": "METHOD", "description": "HTTP method (GET or POST)", "example": "GET", "required": false}
+  ],
+  "files": ["exploit.py", "README.md"]
+}

@@ -35,6 +35,8 @@ Available subcommands:
   authz           Verify authorization bypass
   clickjacking    Verify clickjacking protection (X-Frame-Options, CSP frame-ancestors)
   headerinjection Verify CRLF header injection
+  propertyauthz   Verify property-level authorization
+  ratelimit       Verify rate limiting behavior
   websocket       Verify WebSocket security
   grpc            Verify gRPC security`,
 }

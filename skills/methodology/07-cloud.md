@@ -80,7 +80,7 @@ Read `ensphere-pentest/01-recon/report.md` for infrastructure clues discovered d
 2. No cloud CLI credentials are available (Step 1 below finds nothing)
 3. No IaC files are present in the source code (Step 2 below finds nothing, or assessment is BLACK_BOX)
 
-If skipping: write a brief report to `ensphere-pentest/07-cloud/report.md` stating "No cloud infrastructure in scope — session skipped", mark session SKIPPED in `progress.md`, and proceed to Session 08.
+If skipping: write a brief report to `ensphere-pentest/07-cloud/report.md` stating "No cloud infrastructure in scope — session skipped", mark session SKIPPED in `progress.md`, and proceed to Session 09.
 
 ### Step 1 — Detect Cloud Providers
 
@@ -265,6 +265,34 @@ Organize IaC findings by category:
 | Missing encryption | Unencrypted RDS, S3 without SSE, EBS without encryption | Data at rest exposure |
 | Logging disabled | CloudTrail off, VPC flow logs missing, access logging off | Audit gap |
 | Network misconfig | Overly permissive security groups, missing NACLs | Lateral movement |
+
+## Provider Deep Dives
+
+Based on providers detected in Phase 0, read the relevant sub-file(s) below before proceeding to Phase B. These provide provider-specific attack surfaces and Ensphere CLI commands:
+
+| Provider | Sub-file | Content |
+|----------|----------|---------|
+| AWS | [methodology/07a-aws.md](methodology/07a-aws.md) | Lambda, API Gateway, DynamoDB, SQS/SNS, Cognito, S3 advanced, IAM escalation, ECS/EKS, RDS |
+| GCP | [methodology/07b-gcp.md](methodology/07b-gcp.md) | Cloud Functions, Cloud Run, Firestore, Pub/Sub, Identity Platform, GCS, IAM, GKE |
+| Azure | [methodology/07c-azure.md](methodology/07c-azure.md) | Azure Functions, App Service, Cosmos DB, Service Bus, Azure AD B2C, Blob Storage, RBAC, AKS |
+| Kubernetes | [methodology/07d-k8s.md](methodology/07d-k8s.md) | RBAC, pod security standards, network policies, service mesh, secrets, etcd, admission controllers |
+
+### Using Ensphere Cloud Probes
+
+```bash
+# Storage security audit
+ensphere cloud storage --provider aws --bucket BUCKET --in-scope "aws://ACCOUNT_ID"
+
+# IAM configuration audit
+ensphere cloud iam --provider aws --principal ARN --in-scope "aws://ACCOUNT_ID"
+
+# Network security audit
+ensphere cloud network --provider aws --in-scope "aws://ACCOUNT_ID"
+
+# Parse Prowler/Trivy output into Ensphere vuln types
+ensphere cloud parse-prowler ./prowler-output.json --evidence ./evidence.jsonl
+ensphere cloud parse-trivy ./trivy-results.json --evidence ./evidence.jsonl
+```
 
 ## Phase B: Verification & Exploitation
 

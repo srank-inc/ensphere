@@ -579,3 +579,173 @@ categories:
       extensions: [.js, .ts, .py, .go]
       description: "Cloud storage upload with dynamic filename — check for path traversal"
       risk: 3
+
+  # ============================================================
+  # IaC — Terraform
+  # ============================================================
+  iac_terraform:
+    - name: tf_public_read_acl
+      pattern: 'acl\s*=\s*"public-read"'
+      extensions: [.tf]
+      description: "Terraform S3/GCS bucket with public-read ACL"
+      risk: 4
+    - name: tf_public_readwrite_acl
+      pattern: 'acl\s*=\s*"public-read-write"'
+      extensions: [.tf]
+      description: "Terraform bucket with public-read-write ACL"
+      risk: 5
+    - name: tf_open_cidr
+      pattern: 'cidr_blocks\s*=\s*\["0\.0\.0\.0/0"\]'
+      extensions: [.tf]
+      description: "Terraform security group with open CIDR 0.0.0.0/0"
+      risk: 4
+    - name: tf_kms_rotation_disabled
+      pattern: 'enable_key_rotation\s*=\s*false'
+      extensions: [.tf]
+      description: "Terraform KMS key rotation disabled"
+      risk: 3
+    - name: tf_force_destroy
+      pattern: 'force_destroy\s*=\s*true'
+      extensions: [.tf]
+      description: "Terraform bucket force_destroy enabled — data loss risk"
+      risk: 3
+    - name: tf_rds_public
+      pattern: 'publicly_accessible\s*=\s*true'
+      extensions: [.tf]
+      description: "Terraform RDS instance publicly accessible"
+      risk: 4
+    - name: tf_ebs_unencrypted
+      pattern: 'encrypted\s*=\s*false'
+      extensions: [.tf]
+      description: "Terraform EBS volume unencrypted"
+      risk: 3
+    - name: tf_all_protocol
+      pattern: 'protocol\s*=\s*"-1"'
+      extensions: [.tf]
+      description: "Terraform security group rule with all-protocol (-1)"
+      risk: 3
+    - name: tf_azure_open_nsg
+      pattern: 'source_address_prefix\s*=\s*"\*"'
+      extensions: [.tf]
+      description: "Terraform Azure NSG with wildcard source address"
+      risk: 4
+    - name: tf_open_ipv6
+      pattern: 'ipv6_cidr_blocks\s*=\s*\["::/0"\]'
+      extensions: [.tf]
+      description: "Terraform security group with open IPv6 CIDR ::/0"
+      risk: 4
+
+  # ============================================================
+  # IaC — CloudFormation
+  # ============================================================
+  iac_cloudformation:
+    - name: cfn_open_cidr
+      pattern: 'CidrIp:\s*0\.0\.0\.0/0'
+      extensions: [.yaml, .yml, .json, .template]
+      description: "CloudFormation security group with open CIDR 0.0.0.0/0"
+      risk: 4
+    - name: cfn_open_ipv6
+      pattern: 'CidrIpv6:\s*::/0'
+      extensions: [.yaml, .yml, .json]
+      description: "CloudFormation security group with open IPv6 CIDR"
+      risk: 4
+    - name: cfn_wildcard_principal
+      pattern: "Principal:\\s*['\"]?\\*"
+      extensions: [.yaml, .yml, .json]
+      description: "CloudFormation wildcard principal — overly permissive"
+      risk: 4
+    - name: cfn_public_acl_disabled
+      pattern: 'BlockPublicAcls:\s*false'
+      extensions: [.yaml, .yml, .json]
+      description: "CloudFormation S3 public access block disabled"
+      risk: 4
+    - name: cfn_hardcoded_password
+      pattern: 'MasterUserPassword:'
+      extensions: [.yaml, .yml, .json]
+      description: "CloudFormation hardcoded database master password"
+      risk: 5
+    - name: cfn_wildcard_action
+      pattern: 'Action:\s*"\*"'
+      extensions: [.yaml, .yml, .json]
+      description: "CloudFormation wildcard IAM action"
+      risk: 4
+
+  # ============================================================
+  # IaC — Dockerfile
+  # ============================================================
+  iac_dockerfile:
+    - name: docker_latest_tag
+      pattern: 'FROM\s+\S+:latest'
+      filenames: [Dockerfile, Dockerfile.dev, Dockerfile.prod]
+      extensions: [.dockerfile]
+      description: "Docker FROM with :latest tag — unpinned base image"
+      risk: 3
+    - name: docker_root_user
+      pattern: 'USER\s+root'
+      filenames: [Dockerfile, Dockerfile.dev, Dockerfile.prod]
+      extensions: [.dockerfile]
+      description: "Docker running as root user"
+      risk: 3
+    - name: docker_copy_all
+      pattern: 'COPY\s+\.\s+\.'
+      filenames: [Dockerfile, Dockerfile.dev, Dockerfile.prod]
+      extensions: [.dockerfile]
+      description: "Docker COPY entire directory — may include secrets"
+      risk: 3
+    - name: docker_env_secret
+      pattern: 'ENV\s+.*(?:PASSWORD|SECRET|API_KEY|PRIVATE_KEY)\s*='
+      filenames: [Dockerfile, Dockerfile.dev, Dockerfile.prod]
+      extensions: [.dockerfile]
+      description: "Docker ENV with hardcoded secret value"
+      risk: 4
+    - name: docker_expose_ssh
+      pattern: 'EXPOSE\s+22\b'
+      filenames: [Dockerfile, Dockerfile.dev, Dockerfile.prod]
+      extensions: [.dockerfile]
+      description: "Docker EXPOSE SSH port 22"
+      risk: 3
+
+  # ============================================================
+  # IaC — Kubernetes
+  # ============================================================
+  iac_kubernetes:
+    - name: k8s_privileged
+      pattern: 'privileged:\s*true'
+      extensions: [.yaml, .yml]
+      description: "Kubernetes privileged container"
+      risk: 5
+    - name: k8s_host_network
+      pattern: 'hostNetwork:\s*true'
+      extensions: [.yaml, .yml]
+      description: "Kubernetes host network enabled"
+      risk: 4
+    - name: k8s_host_pid
+      pattern: 'hostPID:\s*true'
+      extensions: [.yaml, .yml]
+      description: "Kubernetes host PID namespace enabled"
+      risk: 4
+    - name: k8s_run_as_root
+      pattern: 'runAsUser:\s*0\b'
+      extensions: [.yaml, .yml]
+      description: "Kubernetes container running as root (UID 0)"
+      risk: 4
+    - name: k8s_run_as_nonroot_false
+      pattern: 'runAsNonRoot:\s*false'
+      extensions: [.yaml, .yml]
+      description: "Kubernetes runAsNonRoot disabled — allows root"
+      risk: 4
+    - name: k8s_priv_escalation
+      pattern: 'allowPrivilegeEscalation:\s*true'
+      extensions: [.yaml, .yml]
+      description: "Kubernetes allowPrivilegeEscalation enabled"
+      risk: 4
+    - name: k8s_writable_rootfs
+      pattern: 'readOnlyRootFilesystem:\s*false'
+      extensions: [.yaml, .yml]
+      description: "Kubernetes writable root filesystem"
+      risk: 3
+    - name: k8s_automount_sa
+      pattern: 'automountServiceAccountToken:\s*true'
+      extensions: [.yaml, .yml]
+      description: "Kubernetes auto-mount service account token"
+      risk: 3

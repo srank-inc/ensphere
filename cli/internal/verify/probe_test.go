@@ -147,6 +147,44 @@ func TestHTTPProbe_PostBody(t *testing.T) {
 	}
 }
 
+func TestCheckCloudScope_MatchesProvider(t *testing.T) {
+	err := CheckCloudScope("aws", "123456789012", []string{"aws://123456789012"})
+	if err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+}
+
+func TestCheckCloudScope_RejectsWrongProvider(t *testing.T) {
+	err := CheckCloudScope("gcp", "my-project", []string{"aws://123456789012"})
+	var scopeErr *ScopeError
+	if !errors.As(err, &scopeErr) {
+		t.Fatalf("expected *ScopeError, got %T: %v", err, err)
+	}
+}
+
+func TestCheckCloudScope_RejectsWrongAccount(t *testing.T) {
+	err := CheckCloudScope("aws", "999999999999", []string{"aws://123456789012"})
+	var scopeErr *ScopeError
+	if !errors.As(err, &scopeErr) {
+		t.Fatalf("expected *ScopeError, got %T: %v", err, err)
+	}
+}
+
+func TestCheckCloudScope_Wildcard(t *testing.T) {
+	err := CheckCloudScope("aws", "anything", []string{"aws://*"})
+	if err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+}
+
+func TestCheckCloudScope_EmptyPatterns(t *testing.T) {
+	err := CheckCloudScope("aws", "123", []string{})
+	var scopeErr *ScopeError
+	if !errors.As(err, &scopeErr) {
+		t.Fatalf("expected *ScopeError, got %T: %v", err, err)
+	}
+}
+
 func TestHTTPProbe_Timeout(t *testing.T) {
 	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(2 * time.Second)

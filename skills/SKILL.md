@@ -28,7 +28,7 @@ When the user says "ensphere" (with or without a session number):
    - Tell the user: "No assessment in progress. Want to start with **Session 01 — Recon**?"
    - Wait for confirmation before proceeding
 4. **If progress exists**, read it and determine status:
-   - If ALL sessions are DONE or SKIPPED: "All 8 sessions complete. Want to review the final report or restart?"
+   - If ALL sessions are DONE or SKIPPED: "All sessions complete. Want to review the final report or restart?"
    - If a session is IN_PROGRESS: "Session {NN} ({category}) is in progress. Resuming."
    - If the next session is PENDING: Show a summary of completed/skipped sessions and their key findings, then ask: "Next up: **Session {NN} — {category}**. Ready to proceed?"
    - Wait for the user's confirmation before starting
@@ -111,6 +111,7 @@ Maintain `ensphere-pentest/progress.md`:
 | 05 | [methodology/05-xss.md](methodology/05-xss.md) | Cross-site scripting (reflected, stored, DOM) |
 | 06 | [methodology/06-ssrf.md](methodology/06-ssrf.md) | Server-side request forgery |
 | 07 | [methodology/07-cloud.md](methodology/07-cloud.md) | Cloud security (AWS, Azure, GCP, K8s, IaC) |
+| 09 | [methodology/09-api.md](methodology/09-api.md) | API security (rate limiting, property authz, mass assignment, pagination) |
 | 08 | [methodology/08-report.md](methodology/08-report.md) | Executive summary synthesis |
 
 ## Universal Rules
@@ -151,6 +152,7 @@ Not every session applies to every target. After Session 01 (Recon), use the Tec
 | 05 XSS | No user input reflected or stored in HTML responses (pure API with no rendered views) |
 | 06 SSRF | No server-side URL fetching, no outbound request sinks found in recon |
 | 07 Cloud | No cloud providers in scope, no cloud CLI credentials, no IaC files (see 07-cloud.md Phase 0) |
+| 09 API | No REST API, GraphQL, or gRPC endpoints discovered in recon |
 
 **Rules:**
 - Session 01 (Recon) and Session 08 (Report) always run — never skip
@@ -656,6 +658,64 @@ ensphere verify authz --url "http://target/api/admin" --low-token "user-jwt" --h
 ```
 
 Sends the same request with a high-privilege and low-privilege token and compares results. Required flags: `--url`, `--low-token`, `--high-token`, `--in-scope`.
+
+## Verify Rate Limiting
+
+Measure rate limiting behavior by sending sequential request bursts.
+
+```bash
+ensphere verify ratelimit --url "http://target/api/login" --method POST --burst-count 100 --window-sec 10 --in-scope "*.target.com"
+ensphere verify ratelimit --url "http://target/api/data" --method GET --burst-count 50 --token "jwt" --in-scope "*.target.com"
+```
+
+Sends N requests as fast as possible within a time window. Records success count (2xx), throttled count (429/503), first throttle position, and timing statistics. Required flags: `--url`, `--in-scope`. Optional: `--burst-count` (default 50), `--window-sec` (default 10), `--method`, `--body`, `--token`.
+
+## Verify Property-Level Authorization
+
+Compare JSON response fields between different privilege levels.
+
+```bash
+ensphere verify propertyauthz --url "http://target/api/user/1" --high-token "admin-jwt" --low-token "user-jwt" --watch-fields "ssn,salary,role" --in-scope "*.target.com"
+```
+
+Sends the same request with high-privilege and low-privilege tokens, extracts top-level JSON keys, and computes field set differences. Required flags: `--url`, `--high-token`, `--low-token`, `--in-scope`. Optional: `--watch-fields` (comma-separated).
+
+## OOB Callback Server
+
+Start an HTTP callback server for out-of-band detection (blind SSRF, blind XXE, blind SSTI).
+
+```bash
+ensphere callback --port 8888 --wait 30 --external-url "https://abc.ngrok.app"
+ensphere callback --port 8888 --external-url "https://abc.ngrok.app" --evidence ./evidence.jsonl
+```
+
+Generates a unique token. Callbacks arrive at `/cb/<token>`. In wait mode, blocks until first callback + 500ms grace or timeout. Returns JSON with all received callbacks.
+
+**Workflow:**
+1. Start callback server: `ensphere callback --port 8888 --external-url "https://abc.ngrok.app" --wait 60` → outputs token
+2. Run probe with callback URL: `ensphere verify ssrf --url TARGET --param url --callback-url "https://abc.ngrok.app/cb/<token>" --in-scope SCOPE`
+3. Callback server returns JSON with received requests — correlate path to confirm OOB
+
+## Cloud Security Verification
+
+Verify cloud resource security configurations using provider CLIs.
+
+```bash
+# Storage security
+ensphere cloud storage --provider aws --bucket my-bucket --in-scope "aws://123456789012"
+
+# IAM configuration
+ensphere cloud iam --provider aws --principal arn:aws:iam::123:user/alice --in-scope "aws://123456789012"
+
+# Network security
+ensphere cloud network --provider aws --in-scope "aws://123456789012" --vpc-id vpc-abc123
+
+# Parse external scanner output
+ensphere cloud parse-prowler ./prowler-output.json --evidence ./evidence.jsonl
+ensphere cloud parse-trivy ./trivy-results.json --evidence ./evidence.jsonl
+```
+
+Cloud scope uses provider URI format: `aws://ACCOUNT_ID`, `gcp://PROJECT_ID`, `azure://SUBSCRIPTION_ID`.
 
 ## Evidence Management
 

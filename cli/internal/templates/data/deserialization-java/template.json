@@ -1,0 +1,15 @@
+{
+  "name": "deserialization-java",
+  "description": "Java deserialization detection — send serialized object headers and timing payloads to detect unsafe deserialization",
+  "vuln_type": "deserialization",
+  "technique": "deserialization_rce",
+  "risk": 4,
+  "run_command": "python3 exploit.py",
+  "success_signals": ["timing_delta:significant", "error_pattern:classnotfound"],
+  "params": [
+    {"name": "TARGET_URL", "description": "Base URL of the application", "example": "http://localhost:8080", "required": true},
+    {"name": "ENDPOINT", "description": "Endpoint path that accepts serialized data", "example": "/api/import", "required": true},
+    {"name": "AUTH_HEADER", "description": "Authorization header value", "example": "Bearer eyJ...", "required": false}
+  ],
+  "files": ["exploit.py", "README.md"]
+}

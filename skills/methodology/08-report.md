@@ -22,6 +22,7 @@ Synthesize all category reports into a final security assessment.
    - `ensphere-pentest/05-xss/report.md`
    - `ensphere-pentest/06-ssrf/report.md`
    - `ensphere-pentest/07-cloud/report.md`
+   - `ensphere-pentest/09-api/report.md`
 
 2. Read external scan results (if they exist):
    - `ensphere-pentest/01-recon/nmap.txt`
@@ -30,13 +31,14 @@ Synthesize all category reports into a final security assessment.
 
 3. Read `ensphere-pentest/config.md` for target details and authorization statement.
 
-4. Read all evidence files from sessions 02-07:
+4. Read all evidence files from sessions 02-07 and 09:
    - `ensphere-pentest/02-injection/evidence.jsonl`
    - `ensphere-pentest/03-auth/evidence.jsonl`
    - `ensphere-pentest/04-authz/evidence.jsonl`
    - `ensphere-pentest/05-xss/evidence.jsonl`
    - `ensphere-pentest/06-ssrf/evidence.jsonl`
    - `ensphere-pentest/07-cloud/evidence.jsonl`
+   - `ensphere-pentest/09-api/evidence.jsonl`
    Use `ensphere evidence query --file <path>` to read entries from each.
 
 ## Report Template
@@ -224,7 +226,7 @@ Include in each finding the affected framework controls (OWASP Top 10, PCI-DSS, 
 
 ## Evidence Cross-Referencing
 
-1. Read all `evidence.jsonl` files from sessions 02-07 using `ensphere evidence query --file <path>`
+1. Read all `evidence.jsonl` files from sessions 02-07 and 09 using `ensphere evidence query --file <path>`
 2. Assign sequential EVID-{NNN} starting from EVID-001 across all sessions
 3. Cross-reference each evidence entry with its corresponding VULN-{NNN} finding
 4. Populate Appendix A with all evidence entries

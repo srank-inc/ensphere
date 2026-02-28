@@ -39,7 +39,7 @@ func NewEntry(probeType, technique, url, param string, statusCode int, duration 
 		StatusCode: statusCode,
 		Duration:   duration,
 		Result:     result,
-		Notes:      notes,
+		Notes:      RedactSecrets(notes),
 	}
 }
 

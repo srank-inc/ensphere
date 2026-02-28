@@ -24,6 +24,8 @@ var ValidVulnTypes = map[string]bool{
 	"error_handling": true,
 	// OWASP API Security Top 10 2023 — compliance mapping and evidence logging only (no payloads)
 	"property_authz": true, "api_inventory": true,
+	// Rate limiting — verification probe only (no payloads)
+	"rate_limit": true,
 	// Transport-level — compliance mapping and verification probes (no payloads)
 	"websocket": true, "grpc": true,
 }
