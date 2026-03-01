@@ -32,8 +32,8 @@ var verifyDeserializationCmd = &cobra.Command{
 Runtimes: java, python, php, node
 
 Examples:
-  ensphere verify deserialization --url "http://target/api" --runtime python --in-scope "*.target.com"
-  ensphere verify deserialization --url "http://target/deserialize" --runtime java --in-scope "*.target.com"`,
+  ensphere verify deserialization --url "http://target/api" --runtime python --max-risk 4 --in-scope "*.target.com"
+  ensphere verify deserialization --url "http://target/deserialize" --runtime java --max-risk 4 --in-scope "*.target.com"`,
 	RunE: runVerifyDeserialization,
 }
 
@@ -41,7 +41,7 @@ func init() {
 	verifyDeserializationCmd.Flags().StringVar(&deserURL, "url", "", "Target URL (required)")
 	verifyDeserializationCmd.Flags().StringVar(&deserRuntime, "runtime", "", "Target runtime: java, python, php, node (required)")
 	verifyDeserializationCmd.Flags().StringVar(&deserMethod, "method", "POST", "HTTP method")
-	verifyDeserializationCmd.Flags().StringVar(&deserTechnique, "technique", "time_based", "Technique: time_based, dns_oob")
+	verifyDeserializationCmd.Flags().StringVar(&deserTechnique, "technique", "time_based", "Technique: time_based")
 	verifyDeserializationCmd.Flags().StringSliceVar(&deserHeaders, "header", nil, "Custom headers (key:value, repeatable)")
 	verifyDeserializationCmd.Flags().StringSliceVar(&deserInScope, "in-scope", nil, "In-scope patterns (required)")
 	verifyDeserializationCmd.Flags().IntVar(&deserMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")

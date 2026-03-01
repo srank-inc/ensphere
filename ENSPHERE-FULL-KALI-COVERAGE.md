@@ -813,7 +813,7 @@ Kali Linux 2025.2+ reorganized its menu to align with **MITRE ATT&CK tactics**. 
 | **Recon-ng** | OSINT framework with modular architecture | Script-based (`-r` flag for resource files) |
 | **enum4linux-ng** | SMB/Samba enumeration (users, shares, policies) | Yes |
 | **dnsrecon** | DNS enumeration — zone transfers, brute force, SRV records | Yes |
-| **whatweb** | Web technology fingerprinting | Yes |
+| **httpx** | Web technology fingerprinting | Yes |
 | **subfinder** | Fast passive subdomain discovery | Yes |
 
 ### Vulnerability Analysis
@@ -996,7 +996,7 @@ Even with full Kali coverage, some penetration testing activities are fundamenta
 
 | Session | Category | Tools Used | Applicable When |
 |---------|----------|-----------|-----------------|
-| 01 | Reconnaissance | Nmap, Amass, theHarvester, whatweb | Always |
+| 01 | Reconnaissance | Nmap, Amass, theHarvester, httpx | Always |
 | 02 | Network Exploitation | Metasploit, Hydra, Nmap scripts, NetExec | Network services exposed |
 | 03 | Web Application — Injection | ensphere payloads, ensphere verify, SQLmap, curl | Web app/API present |
 | 04 | Web Application — Auth | ensphere verify auth, curl, Playwright | Web app/API present |

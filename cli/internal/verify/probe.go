@@ -56,7 +56,63 @@ func HTTPProbe(method, url string, body string, headers map[string]string, timeo
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024)) // 10 MB max
+	if err != nil {
+		return ProbeResponse{
+			StatusCode: resp.StatusCode,
+			ElapsedMs:  elapsed,
+			Headers:    resp.Header,
+			Error:      fmt.Errorf("read body: %w", err),
+		}
+	}
+
+	bodyStr := string(respBody)
+	hash := fmt.Sprintf("%x", sha256.Sum256(respBody))
+
+	return ProbeResponse{
+		StatusCode: resp.StatusCode,
+		Body:       bodyStr,
+		BodyHash:   hash,
+		ElapsedMs:  elapsed,
+		Headers:    resp.Header,
+	}
+}
+
+// HTTPProbeNoRedirect sends an HTTP request without following redirects.
+// Use for probes where the first-hop response status is the security signal
+// (auth, authz, IDOR, fileupload verification).
+func HTTPProbeNoRedirect(method, url string, body string, headers map[string]string, timeoutSec int) ProbeResponse {
+	client := &http.Client{
+		Timeout: time.Duration(timeoutSec) * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	var bodyReader io.Reader
+	if body != "" {
+		bodyReader = strings.NewReader(body)
+	}
+
+	req, err := http.NewRequest(method, url, bodyReader)
+	if err != nil {
+		return ProbeResponse{Error: fmt.Errorf("build request: %w", err)}
+	}
+
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
+	start := time.Now()
+	resp, err := client.Do(req)
+	elapsed := time.Since(start).Milliseconds()
+
+	if err != nil {
+		return ProbeResponse{ElapsedMs: elapsed, Error: fmt.Errorf("request failed: %w", err)}
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
 	if err != nil {
 		return ProbeResponse{
 			StatusCode: resp.StatusCode,

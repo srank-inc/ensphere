@@ -67,6 +67,7 @@ func VerifyRLS(cfg RLSConfig) (*ProbeResult, error) {
 	}
 
 	// Step 1: Tenant A queries own data
+	throttle.Wait()
 	probeCount++
 	ownURL := fmt.Sprintf("%s/rest/v1/%s?select=%s&company_id=eq.%s", cfg.ProjectURL, cfg.Table, selectCols, cfg.TenantA)
 	ownResp := HTTPProbe("GET", ownURL, "", map[string]string{

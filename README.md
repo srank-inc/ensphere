@@ -123,7 +123,7 @@ ensphere verify xxe --url "http://target/api/xml" --technique file_read --in-sco
 
 **Deserialization** — Time-based blind. `--runtime java|python|php|node`
 ```bash
-ensphere verify deserialization --url "http://target/api" --runtime python --in-scope *.target.com
+ensphere verify deserialization --url "http://target/api" --runtime python --max-risk 4 --in-scope *.target.com
 ```
 
 **CSRF** — Origin header validation + SameSite cookie checks
@@ -351,7 +351,7 @@ ensphere checklist --list         # JSON with item counts
   claude mcp add playwright -- npx @anthropic-ai/mcp-playwright@latest
   ```
 - **Go 1.23+** for building CLI
-- **Optional recon tools**: `nmap`, `subfinder`, `whatweb`
+- **Optional recon tools**: `nmap`, `subfinder`, `httpx`
 
 ## Sample Reports
 

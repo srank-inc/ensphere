@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/srank/ensphere/internal/evidence"
 )
@@ -51,6 +52,9 @@ func VerifyCMDi(cfg CMDiConfig) (*ProbeResult, error) {
 		}
 	}
 
+	if cfg.TimeoutSec < 5 {
+		return nil, fmt.Errorf("timeout must be >= 5 for time-based probes, got %d", cfg.TimeoutSec)
+	}
 	sleepSec := cfg.TimeoutSec / 2
 	if sleepSec < 3 {
 		sleepSec = 3
@@ -135,14 +139,21 @@ func VerifyCMDi(cfg CMDiConfig) (*ProbeResult, error) {
 }
 
 func cmdiProbeWithParam(cfg CMDiConfig, value string) ProbeResponse {
+	if strings.ToUpper(cfg.Method) == "POST" {
+		body := url.Values{cfg.Param: {value}}.Encode()
+		headers := make(map[string]string)
+		for k, v := range cfg.Headers {
+			headers[k] = v
+		}
+		headers["Content-Type"] = "application/x-www-form-urlencoded"
+		return HTTPProbe("POST", cfg.URL, body, headers, cfg.TimeoutSec)
+	}
 	parsed, err := url.Parse(cfg.URL)
 	if err != nil {
 		return ProbeResponse{Error: fmt.Errorf("parse URL: %w", err)}
 	}
-
 	params := parsed.Query()
 	params.Set(cfg.Param, value)
 	parsed.RawQuery = params.Encode()
-
 	return HTTPProbe(cfg.Method, parsed.String(), "", cfg.Headers, cfg.TimeoutSec)
 }

@@ -391,5 +391,35 @@ func TestIntegration_MassAssignment(t *testing.T) {
 	}
 }
 
-// Suppress unused import warning for json.
-var _ = json.Unmarshal
+func TestIntegration_Auth_RedirectPreservation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+	// Server returns 302 for unauthenticated, 200 for authenticated
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") == "" {
+			http.Redirect(w, r, "/login", http.StatusFound)
+			return
+		}
+		w.WriteHeader(200)
+		fmt.Fprint(w, "authed")
+	}))
+	result, err := VerifyAuth(AuthConfig{
+		URL:       ts.URL + "/protected",
+		Method:    "GET",
+		Token:     "valid-token",
+		Technique: "no_token",
+		ProbeConfig: baseProbeConfig(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, ok := result.Measurements.(AuthMeasurements)
+	if !ok {
+		t.Fatal("unexpected measurements type")
+	}
+	// Without redirect following, probe (no token) should see 302
+	if m.Probe.StatusCode == 200 {
+		t.Error("auth probe should not follow redirect; expected 302, got 200")
+	}
+}

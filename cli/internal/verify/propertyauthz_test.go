@@ -39,7 +39,10 @@ func TestVerifyPropertyAuthZ_FieldDifference(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	m := result.Measurements.(PropertyAuthZMeasurements)
+	m, ok := result.Measurements.(PropertyAuthZMeasurements)
+	if !ok {
+		t.Fatal("unexpected measurements type")
+	}
 	if len(m.SharedFields) != 3 {
 		t.Errorf("expected 3 shared fields, got %d: %v", len(m.SharedFields), m.SharedFields)
 	}
@@ -77,7 +80,10 @@ func TestVerifyPropertyAuthZ_IdenticalResponses(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	m := result.Measurements.(PropertyAuthZMeasurements)
+	m, ok := result.Measurements.(PropertyAuthZMeasurements)
+	if !ok {
+		t.Fatal("unexpected measurements type")
+	}
 	if !m.HashesMatch {
 		t.Error("expected hashes to match for identical responses")
 	}
@@ -119,7 +125,10 @@ func TestVerifyPropertyAuthZ_WatchFields(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	m := result.Measurements.(PropertyAuthZMeasurements)
+	m, ok := result.Measurements.(PropertyAuthZMeasurements)
+	if !ok {
+		t.Fatal("unexpected measurements type")
+	}
 	if len(m.WatchFieldResults) != 3 {
 		t.Fatalf("expected 3 watch results, got %d", len(m.WatchFieldResults))
 	}
@@ -165,11 +174,58 @@ func TestVerifyPropertyAuthZ_NonJSONResponse(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	m := result.Measurements.(PropertyAuthZMeasurements)
+	m, ok := result.Measurements.(PropertyAuthZMeasurements)
+	if !ok {
+		t.Fatal("unexpected measurements type")
+	}
 	if m.HighPrivFields != nil {
 		t.Errorf("expected nil high-priv fields for HTML, got %v", m.HighPrivFields)
 	}
 	if m.LowPrivFields != nil {
 		t.Errorf("expected nil low-priv fields for HTML, got %v", m.LowPrivFields)
+	}
+}
+
+func TestVerifyPropertyAuthZ_RedirectPreservation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	// Low-priv gets 302 redirect; high-priv gets JSON 200
+	srv := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("Authorization")
+		if auth == "Bearer admin-token" {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"id": 1, "name": "Alice", "ssn": "123-45-6789",
+			})
+		} else {
+			http.Redirect(w, r, "/login", http.StatusFound)
+		}
+	}))
+
+	cfg := PropertyAuthZConfig{
+		URL:           srv.URL + "/api/user",
+		Method:        "GET",
+		HighPrivToken: "admin-token",
+		LowPrivToken:  "user-token",
+		ProbeConfig:   baseProbeConfig(),
+	}
+
+	result, err := VerifyPropertyAuthZ(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	m, ok := result.Measurements.(PropertyAuthZMeasurements)
+	if !ok {
+		t.Fatal("unexpected measurements type")
+	}
+	// Without redirect following, low-priv should see 302, not 200
+	if m.LowPriv.StatusCode == 200 {
+		t.Error("propertyauthz should not follow redirect; expected non-200 for low-priv, got 200")
+	}
+	if m.HighPriv.StatusCode != 200 {
+		t.Errorf("expected 200 for high-priv, got %d", m.HighPriv.StatusCode)
 	}
 }

@@ -200,6 +200,17 @@ func TestRedactSecrets_Bearer(t *testing.T) {
 	}
 }
 
+func TestRedactSecrets_BearerBase64WithPlus(t *testing.T) {
+	input := "Authorization: Bearer abc+def/ghi=="
+	result := RedactSecrets(input)
+	if strings.Contains(result, "def") {
+		t.Fatalf("expected full bearer token to be redacted, got %s", result)
+	}
+	if !strings.Contains(result, "[REDACTED]") {
+		t.Fatal("expected [REDACTED] in output")
+	}
+}
+
 func TestRedactSecrets_QueryParam(t *testing.T) {
 	input := "https://api.com?password=secret123&name=foo"
 	result := RedactSecrets(input)

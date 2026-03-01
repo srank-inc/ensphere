@@ -31,9 +31,8 @@ var validGRPCTechniques = map[string]bool{
 // Protobuf: field 3 (string) = tag 0x1a, length 1, value 0x2a ("*")
 var grpcReflectionBody = []byte{0x00, 0x00, 0x00, 0x00, 0x03, 0x1a, 0x01, 0x2a}
 
-// HTTP/2 connection preface and empty SETTINGS frame.
-var http2Preface = []byte("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n")
-var http2Settings = []byte{0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00}
+// HTTP/2 connection preface + empty SETTINGS frame (pre-concatenated).
+var http2ClientPrelude = append([]byte("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"), 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00)
 
 // VerifyGRPC runs the gRPC security verification probe.
 func VerifyGRPC(cfg GRPCConfig) (*ProbeResult, error) {
@@ -192,7 +191,7 @@ func grpcPlaintext(cfg GRPCConfig, timer *Timer, throttle *Throttle, ew *evidenc
 	plaintextElapsed := time.Since(start).Milliseconds()
 	if err == nil {
 		_ = conn.SetDeadline(time.Now().Add(timeout))
-		_, writeErr := conn.Write(append(http2Preface, http2Settings...))
+		_, writeErr := conn.Write(http2ClientPrelude)
 		if writeErr == nil {
 			buf := make([]byte, 64)
 			n, readErr := conn.Read(buf)
@@ -221,7 +220,7 @@ func grpcPlaintext(cfg GRPCConfig, timer *Timer, throttle *Throttle, ew *evidenc
 	if err == nil {
 		if tlsConn.ConnectionState().NegotiatedProtocol == "h2" {
 			_ = tlsConn.SetDeadline(time.Now().Add(timeout))
-			_, writeErr := tlsConn.Write(append(http2Preface, http2Settings...))
+			_, writeErr := tlsConn.Write(http2ClientPrelude)
 			if writeErr == nil {
 				buf := make([]byte, 64)
 				n, readErr := tlsConn.Read(buf)

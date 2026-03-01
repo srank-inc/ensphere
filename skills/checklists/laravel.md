@@ -50,7 +50,7 @@ Attack surface specific to Laravel PHP applications.
 
 - [ ] Job/queue deserialization attacks — serialized job payloads (Redis, database, SQS) containing user-controlled data can trigger unsafe deserialization chains
   -> payloads: `ensphere payloads deserialization --runtime php --technique deserialization_rce`
-  -> verify: `ensphere verify deserialization --technique time_based --url <endpoint> --param <param> --in-scope <pattern>`
+  -> verify: `ensphere verify deserialization --technique time_based --url <endpoint> --runtime php --max-risk 4 --in-scope <pattern>`
 
 ## Auth Gate/Policy Bypass
 

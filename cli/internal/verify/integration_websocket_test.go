@@ -229,3 +229,100 @@ func TestWSHandshake_RawTCP(t *testing.T) {
 		t.Fatalf("expected elapsed >= 0, got %d", elapsed)
 	}
 }
+
+func TestIntegration_WebSocket_Malformed101Rejected(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+	// Fake server that returns bare 101 without required WS headers
+	ln, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { ln.Close() })
+	go func() {
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		reader := bufio.NewReader(conn)
+		for {
+			line, err := reader.ReadString('\n')
+			if err != nil || strings.TrimSpace(line) == "" {
+				break
+			}
+		}
+		// Return bare 101 without Upgrade/Connection/Accept headers
+		conn.Write([]byte("HTTP/1.1 101 Switching Protocols\r\n\r\n"))
+	}()
+
+	addr := ln.Addr().String()
+	conn, statusCode, _, hsErr := wsHandshake("ws://"+addr+"/ws", "http://localhost", nil, 5)
+	if conn != nil {
+		conn.Close()
+	}
+	if statusCode != 101 {
+		t.Fatalf("expected status 101, got %d", statusCode)
+	}
+	if hsErr == nil {
+		t.Fatal("expected error for malformed 101 without WS headers")
+	}
+	if !strings.Contains(hsErr.Error(), "handshake") {
+		t.Fatalf("expected handshake error, got: %v", hsErr)
+	}
+}
+
+func TestIntegration_WebSocket_Malformed101_UpgradeSuccessFalse(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+	// Server sends bare 101 without required WebSocket headers.
+	// VerifyWebSocket must report UpgradeSuccess=false for this.
+	bare101Handler := func(conns int) net.Listener {
+		ln, err := net.Listen("tcp4", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { ln.Close() })
+		go func() {
+			for i := 0; i < conns; i++ {
+				conn, err := ln.Accept()
+				if err != nil {
+					return
+				}
+				reader := bufio.NewReader(conn)
+				for {
+					line, err := reader.ReadString('\n')
+					if err != nil || strings.TrimSpace(line) == "" {
+						break
+					}
+				}
+				conn.Write([]byte("HTTP/1.1 101 Switching Protocols\r\n\r\n"))
+				conn.Close()
+			}
+		}()
+		return ln
+	}
+
+	// ws_injection needs 2 connections (baseline HTTP + WS upgrade)
+	ln := bare101Handler(2)
+	addr := ln.Addr().String()
+
+	result, err := VerifyWebSocket(WebSocketConfig{
+		URL:       "ws://" + addr + "/ws",
+		Technique: "ws_injection",
+		Payload:   "test",
+		ProbeConfig: baseProbeConfig(),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	m := result.Measurements.(WebSocketMeasurements)
+	if m.UpgradeSuccess {
+		t.Fatal("expected UpgradeSuccess=false for malformed 101 without WS headers")
+	}
+	if m.UpgradeStatus != 101 {
+		t.Fatalf("expected UpgradeStatus=101, got %d", m.UpgradeStatus)
+	}
+}

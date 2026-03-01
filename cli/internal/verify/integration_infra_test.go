@@ -1,6 +1,7 @@
 package verify
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"testing"
@@ -263,5 +264,32 @@ func TestIntegration_CachePoisoning(t *testing.T) {
 	}
 	if m.Verify.StatusCode == 0 {
 		t.Fatal("expected Verify.StatusCode > 0")
+	}
+}
+
+func TestIntegration_FileUpload_VerifyURLScope(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
+	_, err := VerifyFileUpload(FileUploadConfig{
+		URL:       ts.URL + "/upload",
+		FieldName: "file",
+		Filename:  "test.txt",
+		Content:   "test",
+		MIMEType:  "text/plain",
+		Technique: "extension_bypass",
+		VerifyURL: "http://evil.com/uploaded.txt",
+		Method:    "POST",
+		ProbeConfig: baseProbeConfig(),
+	})
+	if err == nil {
+		t.Fatal("expected scope error for out-of-scope verify-url")
+	}
+	var scopeErr *ScopeError
+	if !errors.As(err, &scopeErr) {
+		t.Fatalf("expected ScopeError, got: %v", err)
 	}
 }

@@ -1,8 +1,8 @@
 package verify
 
 import (
+	crypto_rand "crypto/rand"
 	"fmt"
-	"math/rand"
 	"os"
 	"strings"
 
@@ -60,7 +60,9 @@ func VerifyCachePoisoning(cfg CachePoisoningConfig) (*ProbeResult, error) {
 	probeCount := 0
 
 	// Add cache-buster to URL
-	cacheBuster := fmt.Sprintf("ensphere_cb=%d", rand.Intn(999999))
+	var buf [8]byte
+	_, _ = crypto_rand.Read(buf[:])
+	cacheBuster := fmt.Sprintf("ensphere_cb=%x", buf[:])
 	testURL := cfg.URL
 	if strings.Contains(testURL, "?") {
 		testURL += "&" + cacheBuster

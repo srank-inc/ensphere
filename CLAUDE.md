@@ -57,8 +57,8 @@ make clean        # remove build artifacts
 
 ```bash
 make test                                          # go vet + go test ./...
-cd cli && go test -short ./...                     # fast: contracts + core + evidence + drift (~258 tests, ~3s)
-cd cli && go test ./...                            # full: everything including integration (~302 tests, ~5s)
+cd cli && go test -short ./...                     # fast: contracts + core + evidence + drift (~258 tests, ~4s)
+cd cli && go test ./...                            # full: everything including integration (~309 tests, ~11s)
 cd cli && go test -race ./internal/verify/         # race detector on verify package
 cd cli && go test -race -short ./internal/verify/  # race detector, fast path only
 ```
@@ -77,7 +77,7 @@ Test files are organized by concern:
 | `verify/race_test.go` | verify | Race: concurrent burst verification |
 | `verify/websocket_test.go` | verify | WebSocket: computeWSAccept, generateWSKey, parseHTTPStatus |
 | `verify/grpc_test.go` | verify | gRPC: extractServiceNames, isPrintable |
-| `verify/integration_websocket_test.go` | verify | Integration: WebSocket upgrade, origin check, hijack |
+| `verify/integration_websocket_test.go` | verify | Integration: WebSocket upgrade, origin check, hijack, malformed-101 rejection |
 | `verify/integration_grpc_test.go` | verify | Integration: gRPC plaintext detection, reflection probe |
 | `verify/ratelimit_test.go` | verify | Integration: sequential burst, no throttling, window expiry |
 | `verify/propertyauthz_test.go` | verify | Integration: field difference, identical responses, watch fields, non-JSON |

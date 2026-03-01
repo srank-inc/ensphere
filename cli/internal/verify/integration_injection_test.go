@@ -672,3 +672,39 @@ func TestIntegration_FileUpload(t *testing.T) {
 		t.Fatal("expected FilenameInResponse == true")
 	}
 }
+
+func TestIntegration_SQLi_POST(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+	// Handler delays only when POST body contains timing keyword
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		bodyStr := string(body)
+		if r.Method == "POST" && strings.Contains(bodyStr, "pg_sleep") {
+			time.Sleep(150 * time.Millisecond)
+		}
+		w.WriteHeader(200)
+		fmt.Fprint(w, "ok")
+	}))
+	cfg := SQLiConfig{
+		URL:         ts.URL + "/api",
+		Param:       "id",
+		Technique:   "blind_time",
+		Method:      "POST",
+		Boundary:    "single_quote",
+		ProbeConfig: baseProbeConfig(),
+	}
+	cfg.TimeoutSec = 10
+	result, err := VerifySQLi(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, ok := result.Measurements.(SQLiTimeMeasurements)
+	if !ok {
+		t.Fatal("unexpected measurements type")
+	}
+	if m.PayloadAvgMs <= m.BaselineAvgMs {
+		t.Errorf("POST mode: payload avg (%d) should be > baseline avg (%d)", m.PayloadAvgMs, m.BaselineAvgMs)
+	}
+}

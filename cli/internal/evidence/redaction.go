@@ -7,7 +7,7 @@ var redactionPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`),
 
 	// Bearer tokens in headers or values
-	regexp.MustCompile(`(?i)Bearer\s+[A-Za-z0-9_\-.]+`),
+	regexp.MustCompile(`(?i)Bearer\s+[A-Za-z0-9_/+=\-.]+`),
 
 	// Sensitive query parameters: password=, secret=, token=, key=, apikey=, api_key=, api-key=
 	regexp.MustCompile(`(?i)(password|secret|token|key|apikey|api_key|api-key)=[^&\s]+`),

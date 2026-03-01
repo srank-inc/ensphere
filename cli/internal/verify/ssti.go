@@ -133,14 +133,21 @@ func containsEngine(engines []string, engine string) bool {
 }
 
 func sstiProbeWithParam(cfg SSTIConfig, value string) ProbeResponse {
+	if strings.ToUpper(cfg.Method) == "POST" {
+		body := url.Values{cfg.Param: {value}}.Encode()
+		headers := make(map[string]string)
+		for k, v := range cfg.Headers {
+			headers[k] = v
+		}
+		headers["Content-Type"] = "application/x-www-form-urlencoded"
+		return HTTPProbe("POST", cfg.URL, body, headers, cfg.TimeoutSec)
+	}
 	parsed, err := url.Parse(cfg.URL)
 	if err != nil {
 		return ProbeResponse{Error: fmt.Errorf("parse URL: %w", err)}
 	}
-
 	params := parsed.Query()
 	params.Set(cfg.Param, value)
 	parsed.RawQuery = params.Encode()
-
 	return HTTPProbe(cfg.Method, parsed.String(), "", cfg.Headers, cfg.TimeoutSec)
 }

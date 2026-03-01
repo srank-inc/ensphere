@@ -443,7 +443,7 @@ mappings:
 
   mass_assignment:
     - framework: "OWASP Top 10 2025"
-      control_ids: ["A01:2025 - Broken Access Control", "A04:2025 - Insecure Design"]
+      control_ids: ["A01:2025 - Broken Access Control", "A06:2025 - Insecure Design"]
       description: "Mass assignment enables unauthorized modification of object properties"
     - framework: "OWASP API Security Top 10 2023"
       control_ids: ["API3:2023 - Broken Object Property Level Authorization"]

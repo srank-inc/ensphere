@@ -31,8 +31,8 @@ Before starting, read:
 Search for exposed API documentation:
 
 ```bash
-# Scan for API doc route patterns
-ensphere scan ./src --category sqli,ssrf  # (reuse scanner for pattern search)
+# Search code for API documentation route definitions
+grep -rn "swagger\|openapi\|/api-docs\|/graphql" ./src
 ```
 
 Manually check code for:

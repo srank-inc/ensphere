@@ -102,7 +102,7 @@ func wsInjection(cfg WebSocketConfig, timer *Timer, throttle *Throttle, ew *evid
 	origin := fmt.Sprintf("http://%s", parsed.Hostname())
 
 	conn, statusCode, elapsed, err := wsHandshake(cfg.URL, origin, cfg.Headers, cfg.TimeoutSec)
-	upgradeSuccess := statusCode == 101
+	upgradeSuccess := statusCode == 101 && err == nil
 	fmt.Fprintf(os.Stderr, "[WS UPGRADE] status=%d %dms success=%v\n", statusCode, elapsed, upgradeSuccess)
 	writeEvidence(ew, "websocket", cfg.Technique, cfg.URL, "", statusCode,
 		fmt.Sprintf("%dms", elapsed), "probe", "WebSocket upgrade attempt")
@@ -165,12 +165,12 @@ func wsHijack(cfg WebSocketConfig, timer *Timer, throttle *Throttle, ew *evidenc
 	throttle.Wait()
 	*probeCount++
 
-	conn, statusCode, elapsed, _ := wsHandshake(cfg.URL, "http://evil.example.com", cfg.Headers, cfg.TimeoutSec)
+	conn, statusCode, elapsed, hsErr := wsHandshake(cfg.URL, "http://evil.example.com", cfg.Headers, cfg.TimeoutSec)
 	if conn != nil {
 		conn.Close()
 	}
 
-	upgradeSuccess := statusCode == 101
+	upgradeSuccess := statusCode == 101 && hsErr == nil
 	fmt.Fprintf(os.Stderr, "[WS HIJACK] status=%d %dms success=%v\n", statusCode, elapsed, upgradeSuccess)
 	writeEvidence(ew, "websocket", cfg.Technique, cfg.URL, "", statusCode,
 		fmt.Sprintf("%dms", elapsed), "probe", "evil origin WebSocket upgrade")
@@ -212,12 +212,12 @@ func wsOriginCheck(cfg WebSocketConfig, timer *Timer, throttle *Throttle, ew *ev
 		throttle.Wait()
 		*probeCount++
 
-		conn, statusCode, elapsed, _ := wsHandshake(cfg.URL, test.origin, cfg.Headers, cfg.TimeoutSec)
+		conn, statusCode, elapsed, hsErr := wsHandshake(cfg.URL, test.origin, cfg.Headers, cfg.TimeoutSec)
 		if conn != nil {
 			conn.Close()
 		}
 
-		upgradeSuccess := statusCode == 101
+		upgradeSuccess := statusCode == 101 && hsErr == nil
 		results = append(results, OriginCheckResult{
 			Origin:         test.name,
 			UpgradeStatus:  statusCode,
@@ -324,17 +324,48 @@ func wsHandshake(rawURL string, origin string, extraHeaders map[string]string, t
 
 	statusCode := parseHTTPStatus(statusLine)
 
-	// Read remaining headers
+	// Read remaining headers and validate WebSocket upgrade
+	var hasUpgrade, hasConnection bool
+	var serverAccept string
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil || strings.TrimSpace(line) == "" {
 			break
+		}
+		headerLine := strings.TrimSpace(line)
+		lower := strings.ToLower(headerLine)
+		if strings.HasPrefix(lower, "upgrade:") {
+			val := strings.TrimSpace(headerLine[len("upgrade:"):])
+			hasUpgrade = strings.EqualFold(val, "websocket")
+		}
+		if strings.HasPrefix(lower, "connection:") {
+			val := strings.TrimSpace(headerLine[len("connection:"):])
+			for _, token := range strings.Split(val, ",") {
+				if strings.EqualFold(strings.TrimSpace(token), "upgrade") {
+					hasConnection = true
+					break
+				}
+			}
+		}
+		if strings.HasPrefix(lower, "sec-websocket-accept:") {
+			serverAccept = strings.TrimSpace(headerLine[len("sec-websocket-accept:"):])
 		}
 	}
 
 	if statusCode != 101 {
 		conn.Close()
 		return nil, statusCode, elapsed, fmt.Errorf("upgrade failed: status %d", statusCode)
+	}
+
+	if !hasUpgrade || !hasConnection {
+		conn.Close()
+		return nil, statusCode, elapsed, fmt.Errorf("invalid websocket handshake: missing required headers (upgrade=%v, connection=%v)", hasUpgrade, hasConnection)
+	}
+
+	expectedAccept := computeWSAccept(wsKey)
+	if serverAccept != expectedAccept {
+		conn.Close()
+		return nil, statusCode, elapsed, fmt.Errorf("invalid websocket handshake: Sec-WebSocket-Accept mismatch (got %q, want %q)", serverAccept, expectedAccept)
 	}
 
 	return conn, statusCode, elapsed, nil
@@ -422,6 +453,11 @@ func wsReadFrame(conn net.Conn) ([]byte, error) {
 			return nil, err
 		}
 		payloadLen = int(ext[4])<<24 | int(ext[5])<<16 | int(ext[6])<<8 | int(ext[7])
+	}
+
+	const maxWSPayloadSize = 16 * 1024 * 1024 // 16 MB
+	if payloadLen > maxWSPayloadSize {
+		return nil, fmt.Errorf("websocket frame too large: %d bytes (max %d)", payloadLen, maxWSPayloadSize)
 	}
 
 	var maskKey []byte

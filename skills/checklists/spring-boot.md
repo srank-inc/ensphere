@@ -25,7 +25,7 @@ Attack surface specific to Spring Boot and Spring Security applications.
 
 - [ ] Jackson polymorphic deserialization — `@JsonTypeInfo` with `Id.CLASS` or `enableDefaultTyping()` allows instantiation of arbitrary classes from JSON input
   -> payloads: `ensphere payloads deserialization --runtime jvm --technique deserialization_rce`
-  -> verify: `ensphere verify deserialization --technique dns_oob --url <endpoint> --param <param> --in-scope <pattern>`
+  -> verify: `ensphere verify deserialization --technique time_based --url <endpoint> --runtime java --max-risk 4 --in-scope <pattern>`
   -> scan: `ensphere scan ./src --category deserialization`
 
 ## CORS Misconfiguration

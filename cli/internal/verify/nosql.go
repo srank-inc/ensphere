@@ -130,6 +130,9 @@ func verifyNoSQLOperator(cfg NoSQLConfig, throttle *Throttle, timer *Timer, ew *
 }
 
 func verifyNoSQLWhereTime(cfg NoSQLConfig, throttle *Throttle, timer *Timer, ew *evidence.Writer) (*ProbeResult, error) {
+	if cfg.TimeoutSec < 5 {
+		return nil, fmt.Errorf("timeout must be >= 5 for time-based probes, got %d", cfg.TimeoutSec)
+	}
 	sleepSec := cfg.TimeoutSec / 2
 	if sleepSec < 3 {
 		sleepSec = 3

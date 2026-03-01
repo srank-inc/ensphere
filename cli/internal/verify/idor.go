@@ -57,7 +57,7 @@ func VerifyIDOR(cfg IDORConfig) (*ProbeResult, error) {
 	// Send probe
 	throttle.Wait()
 	probeCount++
-	resp := HTTPProbe(cfg.Method, targetURL, "", headers, cfg.TimeoutSec)
+	resp := HTTPProbeNoRedirect(cfg.Method, targetURL, "", headers, cfg.TimeoutSec)
 	if resp.Error != nil {
 		return nil, fmt.Errorf("idor probe: %w", resp.Error)
 	}

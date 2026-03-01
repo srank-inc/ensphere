@@ -8,6 +8,9 @@ import (
 )
 
 func TestVerifyRace_ConcurrentBurst(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
 	var count int64
 	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		n := atomic.AddInt64(&count, 1)

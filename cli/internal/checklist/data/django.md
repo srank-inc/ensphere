@@ -13,7 +13,7 @@ Attack surface specific to Django and Django REST Framework applications.
 
 - [ ] Pickle deserialization via session backend — Django's `PickleSerializer` allows RCE if `SECRET_KEY` is compromised or session data is attacker-controlled
   -> payloads: `ensphere payloads deserialization --runtime python --technique deserialization_rce`
-  -> verify: `ensphere verify deserialization --technique time_based --url <endpoint> --param <param> --in-scope <pattern>`
+  -> verify: `ensphere verify deserialization --technique time_based --url <endpoint> --runtime python --max-risk 4 --in-scope <pattern>`
 
 ## CSRF
 

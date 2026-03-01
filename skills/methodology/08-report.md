@@ -27,7 +27,7 @@ Synthesize all category reports into a final security assessment.
 2. Read external scan results (if they exist):
    - `ensphere-pentest/01-recon/nmap.txt`
    - `ensphere-pentest/01-recon/subdomains.txt`
-   - `ensphere-pentest/01-recon/whatweb.txt`
+   - `ensphere-pentest/01-recon/httpx.txt`
 
 3. Read `ensphere-pentest/config.md` for target details and authorization statement.
 
@@ -127,7 +127,7 @@ Include this section ONLY when Assessment Mode is BLACK_BOX.
 - **Deadline**: [24h/7d/30d/90d based on severity]
 
 ## Network Reconnaissance
-[Security-relevant findings from nmap, subfinder, whatweb — exposed services, misconfigurations, expanded attack surface]
+[Security-relevant findings from nmap, subfinder, httpx — exposed services, misconfigurations, expanded attack surface]
 
 ## Potential Findings
 [Vulnerabilities blocked by external constraints, not security controls]

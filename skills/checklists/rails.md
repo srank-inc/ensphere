@@ -26,7 +26,7 @@ Attack surface specific to Ruby on Rails applications.
 
 - [ ] Insecure deserialization via `Marshal.load` — deserialization of untrusted data leads to arbitrary code execution
   -> payloads: `ensphere payloads deserialization --runtime ruby --technique deserialization_rce`
-  -> verify: `ensphere verify deserialization --technique dns_oob --url <endpoint> --param <param> --in-scope <pattern>`
+  -> verify: manual (Ruby runtime not yet supported by deserialization verifier)
 
 ## Open Redirect
 

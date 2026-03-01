@@ -272,7 +272,15 @@ ensphere template <name> --out ./poc/<name>            # write to directory
 | `sqli-time-postgres` | sqli | blind_time | pg_sleep timing injection |
 | `ssrf-probe` | ssrf | internal_service | Internal URL probing with bypass variants |
 | `auth-header-replay` | authz | cross_tenant | Token replay across users |
-| `upload-polyglot-check` | authz | path_traversal | Mismatched content-type/extension uploads |
+| `upload-polyglot-check` | file_upload | content_type_mismatch | Mismatched content-type/extension uploads |
+| `xss-reflected-poc` | xss | reflected | Reflected XSS detection in response body |
+| `nosql-extraction` | nosql | operator_injection | NoSQL $ne/$gt operator injection |
+| `jwt-forge` | jwt | alg_none | JWT algorithm none attack |
+| `cmdi-reverse-check` | cmdi | command_injection | OS sleep-based timing injection |
+| `deserialization-java` | deserialization | deserialization_rce | Java deserialization header/timing detection |
+| `ssti-rce` | ssti | expression_eval | Multi-engine template expression injection |
+| `lfi-to-rce` | lfi | directory_traversal | Path traversal with known file signatures |
+| `xxe-oob-extract` | xxe | xxe_oob | External entity with OOB callback extraction |
 
 ### Workflow
 1. Query `ensphere payloads` to identify applicable payload types
@@ -352,6 +360,15 @@ ensphere checklist --list               # JSON output with item counts
 | `supabase-rls` | 10 | RLS bypass, PostgREST, JWT claims, Storage ACL, Realtime isolation |
 | `trpc` | 8 | Auth middleware gaps, Zod validation, batch abuse, cross-tenant |
 | `cloudflare-r2` | 6 | Presigned URL scope, public buckets, CORS, SSE-C, enumeration |
+| `aws-iam` | 12 | IAM policy, privilege escalation, role assumption, MFA, access keys |
+| `aws-s3` | 12 | Bucket ACL, encryption, versioning, logging, public access |
+| `django` | 10 | ORM injection, CSRF, XSS, deserialization, auth, settings |
+| `express-js` | 12 | Prototype pollution, NoSQL injection, CORS, CSRF, auth, headers |
+| `fastapi` | 10 | Pydantic validation, CORS, auth, SQL injection, SSRF, headers |
+| `k8s-pod-security` | 10 | Pod security standards, RBAC, secrets, network policies, PSA |
+| `laravel` | 10 | Eloquent injection, mass assignment, CSRF, auth, file upload |
+| `rails` | 12 | ActiveRecord injection, CSRF, XSS, mass assignment, auth, deserialization |
+| `spring-boot` | 12 | SpEL injection, actuator exposure, CSRF, deserialization, auth, headers |
 
 ## CVSS Calculator
 
@@ -397,7 +414,7 @@ ensphere sinks xss             # XSS sink patterns
 ```
 
 ### Categories
-`sqli`, `xss`, `ssrf`, `cmdi`, `lfi`, `ssti`, `deserialization`, `xxe`, `nosql`, `csrf`, `jwt`, `cors`, `redirect`, `idor`
+`sqli`, `xss`, `ssrf`, `cmdi`, `lfi`, `ssti`, `deserialization`, `xxe`, `nosql`, `csrf`, `jwt`, `cors`, `redirect`, `idor`, `ldap`, `xpath`, `header_injection`, `file_upload`, `iac_terraform`, `iac_cloudformation`, `iac_dockerfile`, `iac_kubernetes`
 
 Each pattern includes a regex, applicable file extensions, description, and risk level.
 
@@ -433,6 +450,25 @@ ensphere scan ./src --exclude "test/**"      # exclude patterns
 ```
 
 Output is JSON with `directory`, `files_scanned`, `total_matches`, `matches[]`, and `summary[]`. Exit code 1 if matches found (CI-friendly). Use `--exit-zero` to always exit 0 (for JSON-only CI workflows), or `--min-risk N` to only exit 1 if matches at or above risk level N (1-5).
+
+## OpenAPI Parser
+
+### `ensphere openapi`
+
+Parse an OpenAPI/Swagger specification and output structured endpoint inventory.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--file` | | Local file path to OpenAPI spec (YAML or JSON) |
+| `--url` | | Remote URL to fetch OpenAPI spec from |
+| `--timeout` | 30 | HTTP timeout in seconds (for --url) |
+
+Exactly one of `--file` or `--url` must be provided.
+
+```bash
+ensphere openapi --file openapi.yaml
+ensphere openapi --url https://api.example.com/openapi.json --timeout 60
+```
 
 ## Verify IDOR
 
@@ -523,11 +559,11 @@ Techniques: `file_read` (default), `ssrf`, `oob`. Required flags: `--url`, `--in
 Verify insecure deserialization with time-based blind probes.
 
 ```bash
-ensphere verify deserialization --url "http://target/api" --runtime python --in-scope "*.target.com"
-ensphere verify deserialization --url "http://target/deserialize" --runtime java --in-scope "*.target.com"
+ensphere verify deserialization --url "http://target/api" --runtime python --max-risk 4 --in-scope "*.target.com"
+ensphere verify deserialization --url "http://target/deserialize" --runtime java --max-risk 4 --in-scope "*.target.com"
 ```
 
-Runtimes: `java`, `python`, `php`, `node`. Techniques: `time_based` (default), `dns_oob`. Required flags: `--url`, `--runtime`, `--in-scope`.
+Runtimes: `java`, `python`, `php`, `node`. Techniques: `time_based` (default). Required flags: `--url`, `--runtime`, `--in-scope`. Note: this probe requires `--max-risk 4` (risk level 4, default is 3).
 
 ## Verify CSRF
 
@@ -680,6 +716,173 @@ ensphere verify propertyauthz --url "http://target/api/user/1" --high-token "adm
 
 Sends the same request with high-privilege and low-privilege tokens, extracts top-level JSON keys, and computes field set differences. Required flags: `--url`, `--high-token`, `--low-token`, `--in-scope`. Optional: `--watch-fields` (comma-separated).
 
+### `ensphere verify clickjacking`
+
+Tests for missing X-Frame-Options and Content-Security-Policy frame-ancestors headers.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--url` | | Target URL (required) |
+| `--method` | GET | HTTP method |
+| `--header` | | Custom headers (key:value, repeatable) |
+| `--in-scope` | | In-scope patterns (required) |
+| `--max-risk` | 3 | Maximum risk level (1-5) |
+| `--throttle` | 500 | Milliseconds between probes |
+| `--timeout` | 10 | HTTP request timeout in seconds |
+| `--evidence` | ./evidence.jsonl | Evidence file path |
+
+```bash
+ensphere verify clickjacking --url http://target/app --in-scope "target.com"
+```
+
+### `ensphere verify headerinjection`
+
+Injects CRLF sequences into a parameter and checks if response headers are modified.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--url` | | Target URL (required) |
+| `--param` | | Parameter to test (required) |
+| `--method` | GET | HTTP method |
+| `--header` | | Custom headers (key:value, repeatable) |
+| `--in-scope` | | In-scope patterns (required) |
+| `--max-risk` | 3 | Maximum risk level (1-5) |
+| `--throttle` | 500 | Milliseconds between probes |
+| `--timeout` | 10 | HTTP request timeout in seconds |
+| `--evidence` | ./evidence.jsonl | Evidence file path |
+
+```bash
+ensphere verify headerinjection --url http://target/redirect --param next --in-scope "target.com"
+```
+
+### `ensphere verify ldap`
+
+Tests for LDAP filter injection via response differential or error-based detection.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--url` | | Target URL (required) |
+| `--param` | | Parameter to test (required) |
+| `--technique` | ldap_filter_injection | Technique: ldap_filter_injection, ldap_blind_boolean, ldap_blind_error |
+| `--method` | GET | HTTP method |
+| `--header` | | Custom headers (key:value, repeatable) |
+| `--in-scope` | | In-scope patterns (required) |
+| `--max-risk` | 3 | Maximum risk level (1-5) |
+| `--throttle` | 500 | Milliseconds between probes |
+| `--timeout` | 10 | HTTP request timeout in seconds |
+| `--evidence` | ./evidence.jsonl | Evidence file path |
+
+```bash
+ensphere verify ldap --url http://target/search --param username --technique ldap_filter_injection --in-scope "target.com"
+```
+
+### `ensphere verify xpath`
+
+Tests for XPath injection via response differential or error-based detection.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--url` | | Target URL (required) |
+| `--param` | | Parameter to test (required) |
+| `--technique` | xpath_injection | Technique: xpath_injection, xpath_blind_boolean, xpath_blind_error |
+| `--method` | GET | HTTP method |
+| `--header` | | Custom headers (key:value, repeatable) |
+| `--in-scope` | | In-scope patterns (required) |
+| `--max-risk` | 3 | Maximum risk level (1-5) |
+| `--throttle` | 500 | Milliseconds between probes |
+| `--timeout` | 10 | HTTP request timeout in seconds |
+| `--evidence` | ./evidence.jsonl | Evidence file path |
+
+```bash
+ensphere verify xpath --url http://target/lookup --param id --technique xpath_injection --in-scope "target.com"
+```
+
+### `ensphere verify fileupload`
+
+Tests file upload validation by sending files with mismatched extensions, MIME types, or polyglot content.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--url` | | Target URL (required) |
+| `--field` | file | Form field name for file upload |
+| `--filename` | | Test filename (required) |
+| `--content` | ensphere_upload_test | File content |
+| `--mime-type` | application/octet-stream | Content-Type for the file part |
+| `--verify-url` | | URL to GET after upload to check accessibility |
+| `--technique` | | Technique (required): extension_bypass, mime_bypass, content_type_mismatch, polyglot_file, zip_path_traversal |
+| `--method` | POST | HTTP method |
+| `--header` | | Custom headers (key:value, repeatable) |
+| `--in-scope` | | In-scope patterns (required) |
+| `--max-risk` | 3 | Maximum risk level (1-5) |
+| `--throttle` | 500 | Milliseconds between probes |
+| `--timeout` | 10 | HTTP request timeout in seconds |
+| `--evidence` | ./evidence.jsonl | Evidence file path |
+
+```bash
+ensphere verify fileupload --url http://target/upload --filename test.php.jpg --technique extension_bypass --in-scope "target.com"
+```
+
+### `ensphere verify massassignment`
+
+3-step probe: baseline GET, PUT with injected watch-fields, follow-up GET to check if fields were persisted.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--url` | | Target URL (required) |
+| `--method` | PUT | HTTP method for mutation step |
+| `--body` | | Base JSON body (required) |
+| `--watch-fields` | | Comma-separated fields to inject (required) |
+| `--token` | | Auth token for requests (required) |
+| `--header` | | Custom headers (key:value, repeatable) |
+| `--in-scope` | | In-scope patterns (required) |
+| `--max-risk` | 3 | Maximum risk level (1-5) |
+| `--throttle` | 500 | Milliseconds between probes |
+| `--timeout` | 10 | HTTP request timeout in seconds |
+| `--evidence` | ./evidence.jsonl | Evidence file path |
+
+```bash
+ensphere verify massassignment --url http://target/api/user/1 --body '{"name":"test"}' --watch-fields role,is_admin --token "ey..." --in-scope "target.com"
+```
+
+### `ensphere verify websocket`
+
+Tests WebSocket endpoints for injection, cross-origin hijack, and missing origin validation.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--url` | | Target WebSocket URL, ws:// or wss:// (required) |
+| `--technique` | | Technique (required): ws_injection, ws_hijack, ws_origin_check |
+| `--payload` | | Payload to send in WebSocket frame |
+| `--header` | | Custom headers (key:value, repeatable) |
+| `--in-scope` | | In-scope patterns (required) |
+| `--max-risk` | 3 | Maximum risk level (1-5) |
+| `--throttle` | 500 | Milliseconds between probes |
+| `--timeout` | 10 | HTTP request timeout in seconds |
+| `--evidence` | ./evidence.jsonl | Evidence file path |
+
+```bash
+ensphere verify websocket --url ws://target/ws --technique ws_origin_check --in-scope "target.com"
+```
+
+### `ensphere verify grpc`
+
+Tests gRPC endpoints for reflection service exposure and plaintext (non-TLS) connections.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--url` | | Target URL (required) |
+| `--technique` | | Technique (required): grpc_reflection, grpc_plaintext |
+| `--header` | | Custom headers (key:value, repeatable) |
+| `--in-scope` | | In-scope patterns (required) |
+| `--max-risk` | 3 | Maximum risk level (1-5) |
+| `--throttle` | 500 | Milliseconds between probes |
+| `--timeout` | 10 | HTTP request timeout in seconds |
+| `--evidence` | ./evidence.jsonl | Evidence file path |
+
+```bash
+ensphere verify grpc --url http://target:50051 --technique grpc_reflection --in-scope "target.com"
+```
+
 ## OOB Callback Server
 
 Start an HTTP callback server for out-of-band detection (blind SSRF, blind XXE, blind SSTI).
@@ -728,6 +931,10 @@ ensphere evidence log --probe-type xss --technique reflected --url "http://targe
 ```
 
 Auto-assigns sequential EVID-XXX IDs. Required flags: `--probe-type`, `--technique`, `--url`, `--result`.
+
+```
+--result: confirmed | potential | safe | baseline | probe
+```
 
 ### Query Evidence
 ```bash

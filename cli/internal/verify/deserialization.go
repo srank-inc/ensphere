@@ -12,7 +12,7 @@ type DeserializationConfig struct {
 	URL       string
 	Runtime   string // java | python | php | node
 	Method    string
-	Technique string // time_based | dns_oob
+	Technique string // time_based
 	ProbeConfig
 }
 
@@ -44,7 +44,7 @@ var deserPayloads = map[string]struct {
 }
 
 var validDeserTechniques = map[string]bool{
-	"time_based": true, "dns_oob": true,
+	"time_based": true,
 }
 
 // VerifyDeserialization runs the deserialization verification probe.
@@ -58,7 +58,7 @@ func VerifyDeserialization(cfg DeserializationConfig) (*ProbeResult, error) {
 	}
 
 	if !validDeserTechniques[cfg.Technique] {
-		return nil, &ScopeError{Msg: fmt.Sprintf("unsupported technique %q — use: time_based, dns_oob", cfg.Technique)}
+		return nil, &ScopeError{Msg: fmt.Sprintf("unsupported technique %q — use: time_based", cfg.Technique)}
 	}
 
 	runtimeCfg, ok := deserPayloads[cfg.Runtime]
@@ -80,6 +80,9 @@ func VerifyDeserialization(cfg DeserializationConfig) (*ProbeResult, error) {
 		}
 	}
 
+	if cfg.TimeoutSec < 5 {
+		return nil, fmt.Errorf("timeout must be >= 5 for time-based probes, got %d", cfg.TimeoutSec)
+	}
 	sleepSec := cfg.TimeoutSec / 2
 	if sleepSec < 3 {
 		sleepSec = 3

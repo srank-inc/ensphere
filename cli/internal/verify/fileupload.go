@@ -72,7 +72,7 @@ func MultipartHTTPProbe(method, url, fieldName, filename, content, mimeType stri
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024)) // 10 MB max
 	if err != nil {
 		return ProbeResponse{
 			StatusCode: resp.StatusCode,
@@ -160,9 +160,12 @@ func verifyFileUploadProbe(cfg FileUploadConfig, throttle *Throttle, timer *Time
 
 	// If VerifyURL provided, check if uploaded file is accessible
 	if cfg.VerifyURL != "" {
+		if err := CheckScope(cfg.VerifyURL, cfg.InScope); err != nil {
+			return nil, fmt.Errorf("verify-url scope check: %w", err)
+		}
 		throttle.Wait()
 		probeCount++
-		verifyResp := HTTPProbe("GET", cfg.VerifyURL, "", cfg.Headers, cfg.TimeoutSec)
+		verifyResp := HTTPProbeNoRedirect("GET", cfg.VerifyURL, "", cfg.Headers, cfg.TimeoutSec)
 		if verifyResp.Error != nil {
 			fmt.Fprintf(os.Stderr, "[VERIFY] error: %v\n", verifyResp.Error)
 		} else {

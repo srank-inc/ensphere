@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/srank/ensphere/internal/evidence"
 )
@@ -87,6 +88,9 @@ func VerifySQLi(cfg SQLiConfig) (*ProbeResult, error) {
 }
 
 func verifySQLiBlindTime(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *evidence.Writer) (*ProbeResult, error) {
+	if cfg.TimeoutSec < 5 {
+		return nil, fmt.Errorf("timeout must be >= 5 for time-based probes, got %d", cfg.TimeoutSec)
+	}
 	sleepSec := cfg.TimeoutSec / 2
 	if sleepSec < 3 {
 		sleepSec = 3
@@ -313,15 +317,22 @@ func verifySQLiErrorBased(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *
 
 // probeWithParam injects a value into the target URL parameter and sends the request.
 func probeWithParam(cfg SQLiConfig, value string) ProbeResponse {
+	if strings.ToUpper(cfg.Method) == "POST" {
+		body := url.Values{cfg.Param: {value}}.Encode()
+		headers := make(map[string]string)
+		for k, v := range cfg.Headers {
+			headers[k] = v
+		}
+		headers["Content-Type"] = "application/x-www-form-urlencoded"
+		return HTTPProbe("POST", cfg.URL, body, headers, cfg.TimeoutSec)
+	}
 	parsed, err := url.Parse(cfg.URL)
 	if err != nil {
 		return ProbeResponse{Error: fmt.Errorf("parse URL: %w", err)}
 	}
-
 	params := parsed.Query()
 	params.Set(cfg.Param, value)
 	parsed.RawQuery = params.Encode()
-
 	return HTTPProbe(cfg.Method, parsed.String(), "", cfg.Headers, cfg.TimeoutSec)
 }
 
@@ -330,7 +341,9 @@ func writeEvidence(ew *evidence.Writer, probeType, technique, url, param string,
 		return
 	}
 	entry := evidence.NewEntry(probeType, technique, url, param, statusCode, duration, result, notes)
-	_ = ew.Write(entry)
+	if err := ew.Write(entry); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: evidence write failed: %v\n", err)
+	}
 }
 
 func avgFromRounds(rounds []RoundResult) int64 {

@@ -64,7 +64,7 @@ func VerifyMassAssignment(cfg MassAssignmentConfig) (*ProbeResult, error) {
 
 	throttle.Wait()
 	probeCount++
-	baselineResp := HTTPProbe("GET", cfg.URL, "", headers, cfg.TimeoutSec)
+	baselineResp := HTTPProbeNoRedirect("GET", cfg.URL, "", headers, cfg.TimeoutSec)
 	if baselineResp.Error != nil {
 		return nil, fmt.Errorf("baseline GET: %w", baselineResp.Error)
 	}
@@ -85,7 +85,7 @@ func VerifyMassAssignment(cfg MassAssignmentConfig) (*ProbeResult, error) {
 
 	throttle.Wait()
 	probeCount++
-	mutResp := HTTPProbe(cfg.Method, cfg.URL, string(mutBody), headers, cfg.TimeoutSec)
+	mutResp := HTTPProbeNoRedirect(cfg.Method, cfg.URL, string(mutBody), headers, cfg.TimeoutSec)
 	if mutResp.Error != nil {
 		return nil, fmt.Errorf("mutation %s: %w", cfg.Method, mutResp.Error)
 	}
@@ -98,7 +98,7 @@ func VerifyMassAssignment(cfg MassAssignmentConfig) (*ProbeResult, error) {
 
 	throttle.Wait()
 	probeCount++
-	followUpResp := HTTPProbe("GET", cfg.URL, "", headers, cfg.TimeoutSec)
+	followUpResp := HTTPProbeNoRedirect("GET", cfg.URL, "", headers, cfg.TimeoutSec)
 	if followUpResp.Error != nil {
 		return nil, fmt.Errorf("follow-up GET: %w", followUpResp.Error)
 	}

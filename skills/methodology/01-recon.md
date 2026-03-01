@@ -261,7 +261,7 @@ URL-accepting parameters identified from endpoint names and parameter analysis.
 Parameters that produced interesting error responses during canary injection.
 
 #### 12. External Scan Results (replaces "Critical File Paths")
-nmap, subfinder, whatweb results.
+nmap, subfinder, httpx results.
 
 ## Phase A: Code Analysis
 
@@ -314,7 +314,7 @@ nmap -sV -sC -T4 TARGET_HOST -oN ensphere-pentest/01-recon/nmap.txt 2>/dev/null 
 subfinder -d TARGET_DOMAIN -o ensphere-pentest/01-recon/subdomains.txt 2>/dev/null || echo "subfinder not installed, skipping"
 
 # Technology fingerprinting
-whatweb TARGET_URL -v > ensphere-pentest/01-recon/whatweb.txt 2>/dev/null || echo "whatweb not installed, skipping"
+httpx -u TARGET_URL -tech-detect -status-code -title -server -follow-redirects > ensphere-pentest/01-recon/httpx.txt 2>/dev/null || echo "httpx not installed, skipping"
 ```
 
 ## Report Template

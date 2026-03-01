@@ -63,7 +63,7 @@ func VerifyAuth(cfg AuthConfig) (*ProbeResult, error) {
 
 	throttle.Wait()
 	probeCount++
-	baselineResp := HTTPProbe(cfg.Method, cfg.URL, "", baselineHeaders, cfg.TimeoutSec)
+	baselineResp := HTTPProbeNoRedirect(cfg.Method, cfg.URL, "", baselineHeaders, cfg.TimeoutSec)
 	if baselineResp.Error != nil {
 		return nil, fmt.Errorf("baseline probe: %w", baselineResp.Error)
 	}
@@ -71,8 +71,8 @@ func VerifyAuth(cfg AuthConfig) (*ProbeResult, error) {
 	writeEvidence(ew, "auth_bypass", cfg.Technique, cfg.URL, "", baselineResp.StatusCode,
 		fmt.Sprintf("%dms", baselineResp.ElapsedMs), "baseline", "valid token")
 
-	if baselineResp.StatusCode != 200 {
-		return nil, fmt.Errorf("baseline with valid token returned %d — expected 200", baselineResp.StatusCode)
+	if baselineResp.StatusCode < 200 || baselineResp.StatusCode >= 300 {
+		return nil, fmt.Errorf("baseline with valid token returned %d — expected 2xx", baselineResp.StatusCode)
 	}
 
 	// Build probe headers based on technique
@@ -107,7 +107,7 @@ func VerifyAuth(cfg AuthConfig) (*ProbeResult, error) {
 
 	throttle.Wait()
 	probeCount++
-	probeResp := HTTPProbe(probeMethod, cfg.URL, "", probeHeaders, cfg.TimeoutSec)
+	probeResp := HTTPProbeNoRedirect(probeMethod, cfg.URL, "", probeHeaders, cfg.TimeoutSec)
 	if probeResp.Error != nil {
 		return nil, fmt.Errorf("auth probe: %w", probeResp.Error)
 	}

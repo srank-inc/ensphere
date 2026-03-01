@@ -124,6 +124,7 @@ func VerifySmuggling(cfg SmugglingConfig) (*ProbeResult, error) {
 func buildSmugglingPayload(rawURL, technique string, headers map[string]string) string {
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not parse URL %q: %v\n", rawURL, err)
 		return ""
 	}
 	host := parsed.Host

@@ -157,7 +157,7 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, bodyErr := io.ReadAll(r.Body)
+	body, bodyErr := io.ReadAll(io.LimitReader(r.Body, 1024*1024)) // 1 MB max
 	var bodyHash string
 	if bodyErr != nil {
 		fmt.Fprintf(os.Stderr, "Warning: callback body read error: %v\n", bodyErr)
