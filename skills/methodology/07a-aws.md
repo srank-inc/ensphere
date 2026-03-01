@@ -40,6 +40,15 @@ ensphere cloud iam --provider aws \
   --principal arn:aws:iam::ACCOUNT_ID:role/LAMBDA_ROLE \
   --in-scope "aws://ACCOUNT_ID"
 
+# Serverless compute audit (Lambda functions, public URLs, env var secret patterns)
+ensphere cloud compute --provider aws --in-scope "aws://ACCOUNT_ID"
+
+# Audit logging (CloudTrail trails, multi-region, log validation)
+ensphere cloud logging --provider aws --in-scope "aws://ACCOUNT_ID"
+
+# Secrets management (Secrets Manager rotation, KMS key usage)
+ensphere cloud secrets --provider aws --in-scope "aws://ACCOUNT_ID"
+
 # Evidence logging
 ensphere evidence log \
   --probe-type cloud_compute --technique cli_verification \

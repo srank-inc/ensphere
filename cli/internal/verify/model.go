@@ -101,6 +101,8 @@ type AuthMeasurements struct {
 }
 
 // RLSMeasurements holds Supabase RLS probe measurements.
+// Row count fields use -1 to indicate the response was not a valid JSON array
+// (e.g., an HTML error page). 0 means the server returned an empty JSON array.
 type RLSMeasurements struct {
 	Table           string      `json:"table"`
 	TenantAOwn      RoundResult `json:"tenant_a_own"`
@@ -168,12 +170,12 @@ type DeserializationMeasurements struct {
 
 // CSRFMeasurements holds CSRF probe measurements.
 type CSRFMeasurements struct {
-	NoOrigin       RoundResult `json:"no_origin"`
-	MismatchOrigin RoundResult `json:"mismatch_origin"`
-	Baseline       RoundResult `json:"baseline"`
-	SameSiteFound  bool        `json:"samesite_found"`
-	SameSiteValue  string      `json:"samesite_value,omitempty"`
-	CSRFTokenInBody bool       `json:"csrf_token_in_body"`
+	NoOrigin        RoundResult `json:"no_origin"`
+	MismatchOrigin  RoundResult `json:"mismatch_origin"`
+	Baseline        RoundResult `json:"baseline"`
+	SameSiteFound   bool        `json:"samesite_found"`
+	SameSiteValue   string      `json:"samesite_value,omitempty"`
+	CSRFTokenInBody bool        `json:"csrf_token_in_body"`
 }
 
 // NoSQLMeasurements holds NoSQL injection probe measurements.
@@ -333,10 +335,10 @@ type AuthZMeasurements struct {
 
 // OriginCheckResult captures the result of a single origin-specific WebSocket upgrade attempt.
 type OriginCheckResult struct {
-	Origin        string `json:"origin"`
-	UpgradeStatus int    `json:"upgrade_status"`
-	UpgradeSuccess bool  `json:"upgrade_success"`
-	ElapsedMs     int64  `json:"elapsed_ms"`
+	Origin         string `json:"origin"`
+	UpgradeStatus  int    `json:"upgrade_status"`
+	UpgradeSuccess bool   `json:"upgrade_success"`
+	ElapsedMs      int64  `json:"elapsed_ms"`
 }
 
 // WebSocketMeasurements holds WebSocket security probe measurements.
@@ -387,15 +389,81 @@ type RateLimitMeasurements struct {
 	AvgMs           int64         `json:"avg_ms"`
 }
 
+// LDAPMeasurements holds LDAP injection probe measurements.
+type LDAPMeasurements struct {
+	Technique       string       `json:"technique"`
+	Baseline        *RoundResult `json:"baseline,omitempty"`
+	Probe           *RoundResult `json:"probe,omitempty"`
+	TrueProbe       *RoundResult `json:"true_probe,omitempty"`
+	FalseProbe      *RoundResult `json:"false_probe,omitempty"`
+	HashesMatch     *bool        `json:"hashes_match,omitempty"`
+	TruePayload     string       `json:"true_payload,omitempty"`
+	FalsePayload    string       `json:"false_payload,omitempty"`
+	MatchedPatterns []string     `json:"matched_patterns,omitempty"`
+	PayloadUsed     string       `json:"payload_used"`
+	ResponseSnippet string       `json:"response_snippet,omitempty"`
+}
+
 // GRPCMeasurements holds gRPC security probe measurements.
 type GRPCMeasurements struct {
 	Technique         string   `json:"technique"`
 	ReflectionEnabled bool     `json:"reflection_enabled"`
 	ServicesFound     []string `json:"services_found"`
-	TLSAccepted       bool    `json:"tls_accepted"`
-	PlaintextAccepted bool    `json:"plaintext_accepted"`
-	TLSRequired       bool    `json:"tls_required"`
-	ElapsedMs         int64   `json:"elapsed_ms"`
+	TLSAccepted       bool     `json:"tls_accepted"`
+	PlaintextAccepted bool     `json:"plaintext_accepted"`
+	TLSRequired       bool     `json:"tls_required"`
+	ElapsedMs         int64    `json:"elapsed_ms"`
+}
+
+// XPathMeasurements holds XPath injection probe measurements.
+type XPathMeasurements struct {
+	Technique       string       `json:"technique"`
+	Baseline        *RoundResult `json:"baseline,omitempty"`
+	Probe           *RoundResult `json:"probe,omitempty"`
+	TrueProbe       *RoundResult `json:"true_probe,omitempty"`
+	FalseProbe      *RoundResult `json:"false_probe,omitempty"`
+	HashesMatch     *bool        `json:"hashes_match,omitempty"`
+	TruePayload     string       `json:"true_payload,omitempty"`
+	FalsePayload    string       `json:"false_payload,omitempty"`
+	MatchedPatterns []string     `json:"matched_patterns,omitempty"`
+	PayloadUsed     string       `json:"payload_used"`
+	ResponseSnippet string       `json:"response_snippet,omitempty"`
+}
+
+// FileUploadMeasurements holds file upload vulnerability probe measurements.
+type FileUploadMeasurements struct {
+	Technique          string       `json:"technique"`
+	UploadProbe        RoundResult  `json:"upload_probe"`
+	FilenameInResponse bool         `json:"filename_in_response"`
+	UploadAccepted     bool         `json:"upload_accepted"`
+	VerifyProbe        *RoundResult `json:"verify_probe,omitempty"`
+	VerifyAccessible   *bool        `json:"verify_accessible,omitempty"`
+	FilenameSent       string       `json:"filename_sent"`
+	MIMETypeSent       string       `json:"mime_type_sent"`
+	ContentSent        string       `json:"content_sent"`
+	ResponseSnippet    string       `json:"response_snippet,omitempty"`
+}
+
+// MassAssignmentMeasurements holds mass assignment probe measurements.
+type MassAssignmentMeasurements struct {
+	BaselineGET    RoundResult             `json:"baseline_get"`
+	MutationProbe  RoundResult             `json:"mutation_probe"`
+	FollowUpGET    RoundResult             `json:"followup_get"`
+	BaselineFields []string                `json:"baseline_fields"`
+	FollowUpFields []string                `json:"followup_fields"`
+	InjectedFields []MassAssignFieldResult `json:"injected_fields"`
+	BodyChanged    bool                    `json:"body_changed"`
+	HashesMatch    bool                    `json:"hashes_match"`
+	PayloadUsed    string                  `json:"payload_used"`
+}
+
+// MassAssignFieldResult reports whether a specific field changed after injection.
+type MassAssignFieldResult struct {
+	Name          string      `json:"name"`
+	InBaseline    bool        `json:"in_baseline"`
+	InFollowUp    bool        `json:"in_followup"`
+	BaselineValue interface{} `json:"baseline_value,omitempty"`
+	FollowUpValue interface{} `json:"followup_value,omitempty"`
 }
 
 // Timer tracks probe duration.

@@ -289,6 +289,15 @@ ensphere cloud iam --provider aws --principal ARN --in-scope "aws://ACCOUNT_ID"
 # Network security audit
 ensphere cloud network --provider aws --in-scope "aws://ACCOUNT_ID"
 
+# Compute (Lambda/Functions) security audit
+ensphere cloud compute --provider aws --in-scope "aws://ACCOUNT_ID"
+
+# Logging (CloudTrail/sinks) audit
+ensphere cloud logging --provider aws --in-scope "aws://ACCOUNT_ID"
+
+# Secrets management audit
+ensphere cloud secrets --provider aws --in-scope "aws://ACCOUNT_ID"
+
 # Parse Prowler/Trivy output into Ensphere vuln types
 ensphere cloud parse-prowler ./prowler-output.json --evidence ./evidence.jsonl
 ensphere cloud parse-trivy ./trivy-results.json --evidence ./evidence.jsonl

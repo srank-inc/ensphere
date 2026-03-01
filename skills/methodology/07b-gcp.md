@@ -40,6 +40,15 @@ ensphere cloud iam --provider gcp \
   --principal FUNCTION_SA@PROJECT_ID.iam.gserviceaccount.com \
   --in-scope "gcp://PROJECT_ID"
 
+# Serverless compute audit (Cloud Functions + Cloud Run, public URLs)
+ensphere cloud compute --provider gcp --in-scope "gcp://PROJECT_ID"
+
+# Audit logging (logging sinks, active/disabled status)
+ensphere cloud logging --provider gcp --in-scope "gcp://PROJECT_ID"
+
+# Secrets management (Secret Manager, rotation policy)
+ensphere cloud secrets --provider gcp --in-scope "gcp://PROJECT_ID"
+
 ensphere evidence log \
   --probe-type cloud_compute --technique cli_verification \
   --url "gcp://PROJECT_ID/functions/FUNCTION_NAME" \

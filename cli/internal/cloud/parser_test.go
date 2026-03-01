@@ -70,8 +70,31 @@ func TestParseTrivy(t *testing.T) {
 	if result.FailFindings != 1 {
 		t.Errorf("expected 1 fail, got %d", result.FailFindings)
 	}
-	if result.ByVulnType["iac_misconfig"] != 1 {
-		t.Errorf("expected 1 iac_misconfig, got %d", result.ByVulnType["iac_misconfig"])
+	if result.ByVulnType["cloud_storage"] != 1 {
+		t.Errorf("expected 1 cloud_storage (AVD-AWS-0086), got %d", result.ByVulnType["cloud_storage"])
+	}
+}
+
+func TestMapTrivyTypeToVulnType(t *testing.T) {
+	cases := []struct {
+		trivyType string
+		checkID   string
+		want      string
+	}{
+		{"terraform", "AVD-AWS-0086", "cloud_storage"},
+		{"terraform", "AVD-AWS-0007", "cloud_iam"},
+		{"terraform", "AVD-AWS-0101", "cloud_network"},
+		{"terraform", "AVD-AWS-0017", "cloud_logging"},
+		{"terraform", "AVD-AWS-0104", "cloud_compute"},
+		{"terraform", "AVD-AWS-9999", "iac_misconfig"},
+		{"kubernetes", "KSV-001", "cloud_k8s"},
+		{"dockerfile", "DS-001", "iac_misconfig"},
+	}
+	for _, tc := range cases {
+		got := mapTrivyTypeToVulnType(tc.trivyType, tc.checkID)
+		if got != tc.want {
+			t.Errorf("mapTrivyTypeToVulnType(%q, %q) = %q, want %q", tc.trivyType, tc.checkID, got, tc.want)
+		}
 	}
 }
 

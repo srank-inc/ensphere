@@ -10,10 +10,11 @@ import (
 
 // StorageConfig holds configuration for cloud storage verification.
 type StorageConfig struct {
-	Provider  string // aws, gcp, azure
-	Bucket    string
-	Region    string
-	AccountID string
+	Provider    string // aws, gcp, azure
+	Bucket      string
+	Region      string
+	AccountID   string
+	AccountName string
 	verify.ProbeConfig
 }
 
@@ -114,18 +115,64 @@ func VerifyCloudStorage(cfg StorageConfig) (*verify.ProbeResult, error) {
 		if err := CheckCLIInstalled(cliName); err != nil {
 			return nil, fmt.Errorf("gcloud CLI required: %w", err)
 		}
+		// Describe bucket
 		args := []string{"storage", "buckets", "describe", "gs://" + cfg.Bucket, "--format=json"}
-		result := RunCLI(cliName, args, timeout)
-		cliOutputs = append(cliOutputs, result)
+		descResult := RunCLI(cliName, args, timeout)
+		cliOutputs = append(cliOutputs, descResult)
+		if descResult.ExitCode == 0 {
+			enc, ver, log, pa := parseGCPBucketDescribe(descResult.Stdout)
+			if enc != "" {
+				encryption = enc
+			}
+			if ver != "" {
+				versioning = ver
+			}
+			if log != "" {
+				logging = log
+			}
+			if pa != nil {
+				publicAccess = pa
+			}
+		}
+		// IAM policy
+		args = []string{"storage", "buckets", "get-iam-policy", "gs://" + cfg.Bucket, "--format=json"}
+		iamResult := RunCLI(cliName, args, timeout)
+		cliOutputs = append(cliOutputs, iamResult)
+		if iamResult.ExitCode == 0 {
+			aclEntries = parseGCPBucketIAMPolicy(iamResult.Stdout)
+		}
 
 	case "azure":
 		cliName := "az"
 		if err := CheckCLIInstalled(cliName); err != nil {
 			return nil, fmt.Errorf("az CLI required: %w", err)
 		}
+		// Container show
 		args := []string{"storage", "container", "show", "--name", cfg.Bucket, "--output", "json"}
 		result := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, result)
+
+		if cfg.AccountName != "" {
+			// Storage account properties
+			args = []string{"storage", "account", "show", "--name", cfg.AccountName, "--output", "json"}
+			acctResult := RunCLI(cliName, args, timeout)
+			cliOutputs = append(cliOutputs, acctResult)
+			if acctResult.ExitCode == 0 {
+				enc, pa := parseAzureStorageAccount(acctResult.Stdout)
+				encryption = enc
+				publicAccess = pa
+			}
+
+			// Blob service properties
+			args = []string{"storage", "account", "blob-service-properties", "show", "--account-name", cfg.AccountName, "--output", "json"}
+			blobResult := RunCLI(cliName, args, timeout)
+			cliOutputs = append(cliOutputs, blobResult)
+			if blobResult.ExitCode == 0 {
+				ver, log := parseAzureBlobServiceProps(blobResult.Stdout)
+				versioning = ver
+				logging = log
+			}
+		}
 
 	default:
 		return nil, &verify.ScopeError{Msg: fmt.Sprintf("unsupported provider %q (aws, gcp, azure)", cfg.Provider)}
@@ -239,4 +286,135 @@ func parseAWSPublicAccess(stdout string) bool {
 	// If all blocks are enabled, public access is blocked (not public)
 	allBlocked := cfg.BlockPublicAcls && cfg.IgnorePublicAcls && cfg.BlockPublicPolicy && cfg.RestrictPublicBuckets
 	return !allBlocked
+}
+
+func parseGCPBucketDescribe(stdout string) (encryption, versioning, logging string, publicAccess *bool) {
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
+		return "unknown", "unknown", "unknown", nil
+	}
+	// encryption: check defaultKmsKeyName or encryption key
+	if enc, ok := result["encryption"]; ok {
+		if m, ok := enc.(map[string]interface{}); ok {
+			if _, ok := m["defaultKmsKeyName"]; ok {
+				encryption = "kms"
+			}
+		}
+	}
+	if encryption == "" {
+		encryption = "google-managed"
+	}
+
+	// versioning
+	if v, ok := result["versioning"]; ok {
+		if m, ok := v.(map[string]interface{}); ok {
+			if enabled, ok := m["enabled"].(bool); ok && enabled {
+				versioning = "Enabled"
+			} else {
+				versioning = "disabled"
+			}
+		}
+	} else {
+		versioning = "disabled"
+	}
+
+	// logging
+	if l, ok := result["logging"]; ok {
+		if m, ok := l.(map[string]interface{}); ok {
+			if _, ok := m["logBucket"]; ok {
+				logging = "enabled"
+			}
+		}
+	}
+	if logging == "" {
+		logging = "disabled"
+	}
+
+	// publicAccess
+	if iam, ok := result["iamConfiguration"]; ok {
+		if m, ok := iam.(map[string]interface{}); ok {
+			if pap, ok := m["publicAccessPrevention"].(string); ok {
+				blocked := pap == "enforced"
+				notBlocked := !blocked
+				publicAccess = &notBlocked
+			}
+		}
+	}
+	return
+}
+
+func parseGCPBucketIAMPolicy(stdout string) []string {
+	var result struct {
+		Bindings []struct {
+			Role    string   `json:"role"`
+			Members []string `json:"members"`
+		} `json:"bindings"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
+		return nil
+	}
+	var entries []string
+	for _, b := range result.Bindings {
+		for _, m := range b.Members {
+			if m == "allUsers" || m == "allAuthenticatedUsers" {
+				entries = append(entries, fmt.Sprintf("%s:%s", m, b.Role))
+			}
+		}
+	}
+	return entries
+}
+
+func parseAzureStorageAccount(stdout string) (encryption string, publicAccess *bool) {
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
+		return "unknown", nil
+	}
+	// Check encryption services
+	if enc, ok := result["encryption"]; ok {
+		if m, ok := enc.(map[string]interface{}); ok {
+			if services, ok := m["services"]; ok {
+				if _, ok := services.(map[string]interface{}); ok {
+					encryption = "microsoft-managed"
+				}
+			}
+			if keySource, ok := m["keySource"].(string); ok && keySource == "Microsoft.Keyvault" {
+				encryption = "customer-managed"
+			}
+		}
+	}
+	if encryption == "" {
+		encryption = "unknown"
+	}
+	// publicAccess: allowBlobPublicAccess
+	if allow, ok := result["allowBlobPublicAccess"].(bool); ok {
+		publicAccess = &allow
+	}
+	return
+}
+
+func parseAzureBlobServiceProps(stdout string) (versioning, logging string) {
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
+		return "unknown", "unknown"
+	}
+	if v, ok := result["isVersioningEnabled"].(bool); ok {
+		if v {
+			versioning = "Enabled"
+		} else {
+			versioning = "disabled"
+		}
+	} else {
+		versioning = "unknown"
+	}
+	if drp, ok := result["deleteRetentionPolicy"]; ok {
+		if m, ok := drp.(map[string]interface{}); ok {
+			if enabled, ok := m["enabled"].(bool); ok && enabled {
+				logging = "enabled"
+			}
+		}
+	}
+	if logging == "" {
+		logging = "disabled"
+	}
+	return
 }

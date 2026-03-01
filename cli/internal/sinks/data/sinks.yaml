@@ -749,3 +749,62 @@ categories:
       extensions: [.yaml, .yml]
       description: "Kubernetes auto-mount service account token"
       risk: 3
+
+absence_rules:
+  iac_terraform:
+    - name: s3_missing_encryption
+      pattern: 'resource\s+"aws_s3_bucket"\s+'
+      security_pattern: 'server_side_encryption_configuration'
+      window: 30
+      extensions: [.tf]
+      risk: 3
+      description: "S3 bucket without encryption configuration"
+    - name: s3_missing_versioning
+      pattern: 'resource\s+"aws_s3_bucket"\s+'
+      security_pattern: 'versioning\s*\{'
+      window: 30
+      extensions: [.tf]
+      risk: 2
+      description: "S3 bucket without versioning"
+    - name: s3_missing_logging
+      pattern: 'resource\s+"aws_s3_bucket"\s+'
+      security_pattern: 'logging\s*\{'
+      window: 30
+      extensions: [.tf]
+      risk: 2
+      description: "S3 bucket without access logging"
+    - name: rds_missing_encryption
+      pattern: 'resource\s+"aws_db_instance"\s+'
+      security_pattern: 'storage_encrypted\s*=\s*true'
+      window: 30
+      extensions: [.tf]
+      risk: 3
+      description: "RDS instance without encryption"
+    - name: ebs_missing_encryption
+      pattern: 'resource\s+"aws_ebs_volume"\s+'
+      security_pattern: 'encrypted\s*=\s*true'
+      window: 20
+      extensions: [.tf]
+      risk: 3
+      description: "EBS volume without encryption"
+    - name: sg_missing_description
+      pattern: 'resource\s+"aws_security_group"\s+'
+      security_pattern: 'description\s*='
+      window: 20
+      extensions: [.tf]
+      risk: 1
+      description: "Security group without description"
+    - name: gcs_missing_uniform_access
+      pattern: 'resource\s+"google_storage_bucket"\s+'
+      security_pattern: 'uniform_bucket_level_access'
+      window: 30
+      extensions: [.tf]
+      risk: 2
+      description: "GCS bucket without uniform bucket-level access"
+    - name: azure_storage_missing_https
+      pattern: 'resource\s+"azurerm_storage_account"\s+'
+      security_pattern: 'enable_https_traffic_only\s*=\s*true'
+      window: 30
+      extensions: [.tf]
+      risk: 3
+      description: "Azure storage account without HTTPS enforcement"

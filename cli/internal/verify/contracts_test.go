@@ -368,6 +368,62 @@ var contracts = []probeContract{
 				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
 		},
 	},
+	{name: "ldap", risk: 3,
+		callOutOfScope: func() (*ProbeResult, error) {
+			return VerifyLDAP(LDAPConfig{URL: "http://evil.example.com/api", Param: "uid", Technique: "ldap_filter_injection", Method: "GET",
+				ProbeConfig: ProbeConfig{InScope: []string{"safe.example.com"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callLowRisk: func() (*ProbeResult, error) {
+			return VerifyLDAP(LDAPConfig{URL: "http://localhost/api", Param: "uid", Technique: "ldap_filter_injection", Method: "GET",
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callBadTechnique: func() (*ProbeResult, error) {
+			return VerifyLDAP(LDAPConfig{URL: "http://localhost/api", Param: "uid", Technique: "INVALID", Method: "GET",
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+	},
+	{name: "xpath", risk: 3,
+		callOutOfScope: func() (*ProbeResult, error) {
+			return VerifyXPath(XPathConfig{URL: "http://evil.example.com/api", Param: "q", Technique: "xpath_injection", Method: "GET",
+				ProbeConfig: ProbeConfig{InScope: []string{"safe.example.com"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callLowRisk: func() (*ProbeResult, error) {
+			return VerifyXPath(XPathConfig{URL: "http://localhost/api", Param: "q", Technique: "xpath_injection", Method: "GET",
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callBadTechnique: func() (*ProbeResult, error) {
+			return VerifyXPath(XPathConfig{URL: "http://localhost/api", Param: "q", Technique: "INVALID", Method: "GET",
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+	},
+	{name: "fileupload", risk: 3,
+		callOutOfScope: func() (*ProbeResult, error) {
+			return VerifyFileUpload(FileUploadConfig{URL: "http://evil.example.com/upload", FieldName: "file", Filename: "test.php", Content: "test", MIMEType: "application/octet-stream", Technique: "extension_bypass", Method: "POST",
+				ProbeConfig: ProbeConfig{InScope: []string{"safe.example.com"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callLowRisk: func() (*ProbeResult, error) {
+			return VerifyFileUpload(FileUploadConfig{URL: "http://localhost/upload", FieldName: "file", Filename: "test.php", Content: "test", MIMEType: "application/octet-stream", Technique: "extension_bypass", Method: "POST",
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callBadTechnique: func() (*ProbeResult, error) {
+			return VerifyFileUpload(FileUploadConfig{URL: "http://localhost/upload", FieldName: "file", Filename: "test.php", Content: "test", MIMEType: "application/octet-stream", Technique: "INVALID", Method: "POST",
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+	},
+	{name: "massassignment", risk: 3,
+		callOutOfScope: func() (*ProbeResult, error) {
+			return VerifyMassAssignment(MassAssignmentConfig{URL: "http://evil.example.com/api/user", Method: "PUT", Body: `{"name":"test"}`, WatchFields: []string{"role"}, Token: "tok",
+				ProbeConfig: ProbeConfig{InScope: []string{"safe.example.com"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callLowRisk: func() (*ProbeResult, error) {
+			return VerifyMassAssignment(MassAssignmentConfig{URL: "http://localhost/api/user", Method: "PUT", Body: `{"name":"test"}`, WatchFields: []string{"role"}, Token: "tok",
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callBadConfig: func() (*ProbeResult, error) {
+			return VerifyMassAssignment(MassAssignmentConfig{URL: "http://localhost/api/user", Method: "PUT", Body: `{"name":"test"}`, WatchFields: []string{}, Token: "tok",
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+	},
 }
 
 func TestContracts_ScopeEnforcement(t *testing.T) {

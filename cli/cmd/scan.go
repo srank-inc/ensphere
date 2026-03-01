@@ -12,11 +12,12 @@ import (
 )
 
 var (
-	scanCategories []string
-	scanExtensions []string
-	scanExcludes   []string
-	scanExitZero   bool
-	scanMinRisk    int
+	scanCategories   []string
+	scanExtensions   []string
+	scanExcludes     []string
+	scanExitZero     bool
+	scanMinRisk      int
+	scanAbsenceCheck bool
 )
 
 var scanCmd = &cobra.Command{
@@ -41,6 +42,7 @@ func init() {
 	scanCmd.Flags().StringSliceVar(&scanExcludes, "exclude", nil, "Additional glob patterns to exclude (repeatable)")
 	scanCmd.Flags().BoolVar(&scanExitZero, "exit-zero", false, "Always exit 0, even when matches are found")
 	scanCmd.Flags().IntVar(&scanMinRisk, "min-risk", 0, "Only exit 1 if matches at or above this risk level (1-5)")
+	scanCmd.Flags().BoolVar(&scanAbsenceCheck, "absence-check", false, "Enable IaC absence detection (missing security config)")
 
 	rootCmd.AddCommand(scanCmd)
 }
@@ -63,10 +65,11 @@ func runScan(cmd *cobra.Command, args []string) error {
 	}
 
 	cfg := scan.ScanConfig{
-		Directory:  dir,
-		Categories: scanCategories,
-		Extensions: scanExtensions,
-		Excludes:   scanExcludes,
+		Directory:    dir,
+		Categories:   scanCategories,
+		Extensions:   scanExtensions,
+		Excludes:     scanExcludes,
+		AbsenceCheck: scanAbsenceCheck,
 	}
 
 	result, err := scan.RunScan(cfg)

@@ -8,9 +8,11 @@ Assess API-specific vulnerabilities: rate limiting, property-level authorization
 |------|------|------|
 | Rate limit measurement | Tier 1 | `ensphere verify ratelimit` |
 | Property-level authz | Tier 1 | `ensphere verify propertyauthz` |
+| Mass assignment | Tier 1 | `ensphere verify massassignment` |
 | Authorization bypass | Tier 1 | `ensphere verify authz` |
 | IDOR/BOLA | Tier 1 | `ensphere verify idor` |
 | CORS testing | Tier 1 | `ensphere verify cors` |
+| OpenAPI spec parsing | Tier 1 | `ensphere openapi` |
 | Payload database | Tier 1 | `ensphere payloads authz` |
 | Code scanning | Tier 1 | `ensphere scan` (WHITE_BOX only) |
 | Browser interaction | Tier 3 | Playwright MCP (API docs, Swagger UI) |

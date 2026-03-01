@@ -26,7 +26,7 @@ Attack surface specific to Django and Django REST Framework applications.
 
 - [ ] Django admin endpoint accessible in production — `/admin/` exposed without IP restriction or 2FA
   -> payloads: `ensphere payloads auth_bypass --technique forced_browsing`
-  -> verify: `ensphere verify auth --technique forced_browsing --url <target>/admin/ --in-scope <pattern>`
+  -> verify: `ensphere verify auth --technique no_token --url <target>/admin/ --token <valid-jwt> --in-scope <pattern>`
 
 ## CORS
 
@@ -56,10 +56,10 @@ Attack surface specific to Django and Django REST Framework applications.
 
 - [ ] Unrestricted file upload via `FileField` / `ImageField` — missing content-type validation, file size limits, or filename sanitization
   -> payloads: `ensphere payloads file_upload --technique extension_bypass`
-  -> verify: `ensphere verify sqli --technique error_based --url <upload_endpoint> --param file --in-scope <pattern>`
+  -> verify: `ensphere verify fileupload --technique extension_bypass --url <upload_endpoint> --filename <test-file.php.jpg> --in-scope <pattern>`
 
 ## Template Injection
 
 - [ ] Server-side template injection via Django templates — user input rendered with `Template(user_input).render()` instead of passed as context variable
   -> payloads: `ensphere payloads ssti --runtime python --technique expression_eval`
-  -> verify: `ensphere verify ssti --technique expression_eval --url <endpoint> --param <param> --in-scope <pattern>`
+  -> verify: `ensphere verify ssti --url <endpoint> --param <param> --in-scope <pattern>`

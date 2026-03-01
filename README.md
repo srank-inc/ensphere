@@ -56,7 +56,7 @@ make install-all  # binary + skill files
 
 ### payloads — Query payload database
 
-1188 payloads across 26 vulnerability types. YAML seeds compiled to SQLite, queried at runtime.
+1206 payloads across 27 vulnerability types. YAML seeds compiled to SQLite, queried at runtime.
 
 ```bash
 ensphere payloads sqli --db postgres --technique blind_time
@@ -69,7 +69,7 @@ JSON output: `query`, `count`, `results[]` (payload, placeholders, evidence_type
 
 ### verify — Targeted verification probes
 
-29 probe types. All verify commands output JSON (schema v2: measurements only, no status/confidence), log evidence to `./evidence.jsonl`, and use exit codes: 0 = probes completed, 2 = scope/usage error, 3 = runtime failure. All require `--in-scope`.
+33 probe types. All verify commands output JSON (schema v2: measurements only, no status/confidence), log evidence to `./evidence.jsonl`, and use exit codes: 0 = probes completed, 2 = scope/usage error, 3 = runtime failure. All require `--in-scope`.
 
 **SQLi** — Techniques: `blind_time` (default), `blind_boolean`, `error_based`
 ```bash
@@ -196,6 +196,35 @@ ensphere verify ratelimit --url "http://target/api/login" --method POST --burst-
 ensphere verify propertyauthz --url "http://target/api/users/me" --high-token "admin-jwt" --low-token "user-jwt" --watch-fields "ssn,salary" --in-scope *.target.com
 ```
 
+**LDAP Injection** — Techniques: `ldap_filter_injection` (default), `ldap_blind_boolean`, `ldap_blind_error`
+```bash
+ensphere verify ldap --url "http://target/search?user=test" --param user --technique ldap_filter_injection --in-scope *.target.com
+```
+
+**XPath Injection** — Techniques: `xpath_injection` (default), `xpath_blind_boolean`, `xpath_blind_error`
+```bash
+ensphere verify xpath --url "http://target/xml?query=test" --param query --technique xpath_injection --in-scope *.target.com
+```
+
+**File Upload** — Techniques: `extension_bypass`, `mime_bypass`, `content_type_mismatch`, `polyglot_file`, `zip_path_traversal`
+```bash
+ensphere verify fileupload --url "http://target/upload" --filename "shell.php.jpg" --technique extension_bypass --in-scope *.target.com
+```
+
+**Mass Assignment** — 3-step: baseline GET, mutation with injected fields, follow-up GET comparison
+```bash
+ensphere verify massassignment --url "http://target/api/users/1" --body '{"name":"test"}' --watch-fields "role,is_admin" --token "user-jwt" --in-scope *.target.com
+```
+
+### openapi — OpenAPI/Swagger parser
+
+Parse an OpenAPI/Swagger specification and output structured endpoint inventory with auth requirements.
+
+```bash
+ensphere openapi --file ./openapi.yaml
+ensphere openapi --url "http://target/api/docs/openapi.json"
+```
+
 ### callback — OOB callback listener
 
 Receives out-of-band callbacks for blind SSRF, XXE, and SSTI confirmation. Token-based path routing for correlation.
@@ -212,6 +241,9 @@ Probes cloud infrastructure via provider CLIs (aws, gcloud, az). No SDK dependen
 ensphere cloud storage --provider aws --bucket my-bucket --in-scope "aws://123456789012"
 ensphere cloud iam --provider aws --principal arn:aws:iam::123:user/alice --in-scope "aws://123456789012"
 ensphere cloud network --provider aws --in-scope "aws://123456789012" --vpc-id vpc-abc123
+ensphere cloud compute --provider aws --in-scope "aws://123456789012"
+ensphere cloud logging --provider aws --in-scope "aws://123456789012"
+ensphere cloud secrets --provider aws --in-scope "aws://123456789012"
 ensphere cloud parse-prowler ./prowler-output.json --evidence ./evidence.jsonl
 ensphere cloud parse-trivy ./trivy-results.json --evidence ./evidence.jsonl
 ```

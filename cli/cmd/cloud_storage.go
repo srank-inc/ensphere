@@ -13,13 +13,14 @@ import (
 )
 
 var (
-	csProvider  string
-	csBucket    string
-	csRegion    string
-	csInScope   []string
-	csMaxRisk   int
-	csTimeout   int
-	csEvidence  string
+	csProvider    string
+	csBucket      string
+	csRegion      string
+	csAccountName string
+	csInScope     []string
+	csMaxRisk     int
+	csTimeout     int
+	csEvidence    string
 )
 
 var cloudStorageCmd = &cobra.Command{
@@ -39,6 +40,7 @@ func init() {
 	cloudStorageCmd.Flags().StringVar(&csProvider, "provider", "", "Cloud provider: aws, gcp, azure (required)")
 	cloudStorageCmd.Flags().StringVar(&csBucket, "bucket", "", "Bucket/container name (required)")
 	cloudStorageCmd.Flags().StringVar(&csRegion, "region", "", "Cloud region (optional)")
+	cloudStorageCmd.Flags().StringVar(&csAccountName, "account-name", "", "Azure storage account name (required for --provider azure)")
 	cloudStorageCmd.Flags().StringSliceVar(&csInScope, "in-scope", nil, "In-scope patterns (required, e.g., aws://ACCOUNT_ID)")
 	cloudStorageCmd.Flags().IntVar(&csMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
 	cloudStorageCmd.Flags().IntVar(&csTimeout, "timeout", 30, "CLI command timeout in seconds")
@@ -52,14 +54,21 @@ func init() {
 }
 
 func runCloudStorage(cmd *cobra.Command, args []string) error {
+	// Validate --account-name required for Azure
+	if csProvider == "azure" && csAccountName == "" {
+		fmt.Fprintln(os.Stderr, "--account-name is required when --provider is azure")
+		os.Exit(2)
+	}
+
 	// Extract account ID from in-scope pattern
 	accountID := extractAccountID(csInScope, csProvider)
 
 	cfg := cloud.StorageConfig{
-		Provider:  csProvider,
-		Bucket:    csBucket,
-		Region:    csRegion,
-		AccountID: accountID,
+		Provider:    csProvider,
+		Bucket:      csBucket,
+		Region:      csRegion,
+		AccountID:   accountID,
+		AccountName: csAccountName,
 		ProbeConfig: verify.ProbeConfig{
 			InScope:    csInScope,
 			MaxRisk:    csMaxRisk,

@@ -22,8 +22,8 @@ var ValidVulnTypes = map[string]bool{
 	"cloud_secrets": true, "iac_misconfig": true,
 	// OWASP A10:2025 — Mishandling of Exceptional Conditions (no payloads — compliance mapping and evidence logging)
 	"error_handling": true,
-	// OWASP API Security Top 10 2023 — compliance mapping and evidence logging only (no payloads)
-	"property_authz": true, "api_inventory": true,
+	// OWASP API Security Top 10 2023
+	"property_authz": true, "api_inventory": true, "mass_assignment": true,
 	// Rate limiting — verification probe only (no payloads)
 	"rate_limit": true,
 	// Transport-level — compliance mapping and verification probes (no payloads)
@@ -96,6 +96,8 @@ var ValidTechniques = map[string]bool{
 	"ws_injection": true, "ws_hijack": true, "ws_origin_check": true,
 	// gRPC techniques
 	"grpc_reflection": true, "grpc_plaintext": true,
+	// Mass assignment technique
+	"mass_assignment": true,
 }
 
 var ValidDBEngines = map[string]bool{

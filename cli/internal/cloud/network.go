@@ -3,6 +3,7 @@ package cloud
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/srank/ensphere/internal/verify"
@@ -101,18 +102,56 @@ func VerifyCloudNetwork(cfg NetworkConfig) (*verify.ProbeResult, error) {
 		if err := CheckCLIInstalled(cliName); err != nil {
 			return nil, fmt.Errorf("gcloud CLI required: %w", err)
 		}
-		args := []string{"compute", "firewall-rules", "list", "--format=json"}
-		result := RunCLI(cliName, args, timeout)
-		cliOutputs = append(cliOutputs, result)
+		// Firewall rules
+		fwArgs := []string{"compute", "firewall-rules", "list", "--format=json"}
+		fwResult := RunCLI(cliName, fwArgs, timeout)
+		cliOutputs = append(cliOutputs, fwResult)
+		if fwResult.ExitCode == 0 {
+			openIngress, totalSGs = parseGCPFirewallRules(fwResult.Stdout)
+		}
+		// Subnets for flow logs
+		subArgs := []string{"compute", "networks", "subnets", "list", "--format=json"}
+		subResult := RunCLI(cliName, subArgs, timeout)
+		cliOutputs = append(cliOutputs, subResult)
+		if subResult.ExitCode == 0 {
+			fl := parseGCPSubnetsFlowLogs(subResult.Stdout)
+			flowLogsEnabled = &fl
+		}
+		// External addresses
+		addrArgs := []string{"compute", "addresses", "list", "--format=json"}
+		addrResult := RunCLI(cliName, addrArgs, timeout)
+		cliOutputs = append(cliOutputs, addrResult)
+		if addrResult.ExitCode == 0 {
+			publicIPs = parseGCPAddresses(addrResult.Stdout)
+		}
 
 	case "azure":
 		cliName := "az"
 		if err := CheckCLIInstalled(cliName); err != nil {
 			return nil, fmt.Errorf("az CLI required: %w", err)
 		}
-		args := []string{"network", "nsg", "list", "--output", "json"}
-		result := RunCLI(cliName, args, timeout)
-		cliOutputs = append(cliOutputs, result)
+		// NSG list
+		nsgArgs := []string{"network", "nsg", "list", "--output", "json"}
+		nsgResult := RunCLI(cliName, nsgArgs, timeout)
+		cliOutputs = append(cliOutputs, nsgResult)
+		if nsgResult.ExitCode == 0 {
+			openIngress, totalSGs = parseAzureNSGs(nsgResult.Stdout)
+		}
+		// Flow logs
+		flArgs := []string{"network", "watcher", "flow-log", "list", "--output", "json"}
+		flResult := RunCLI(cliName, flArgs, timeout)
+		cliOutputs = append(cliOutputs, flResult)
+		if flResult.ExitCode == 0 {
+			fl := parseAzureFlowLogs(flResult.Stdout)
+			flowLogsEnabled = &fl
+		}
+		// Public IPs
+		ipArgs := []string{"network", "public-ip", "list", "--output", "json"}
+		ipResult := RunCLI(cliName, ipArgs, timeout)
+		cliOutputs = append(cliOutputs, ipResult)
+		if ipResult.ExitCode == 0 {
+			publicIPs = parseAzurePublicIPs(ipResult.Stdout)
+		}
 
 	default:
 		return nil, &verify.ScopeError{Msg: fmt.Sprintf("unsupported provider %q (aws, gcp, azure)", cfg.Provider)}
@@ -234,4 +273,145 @@ func parseAWSPublicIPs(stdout string) []string {
 		ips = append(ips, a.PublicIp)
 	}
 	return ips
+}
+
+func parseGCPFirewallRules(stdout string) ([]SecurityGroupRule, int) {
+	var rules []struct {
+		Name         string   `json:"name"`
+		Direction    string   `json:"direction"`
+		SourceRanges []string `json:"sourceRanges"`
+		Allowed      []struct {
+			IPProtocol string   `json:"IPProtocol"`
+			Ports      []string `json:"ports"`
+		} `json:"allowed"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &rules); err != nil {
+		return nil, 0
+	}
+	var open []SecurityGroupRule
+	for _, r := range rules {
+		if r.Direction != "INGRESS" {
+			continue
+		}
+		for _, src := range r.SourceRanges {
+			if src == "0.0.0.0/0" || src == "::/0" {
+				for _, a := range r.Allowed {
+					port := "all"
+					if len(a.Ports) > 0 {
+						port = strings.Join(a.Ports, ",")
+					}
+					open = append(open, SecurityGroupRule{
+						GroupID:   r.Name,
+						GroupName: r.Name,
+						Port:      port,
+						Protocol:  a.IPProtocol,
+						Source:    src,
+					})
+				}
+			}
+		}
+	}
+	return open, len(rules)
+}
+
+func parseGCPSubnetsFlowLogs(stdout string) bool {
+	var subnets []struct {
+		LogConfig struct {
+			Enable bool `json:"enable"`
+		} `json:"logConfig"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &subnets); err != nil {
+		return false
+	}
+	for _, s := range subnets {
+		if s.LogConfig.Enable {
+			return true
+		}
+	}
+	return false
+}
+
+func parseGCPAddresses(stdout string) []string {
+	var addrs []struct {
+		Address     string `json:"address"`
+		AddressType string `json:"addressType"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &addrs); err != nil {
+		return nil
+	}
+	var ips []string
+	for _, a := range addrs {
+		if a.AddressType == "EXTERNAL" {
+			ips = append(ips, a.Address)
+		}
+	}
+	return ips
+}
+
+func parseAzureNSGs(stdout string) ([]SecurityGroupRule, int) {
+	var nsgs []struct {
+		Name          string `json:"name"`
+		SecurityRules []struct {
+			Name                 string `json:"name"`
+			Direction            string `json:"direction"`
+			Access               string `json:"access"`
+			SourceAddressPrefix  string `json:"sourceAddressPrefix"`
+			DestinationPortRange string `json:"destinationPortRange"`
+			Protocol             string `json:"protocol"`
+		} `json:"securityRules"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &nsgs); err != nil {
+		return nil, 0
+	}
+	var open []SecurityGroupRule
+	total := 0
+	for _, nsg := range nsgs {
+		total++
+		for _, rule := range nsg.SecurityRules {
+			if rule.Direction != "Inbound" || rule.Access != "Allow" {
+				continue
+			}
+			if rule.SourceAddressPrefix == "*" || rule.SourceAddressPrefix == "0.0.0.0/0" || rule.SourceAddressPrefix == "Internet" {
+				open = append(open, SecurityGroupRule{
+					GroupID:   nsg.Name,
+					GroupName: nsg.Name,
+					Port:      rule.DestinationPortRange,
+					Protocol:  rule.Protocol,
+					Source:    rule.SourceAddressPrefix,
+				})
+			}
+		}
+	}
+	return open, total
+}
+
+func parseAzureFlowLogs(stdout string) bool {
+	var logs []struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &logs); err != nil {
+		return false
+	}
+	for _, l := range logs {
+		if l.Enabled {
+			return true
+		}
+	}
+	return false
+}
+
+func parseAzurePublicIPs(stdout string) []string {
+	var ips []struct {
+		IpAddress string `json:"ipAddress"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &ips); err != nil {
+		return nil
+	}
+	var result []string
+	for _, ip := range ips {
+		if ip.IpAddress != "" {
+			result = append(result, ip.IpAddress)
+		}
+	}
+	return result
 }

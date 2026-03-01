@@ -159,10 +159,14 @@ func buildSupabaseJWT(secret, companyID string) (string, error) {
 	return token.SignedString([]byte(secret))
 }
 
+// countJSONRows returns the number of rows in a JSON array response body.
+// Returns -1 if the body is not a valid JSON array (e.g., HTML error page,
+// JSON object, or malformed response). Callers should treat -1 as
+// "response was not parseable" rather than "zero rows returned".
 func countJSONRows(body string) int {
 	var rows []json.RawMessage
 	if err := json.Unmarshal([]byte(body), &rows); err != nil {
-		return 0
+		return -1
 	}
 	return len(rows)
 }

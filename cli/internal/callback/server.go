@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -104,8 +105,6 @@ func (s *Server) Start(ctx context.Context) (*CallbackResult, error) {
 		_ = srv.Serve(ln)
 	}()
 
-	fmt.Fprintf(io.Discard, "") // prevent unused import
-
 	if s.cfg.WaitSec > 0 {
 		// Wait mode: block until first callback + 500ms grace, or timeout
 		timeout := time.Duration(s.cfg.WaitSec) * time.Second
@@ -152,9 +151,20 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(404)
 		return
 	}
+	pathToken := strings.TrimPrefix(r.URL.Path, "/cb/")
+	if pathToken != s.token {
+		w.WriteHeader(404)
+		return
+	}
 
-	body, _ := io.ReadAll(r.Body)
-	h := sha256.Sum256(body)
+	body, bodyErr := io.ReadAll(r.Body)
+	var bodyHash string
+	if bodyErr != nil {
+		fmt.Fprintf(os.Stderr, "Warning: callback body read error: %v\n", bodyErr)
+	} else {
+		h := sha256.Sum256(body)
+		bodyHash = hex.EncodeToString(h[:])
+	}
 
 	headers := make(map[string]string)
 	for k := range r.Header {
@@ -170,7 +180,7 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 		Method:     r.Method,
 		Path:       r.URL.Path,
 		Headers:    headers,
-		BodyHash:   hex.EncodeToString(h[:]),
+		BodyHash:   bodyHash,
 		BodyLength: len(body),
 		ElapsedMs:  time.Since(s.startedAt).Milliseconds(),
 	}

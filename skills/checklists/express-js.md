@@ -20,7 +20,7 @@ Attack surface specific to Express.js and Node.js web applications.
 
 - [ ] Path traversal via `express.static` or `res.sendFile` — user-controlled path segments resolve to files outside intended directory
   -> payloads: `ensphere payloads lfi --technique directory_traversal`
-  -> verify: `ensphere verify lfi --technique directory_traversal --url <endpoint> --param <param> --in-scope <pattern>`
+  -> verify: `ensphere verify lfi --url <endpoint> --param <param> --in-scope <pattern>`
 
 ## JWT Implementation
 
@@ -32,7 +32,7 @@ Attack surface specific to Express.js and Node.js web applications.
 
 - [ ] Missing Helmet middleware — no `helmet()` middleware or individual headers (`X-Content-Type-Options`, `X-Frame-Options`, `CSP`, `HSTS`) not configured
   -> payloads: manual — inspect response headers for missing security headers
-  -> verify: `ensphere verify clickjacking --technique frame_header_check --url <endpoint> --in-scope <pattern>`
+  -> verify: `ensphere verify clickjacking --url <endpoint> --in-scope <pattern>`
 
 ## CORS Configuration
 
@@ -50,7 +50,7 @@ Attack surface specific to Express.js and Node.js web applications.
 
 - [ ] Insecure `express-session` configuration — default `MemoryStore` in production, missing `secure`, `httpOnly`, `sameSite` flags, or weak session secret
   -> payloads: `ensphere payloads auth_bypass --technique session_fixation`
-  -> verify: `ensphere verify auth --technique session_fixation --url <endpoint> --in-scope <pattern>`
+  -> verify: manual — set session cookie before login, authenticate, check if same session ID persists post-auth
 
 ## File Upload
 
@@ -62,7 +62,7 @@ Attack surface specific to Express.js and Node.js web applications.
 
 - [ ] Server-side template injection in EJS or Pug — user input interpolated into template strings or passed as template options enables code execution
   -> payloads: `ensphere payloads ssti --runtime node --technique expression_eval`
-  -> verify: `ensphere verify ssti --technique expression_eval --url <endpoint> --param <param> --in-scope <pattern>`
+  -> verify: `ensphere verify ssti --url <endpoint> --param <param> --in-scope <pattern>`
   -> scan: `ensphere scan ./src --category ssti`
 
 ## SQL Injection
@@ -76,5 +76,5 @@ Attack surface specific to Express.js and Node.js web applications.
 
 - [ ] SSRF via `axios`, `node-fetch`, or `got` — user-controlled URLs passed to HTTP clients without validation reach internal services, cloud metadata, or localhost
   -> payloads: `ensphere payloads ssrf --technique metadata_access`
-  -> verify: `ensphere verify ssrf --technique metadata_access --url <endpoint> --param <param> --in-scope <pattern>`
+  -> verify: `ensphere verify ssrf --url <endpoint> --param <param> --in-scope <pattern>`
   -> scan: `ensphere scan ./src --category ssrf`

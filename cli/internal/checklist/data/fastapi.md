@@ -6,7 +6,7 @@ Attack surface specific to FastAPI and Python async web applications.
 
 - [ ] Missing `Depends()` auth dependency on endpoints — path operations without `Depends(get_current_user)` or custom auth dependency are publicly accessible
   -> payloads: `ensphere payloads auth_bypass --technique forced_browsing`
-  -> verify: `ensphere verify auth --technique no_token --url <endpoint> --in-scope <pattern>`
+  -> verify: `ensphere verify auth --technique no_token --url <endpoint> --token <valid-jwt> --in-scope <pattern>`
 
 ## Pydantic Validation Bypass
 
@@ -24,7 +24,7 @@ Attack surface specific to FastAPI and Python async web applications.
 
 - [ ] OpenAPI schema and Swagger UI in production — `/docs`, `/redoc`, and `/openapi.json` expose all endpoints, parameters, and response schemas to attackers
   -> payloads: `ensphere payloads auth_bypass --technique forced_browsing`
-  -> verify: `ensphere verify auth --technique forced_browsing --url <target>/docs --in-scope <pattern>`
+  -> verify: `ensphere verify auth --technique no_token --url <target>/docs --token <valid-jwt> --in-scope <pattern>`
 
 ## SQL Injection
 
@@ -55,11 +55,11 @@ Attack surface specific to FastAPI and Python async web applications.
 
 - [ ] Path parameter injection — user-controlled path parameters used in file operations (`Path(...)` to file reads) or database queries without sanitization
   -> payloads: `ensphere payloads lfi --technique directory_traversal`
-  -> verify: `ensphere verify lfi --technique directory_traversal --url <endpoint> --param <param> --in-scope <pattern>`
+  -> verify: `ensphere verify lfi --url <endpoint> --param <param> --in-scope <pattern>`
 
 ## Background Task Injection
 
 - [ ] Background task with unsanitized input — `BackgroundTasks.add_task()` executing shell commands or file operations with user-controlled arguments
   -> payloads: `ensphere payloads cmdi --technique command_injection`
-  -> verify: `ensphere verify cmdi --technique command_injection --url <endpoint> --param <param> --in-scope <pattern>`
+  -> verify: `ensphere verify cmdi --url <endpoint> --param <param> --in-scope <pattern>`
   -> scan: `ensphere scan ./src --category cmdi`

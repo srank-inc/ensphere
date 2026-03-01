@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"testing/iotest"
 	"time"
 )
 
@@ -154,5 +156,39 @@ func TestGenerateToken_Unique(t *testing.T) {
 		if len(tok) != 32 { // 16 bytes = 32 hex chars
 			t.Errorf("expected 32 char token, got %d: %s", len(tok), tok)
 		}
+	}
+}
+
+func TestCallbackServer_BodyReadError(t *testing.T) {
+	srv := &Server{
+		cfg:       CallbackConfig{Port: 0, WaitSec: 5},
+		token:     "test-token",
+		startedAt: time.Now(),
+		firstHit:  make(chan struct{}),
+	}
+
+	body := iotest.ErrReader(fmt.Errorf("simulated read error"))
+	req := httptest.NewRequest("POST", "/cb/test-token", body)
+	w := httptest.NewRecorder()
+
+	srv.handleCallback(w, req)
+
+	if w.Code != 200 {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	srv.mu.Lock()
+	defer srv.mu.Unlock()
+
+	if len(srv.entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(srv.entries))
+	}
+
+	entry := srv.entries[0]
+	if entry.BodyHash != "" {
+		t.Errorf("expected empty BodyHash on read error, got %q", entry.BodyHash)
+	}
+	if entry.BodyLength != 0 {
+		t.Errorf("expected 0 BodyLength on read error, got %d", entry.BodyLength)
 	}
 }

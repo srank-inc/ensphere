@@ -6,13 +6,13 @@ Attack surface specific to Supabase (PostgreSQL + PostgREST + GoTrue + Storage).
 
 - [ ] RLS bypass via exposed `service_role` key — check client-side JS bundles, `.env` files, git history
   → payloads: manual — search for `eyJ` (JWT prefix) in page source, network requests, public repos
-  → verify: `ensphere verify config --technique key_exposure` (Increment 3)
+  → verify: manual — search client-side JS bundles and page source for `eyJ` (JWT prefix) indicating exposed service_role key
 
 ## PostgREST
 
 - [ ] Direct PostgREST access bypassing app validation — Supabase exposes REST API at `/rest/v1/`; Zod validation only runs in the app
   → payloads: `ensphere payloads sqli --db postgres --surface query`
-  → verify: `ensphere verify authz --technique postgrest_direct` (Increment 3)
+  → verify: `ensphere verify authz --url <supabase-url>/rest/v1/<table> --low-token <anon-jwt> --high-token <service-role> --in-scope <pattern>`
 
 ## RLS Policies
 
@@ -22,7 +22,7 @@ Attack surface specific to Supabase (PostgreSQL + PostgREST + GoTrue + Storage).
 
 - [ ] RLS `USING` vs `WITH CHECK` mismatch — `USING` controls reads, `WITH CHECK` controls writes; missing either creates gaps
   → payloads: manual — review policies for SELECT-only or INSERT-only rules
-  → verify: `ensphere verify authz --technique rls_mismatch` (Increment 3)
+  → verify: manual — review RLS policies for USING vs WITH CHECK coverage gaps; query pg_policies for inspection
 
 ## JWT & Auth
 
@@ -32,7 +32,7 @@ Attack surface specific to Supabase (PostgreSQL + PostgREST + GoTrue + Storage).
 
 - [ ] Auth webhook spoofing — if using custom auth hooks, verify webhook origin and signature
   → payloads: `ensphere payloads ssrf --technique webhook_spoof`
-  → verify: `ensphere verify authz --technique webhook_spoof` (Increment 3)
+  → verify: manual — send forged webhook request without valid signature header, check if accepted
 
 ## Functions
 
@@ -44,16 +44,16 @@ Attack surface specific to Supabase (PostgreSQL + PostgREST + GoTrue + Storage).
 
 - [ ] Storage bucket ACL leakage — public buckets expose all objects; check bucket policies for unintended public access
   → payloads: manual — enumerate `storage/v1/object/public/` paths
-  → verify: `ensphere verify authz --technique storage_acl` (Increment 3)
+  → verify: `ensphere verify authz --url <supabase-url>/storage/v1/object/<bucket>/<key> --low-token <anon-jwt> --high-token <service-role> --in-scope <pattern>`
 
 ## Realtime
 
 - [ ] Realtime subscription tenant isolation — Realtime channels may leak data across tenants if RLS isn't enforced on subscriptions
   → payloads: manual — subscribe to channels with different tenant contexts
-  → verify: `ensphere verify authz --technique realtime_isolation` (Increment 3)
+  → verify: manual — subscribe to Realtime channel with tenant-A JWT, check if tenant-B data is received
 
 ## Edge Functions
 
 - [ ] Edge function secrets exposure — secrets available via `Deno.env.get()` may leak in error responses or logs
   → payloads: manual — trigger errors in edge functions and inspect responses
-  → verify: `ensphere verify info_disclosure --technique edge_secrets` (Increment 3)
+  → verify: manual — trigger errors in edge functions and inspect responses for leaked `Deno.env` values

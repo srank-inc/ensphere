@@ -3,6 +3,7 @@ package cloud
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -115,10 +116,9 @@ func VerifyCloudIAM(cfg IAMConfig) (*verify.ProbeResult, error) {
 
 		// Collect all actions from policy documents for dangerous combo check
 		for _, policyARN := range attachedPolicies {
-			args = []string{"iam", "get-policy", "--policy-arn", policyARN, "--output", "json"}
-			pResult := RunCLI(cliName, args, timeout)
+			policyActions, pResult := extractActionsFromPolicy(cliName, policyARN, timeout)
 			cliOutputs = append(cliOutputs, pResult)
-			allActions = append(allActions, extractActionsFromPolicyInfo(pResult.Stdout)...)
+			allActions = append(allActions, policyActions...)
 		}
 
 	case "gcp":
@@ -126,9 +126,22 @@ func VerifyCloudIAM(cfg IAMConfig) (*verify.ProbeResult, error) {
 		if err := CheckCLIInstalled(cliName); err != nil {
 			return nil, fmt.Errorf("gcloud CLI required: %w", err)
 		}
+		// Project IAM policy
 		args := []string{"projects", "get-iam-policy", cfg.AccountID, "--format=json"}
-		result := RunCLI(cliName, args, timeout)
-		cliOutputs = append(cliOutputs, result)
+		iamResult := RunCLI(cliName, args, timeout)
+		cliOutputs = append(cliOutputs, iamResult)
+		if iamResult.ExitCode == 0 {
+			policies, dangerous := parseGCPIAMPolicy(iamResult.Stdout)
+			attachedPolicies = policies
+			allActions = append(allActions, dangerous...)
+		}
+
+		// Service account keys (if principal looks like a service account email)
+		if strings.Contains(cfg.Principal, "iam.gserviceaccount.com") {
+			args = []string{"iam", "service-accounts", "keys", "list", "--iam-account", cfg.Principal, "--format=json"}
+			keysResult := RunCLI(cliName, args, timeout)
+			cliOutputs = append(cliOutputs, keysResult)
+		}
 
 	case "azure":
 		cliName := "az"
@@ -136,8 +149,18 @@ func VerifyCloudIAM(cfg IAMConfig) (*verify.ProbeResult, error) {
 			return nil, fmt.Errorf("az CLI required: %w", err)
 		}
 		args := []string{"role", "assignment", "list", "--assignee", cfg.Principal, "--output", "json"}
-		result := RunCLI(cliName, args, timeout)
-		cliOutputs = append(cliOutputs, result)
+		roleResult := RunCLI(cliName, args, timeout)
+		cliOutputs = append(cliOutputs, roleResult)
+		if roleResult.ExitCode == 0 {
+			roles, dangerous := parseAzureRoleAssignments(roleResult.Stdout)
+			attachedPolicies = roles
+			allActions = append(allActions, dangerous...)
+		}
+
+		// Custom roles
+		args = []string{"role", "definition", "list", "--custom-role-only", "true", "--output", "json"}
+		customResult := RunCLI(cliName, args, timeout)
+		cliOutputs = append(cliOutputs, customResult)
 
 	default:
 		return nil, &verify.ScopeError{Msg: fmt.Sprintf("unsupported provider %q (aws, gcp, azure)", cfg.Provider)}
@@ -220,11 +243,117 @@ func parseAWSLastUsed(stdout string) string {
 	return result.User.PasswordLastUsed
 }
 
-func extractActionsFromPolicyInfo(stdout string) []string {
-	// This extracts policy ARN info — actual actions would need get-policy-version.
-	// For now we extract from the policy name as a heuristic-free fact collection.
-	// The AI will interpret the raw CLI outputs for detailed analysis.
-	return nil
+func extractActionsFromPolicy(cliName, policyARN string, timeout int) ([]string, CLIResult) {
+	// Step 1: get-policy to find DefaultVersionId
+	args := []string{"iam", "get-policy", "--policy-arn", policyARN, "--output", "json"}
+	policyResult := RunCLI(cliName, args, timeout)
+	if policyResult.ExitCode != 0 {
+		return nil, policyResult
+	}
+
+	var policyInfo struct {
+		Policy struct {
+			DefaultVersionId string `json:"DefaultVersionId"`
+		} `json:"Policy"`
+	}
+	if err := json.Unmarshal([]byte(policyResult.Stdout), &policyInfo); err != nil || policyInfo.Policy.DefaultVersionId == "" {
+		return nil, policyResult
+	}
+
+	// Step 2: get-policy-version
+	args = []string{"iam", "get-policy-version", "--policy-arn", policyARN, "--version-id", policyInfo.Policy.DefaultVersionId, "--output", "json"}
+	versionResult := RunCLI(cliName, args, timeout)
+	if versionResult.ExitCode != 0 {
+		return nil, versionResult
+	}
+
+	return parseActionsFromPolicyVersion(versionResult.Stdout), versionResult
+}
+
+func parseActionsFromPolicyVersion(stdout string) []string {
+	var result struct {
+		PolicyVersion struct {
+			Document string `json:"Document"`
+		} `json:"PolicyVersion"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
+		return nil
+	}
+	// Document is URL-encoded JSON
+	doc := result.PolicyVersion.Document
+	// Try URL-decode
+	if decoded, err := url.QueryUnescape(doc); err == nil {
+		doc = decoded
+	}
+	var policy struct {
+		Statement []struct {
+			Action interface{} `json:"Action"`
+		} `json:"Statement"`
+	}
+	if err := json.Unmarshal([]byte(doc), &policy); err != nil {
+		return nil
+	}
+	var actions []string
+	for _, stmt := range policy.Statement {
+		switch a := stmt.Action.(type) {
+		case string:
+			actions = append(actions, a)
+		case []interface{}:
+			for _, v := range a {
+				if s, ok := v.(string); ok {
+					actions = append(actions, s)
+				}
+			}
+		}
+	}
+	return actions
+}
+
+func parseGCPIAMPolicy(stdout string) ([]string, []string) {
+	var result struct {
+		Bindings []struct {
+			Role    string   `json:"role"`
+			Members []string `json:"members"`
+		} `json:"bindings"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
+		return nil, nil
+	}
+	var roles []string
+	var dangerous []string
+	dangerousRoles := map[string]bool{
+		"roles/owner": true, "roles/editor": true, "roles/iam.securityAdmin": true,
+		"roles/iam.serviceAccountAdmin": true, "roles/iam.serviceAccountKeyAdmin": true,
+	}
+	for _, b := range result.Bindings {
+		roles = append(roles, b.Role)
+		if dangerousRoles[b.Role] {
+			dangerous = append(dangerous, b.Role)
+		}
+	}
+	return roles, dangerous
+}
+
+func parseAzureRoleAssignments(stdout string) ([]string, []string) {
+	var result []struct {
+		RoleDefinitionName string `json:"roleDefinitionName"`
+		Scope              string `json:"scope"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
+		return nil, nil
+	}
+	dangerousRoles := map[string]bool{
+		"Owner": true, "Contributor": true, "User Access Administrator": true,
+	}
+	var roles []string
+	var dangerous []string
+	for _, r := range result {
+		roles = append(roles, r.RoleDefinitionName)
+		if dangerousRoles[r.RoleDefinitionName] {
+			dangerous = append(dangerous, r.RoleDefinitionName)
+		}
+	}
+	return roles, dangerous
 }
 
 func checkDangerousCombos(actions []string) []string {

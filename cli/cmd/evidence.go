@@ -11,7 +11,8 @@ var evidenceCmd = &cobra.Command{
 
 Available subcommands:
   log     Write a new evidence entry
-  query   Read and filter evidence entries`,
+  query   Read and filter evidence entries
+  verify  Verify evidence hash chain integrity`,
 }
 
 func init() {

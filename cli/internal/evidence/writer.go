@@ -21,7 +21,7 @@ type Writer struct {
 func NewWriter(path string) (*Writer, error) {
 	// Read existing entries to recover last hash for chain continuity
 	var lastHash string
-	if entries, err := ReadAll(path); err == nil && len(entries) > 0 {
+	if entries, _, err := ReadAll(path); err == nil && len(entries) > 0 {
 		lastHash = entries[len(entries)-1].Hash
 	}
 

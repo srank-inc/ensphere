@@ -11,7 +11,8 @@ import (
 
 // sinksFile is the intermediate struct for YAML parsing.
 type sinksFile struct {
-	Categories map[string][]SinkPattern `yaml:"categories"`
+	Categories   map[string][]SinkPattern `yaml:"categories"`
+	AbsenceRules map[string][]AbsenceRule `yaml:"absence_rules"`
 }
 
 var (
@@ -92,6 +93,15 @@ func AllPatterns() (map[string][]SinkPattern, error) {
 		return nil, err
 	}
 	return data.Categories, nil
+}
+
+// AllAbsenceRules returns all IaC absence rules grouped by category.
+func AllAbsenceRules() (map[string][]AbsenceRule, error) {
+	data, err := load()
+	if err != nil {
+		return nil, err
+	}
+	return data.AbsenceRules, nil
 }
 
 // sortedKeys returns the map keys in sorted order.

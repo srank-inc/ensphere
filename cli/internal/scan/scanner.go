@@ -85,7 +85,49 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 		}
 	}
 
-	if len(compiled) == 0 {
+	// Load absence rules if enabled
+	var absenceRules []compiledAbsenceRule
+	if cfg.AbsenceCheck {
+		absRules, absErr := sinks.AllAbsenceRules()
+		if absErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not load absence rules: %v\n", absErr)
+		} else {
+			for cat, rules := range absRules {
+				for _, r := range rules {
+					re, err := regexp.Compile(r.Pattern)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "Warning: skip invalid absence pattern %q: %v\n", r.Name, err)
+						continue
+					}
+					secRe, err := regexp.Compile(r.SecurityPattern)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "Warning: skip invalid security pattern %q: %v\n", r.Name, err)
+						continue
+					}
+					exts := make(map[string]bool)
+					for _, ext := range r.Extensions {
+						if !strings.HasPrefix(ext, ".") {
+							ext = "." + ext
+						}
+						exts[ext] = true
+						extUnion[ext] = true
+					}
+					absenceRules = append(absenceRules, compiledAbsenceRule{
+						re:         re,
+						securityRe: secRe,
+						name:       r.Name,
+						category:   cat,
+						risk:       r.Risk,
+						window:     r.Window,
+						extensions: exts,
+						description: r.Description,
+					})
+				}
+			}
+		}
+	}
+
+	if len(compiled) == 0 && len(absenceRules) == 0 {
 		return &ScanResult{
 			Directory: cfg.Directory,
 			Duration:  time.Since(start).Round(time.Millisecond).String(),
@@ -94,13 +136,22 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 		}, nil
 	}
 
-	// Override extensions if specified
+	// Override extensions if specified (merge with absence rule extensions)
 	if len(cfg.Extensions) > 0 {
+		absExts := make(map[string]bool)
+		for _, r := range absenceRules {
+			for ext := range r.extensions {
+				absExts[ext] = true
+			}
+		}
 		extUnion = make(map[string]bool)
 		for _, ext := range cfg.Extensions {
 			if !strings.HasPrefix(ext, ".") {
 				ext = "." + ext
 			}
+			extUnion[ext] = true
+		}
+		for ext := range absExts {
 			extUnion[ext] = true
 		}
 	}
@@ -179,6 +230,14 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 	}
 	wg.Wait()
 
+	// Run absence checks if enabled
+	if cfg.AbsenceCheck && len(absenceRules) > 0 {
+		for _, path := range files {
+			absMatches := scanFileAbsence(path, cfg.Directory, absenceRules)
+			allMatches = append(allMatches, absMatches...)
+		}
+	}
+
 	// Sort by file + line
 	sort.Slice(allMatches, func(i, j int) bool {
 		if allMatches[i].File != allMatches[j].File {
@@ -208,6 +267,13 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 	sort.Slice(summary, func(i, j int) bool {
 		return summary[i].Category < summary[j].Category
 	})
+
+	if allMatches == nil {
+		allMatches = []ScanMatch{}
+	}
+	if summary == nil {
+		summary = []CategoryHit{}
+	}
 
 	return &ScanResult{
 		Directory:    cfg.Directory,
@@ -284,6 +350,91 @@ func scanFile(path, baseDir string, patterns []compiledPattern) []ScanMatch {
 		}
 	}
 
+	return matches
+}
+
+// compiledAbsenceRule holds a pre-compiled absence rule.
+type compiledAbsenceRule struct {
+	re          *regexp.Regexp
+	securityRe  *regexp.Regexp
+	name        string
+	category    string
+	risk        int
+	window      int
+	extensions  map[string]bool
+	description string
+}
+
+// scanFileAbsence scans a file for resource declarations missing security configuration.
+func scanFileAbsence(path, baseDir string, rules []compiledAbsenceRule) []ScanMatch {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+
+	ext := filepath.Ext(path)
+	relPath, err := filepath.Rel(baseDir, path)
+	if err != nil {
+		relPath = path
+	}
+
+	var lines []string
+	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 0, 256*1024), 1024*1024)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	var matches []ScanMatch
+	for lineIdx, line := range lines {
+		for _, r := range rules {
+			if len(r.extensions) > 0 && !r.extensions[ext] {
+				continue
+			}
+			if !r.re.MatchString(line) {
+				continue
+			}
+			// Found resource declaration — search next N lines for security pattern
+			windowEnd := lineIdx + r.window
+			if windowEnd > len(lines) {
+				windowEnd = len(lines)
+			}
+			found := false
+			for i := lineIdx; i < windowEnd; i++ {
+				if r.securityRe.MatchString(lines[i]) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				matched := line
+				if len(matched) > 100 {
+					matched = matched[:100]
+				}
+				ctxStart := lineIdx - 2
+				if ctxStart < 0 {
+					ctxStart = 0
+				}
+				ctxEnd := lineIdx + 3
+				if ctxEnd > len(lines) {
+					ctxEnd = len(lines)
+				}
+				context := strings.Join(lines[ctxStart:ctxEnd], "\n")
+				matches = append(matches, ScanMatch{
+					File:        relPath,
+					Line:        lineIdx + 1,
+					Column:      1,
+					PatternName: r.name,
+					Category:    r.category,
+					Risk:        r.risk,
+					MatchedText: matched,
+					Context:     context,
+					MatchType:   "absence",
+				})
+			}
+		}
+	}
 	return matches
 }
 

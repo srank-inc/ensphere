@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func testEntry(probeType, result string) Entry {
@@ -42,7 +43,7 @@ func TestWriteAndReadBack(t *testing.T) {
 	e3 := testEntry("cmdi", "baseline")
 	writeEntries(t, path, e1, e2, e3)
 
-	entries, err := ReadAll(path)
+	entries, _, err := ReadAll(path)
 	if err != nil {
 		t.Fatalf("ReadAll: %v", err)
 	}
@@ -295,5 +296,60 @@ func TestCountByResult(t *testing.T) {
 	}
 	if counts["probe"] != 3 {
 		t.Fatalf("expected 3 probe, got %d", counts["probe"])
+	}
+}
+
+func TestReadAll_MalformedLines(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "evidence.jsonl")
+
+	ew, err := NewWriter(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	e1 := Entry{ProbeType: "sqli", Result: "completed", Timestamp: time.Now().UTC().Format(time.RFC3339)}
+	if err := ew.Write(e1); err != nil {
+		t.Fatal(err)
+	}
+	e2 := Entry{ProbeType: "xss", Result: "completed", Timestamp: time.Now().UTC().Format(time.RFC3339)}
+	if err := ew.Write(e2); err != nil {
+		t.Fatal(err)
+	}
+	if err := ew.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.WriteString("{this is not valid json}\n"); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	ew2, err := NewWriter(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e3 := Entry{ProbeType: "csrf", Result: "completed", Timestamp: time.Now().UTC().Format(time.RFC3339)}
+	if err := ew2.Write(e3); err != nil {
+		t.Fatal(err)
+	}
+	if err := ew2.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	entries, skipped, err := ReadAll(path)
+	if err != nil {
+		t.Fatalf("ReadAll error: %v", err)
+	}
+	if skipped != 1 {
+		t.Errorf("expected 1 skipped line, got %d", skipped)
+	}
+	if len(entries) != 3 {
+		t.Errorf("expected 3 valid entries, got %d", len(entries))
 	}
 }

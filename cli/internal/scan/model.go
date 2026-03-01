@@ -10,6 +10,7 @@ type ScanMatch struct {
 	Risk        int    `json:"risk"`
 	MatchedText string `json:"matched_text"`
 	Context     string `json:"context"`
+	MatchType   string `json:"match_type,omitempty"` // "presence" (default) or "absence"
 }
 
 // ScanResult holds the complete output of a scan.
@@ -31,8 +32,9 @@ type CategoryHit struct {
 
 // ScanConfig holds configuration for a scan run.
 type ScanConfig struct {
-	Directory  string
-	Categories []string // filter to these categories; empty = all
-	Extensions []string // override file extensions; empty = use pattern defaults
-	Excludes   []string // glob patterns to skip
+	Directory    string
+	Categories   []string // filter to these categories; empty = all
+	Extensions   []string // override file extensions; empty = use pattern defaults
+	Excludes     []string // glob patterns to skip
+	AbsenceCheck bool     // enable IaC absence detection
 }

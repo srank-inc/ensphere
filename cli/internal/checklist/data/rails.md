@@ -32,7 +32,7 @@ Attack surface specific to Ruby on Rails applications.
 
 - [ ] `redirect_to` with user-controlled input — missing host validation allows redirecting to attacker-controlled domains
   -> payloads: `ensphere payloads redirect --technique open_redirect_param`
-  -> verify: `ensphere verify redirect --technique open_redirect_param --url <endpoint> --param <param> --in-scope <pattern>`
+  -> verify: `ensphere verify redirect --url <endpoint> --param <param> --in-scope <pattern>`
 
 ## CSRF
 
@@ -44,7 +44,7 @@ Attack surface specific to Ruby on Rails applications.
 
 - [ ] Devise auth bypass — custom authentication logic bypassing Devise guards, or missing `authenticate_user!` before_action on controllers
   -> payloads: `ensphere payloads auth_bypass --technique forced_browsing`
-  -> verify: `ensphere verify auth --technique no_token --url <endpoint> --in-scope <pattern>`
+  -> verify: `ensphere verify auth --technique no_token --url <endpoint> --token <valid-jwt> --in-scope <pattern>`
 
 ## Secret Key Base
 
@@ -56,7 +56,7 @@ Attack surface specific to Ruby on Rails applications.
 
 - [ ] Missing or weak CSP — no `content_security_policy` block in initializer, or overly permissive `unsafe-inline`, `unsafe-eval` directives
   -> payloads: `ensphere payloads xss --technique reflected`
-  -> verify: `ensphere verify xss --technique reflected --url <endpoint> --param <param> --in-scope <pattern>`
+  -> verify: `ensphere verify xss --url <endpoint> --param <param> --payload "<script>alert(1)</script>" --in-scope <pattern>`
 
 ## File Upload
 
@@ -68,7 +68,7 @@ Attack surface specific to Ruby on Rails applications.
 
 - [ ] Session fixation via `reset_session` omission — session ID not regenerated after authentication, allowing attacker to fixate session before login
   -> payloads: `ensphere payloads auth_bypass --technique session_fixation`
-  -> verify: `ensphere verify auth --technique session_fixation --url <login_endpoint> --in-scope <pattern>`
+  -> verify: manual — set session cookie before login, authenticate, check if same session ID persists post-auth
 
 ## Insecure Cookie Settings
 

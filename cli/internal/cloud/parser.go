@@ -133,7 +133,7 @@ func ParseTrivy(filePath string) (*ParseResult, error) {
 			}
 			result.FailFindings++
 
-			vulnType := mapTrivyTypeToVulnType(tr.Type)
+			vulnType := mapTrivyTypeToVulnType(tr.Type, m.ID)
 			result.BySeverity[m.Severity]++
 			result.ByVulnType[vulnType]++
 
@@ -175,7 +175,26 @@ func mapServiceToVulnType(service string) string {
 }
 
 // mapTrivyTypeToVulnType maps Trivy result types to Ensphere vuln types.
-func mapTrivyTypeToVulnType(trivyType string) string {
+// Uses check ID for specific resource mapping, falling back to type-based mapping.
+func mapTrivyTypeToVulnType(trivyType, checkID string) string {
+	id := strings.ToUpper(checkID)
+	switch {
+	case strings.HasPrefix(id, "AVD-AWS-0086"), strings.HasPrefix(id, "AVD-AWS-0088"),
+		strings.HasPrefix(id, "AVD-AWS-0089"), strings.HasPrefix(id, "AVD-AWS-0090"),
+		strings.HasPrefix(id, "AVD-AWS-0091"), strings.HasPrefix(id, "AVD-AWS-0132"):
+		return "cloud_storage"
+	case strings.HasPrefix(id, "AVD-AWS-0007"), strings.HasPrefix(id, "AVD-AWS-0057"),
+		strings.HasPrefix(id, "AVD-AWS-0142"), strings.HasPrefix(id, "AVD-AWS-0143"),
+		strings.HasPrefix(id, "AVD-AWS-0144"), strings.HasPrefix(id, "AVD-AWS-0145"):
+		return "cloud_iam"
+	case strings.HasPrefix(id, "AVD-AWS-0101"), strings.HasPrefix(id, "AVD-AWS-0105"):
+		return "cloud_network"
+	case strings.HasPrefix(id, "AVD-AWS-0017"), strings.HasPrefix(id, "AVD-AWS-0065"):
+		return "cloud_logging"
+	case strings.HasPrefix(id, "AVD-AWS-0104"):
+		return "cloud_compute"
+	}
+
 	t := strings.ToLower(trivyType)
 	switch {
 	case strings.Contains(t, "terraform"):

@@ -46,6 +46,15 @@ ensphere cloud iam --provider azure \
   --principal MANAGED_IDENTITY_PRINCIPAL_ID \
   --in-scope "azure://SUBSCRIPTION_ID"
 
+# Serverless compute audit (Function Apps, public hostnames)
+ensphere cloud compute --provider azure --in-scope "azure://SUBSCRIPTION_ID"
+
+# Audit logging (diagnostic settings, active log status)
+ensphere cloud logging --provider azure --in-scope "azure://SUBSCRIPTION_ID"
+
+# Secrets management (Key Vault, soft-delete, purge protection)
+ensphere cloud secrets --provider azure --in-scope "azure://SUBSCRIPTION_ID"
+
 ensphere evidence log \
   --probe-type cloud_compute --technique cli_verification \
   --url "azure://SUBSCRIPTION_ID/functionapp/FUNCTION_APP" \

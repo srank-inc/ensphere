@@ -4,7 +4,7 @@
 
 ### Layer 1 — Payload Database
 
-1188 curated payloads across 26 vuln types, compiled from YAML seeds to embedded SQLite. Agent queries `ensphere payloads <vuln_type> [filters]` for deterministic, context-indexed payloads instead of generating from training data.
+1206 curated payloads across 27 vuln types, compiled from YAML seeds to embedded SQLite. Agent queries `ensphere payloads <vuln_type> [filters]` for deterministic, context-indexed payloads instead of generating from training data.
 
 Payloads indexed by **context**, not framework:
 - **SQLi**: db_engine (postgres/mysql/mssql/sqlite/oracle), technique, injection_surface, encoding, string_boundary
@@ -20,7 +20,7 @@ Custom Go HTTP probes (not wrappers around external tools). Agent calls `enspher
 - Returns structured JSON (schema v2): `{schema_version, vuln_type, technique, started_at, probe_count, duration, measurements}` — measurement-only output, no status/confidence classification
 - Safety: mandatory `--in-scope` scoping, rate throttling (default 500ms), max-risk gate (default 3)
 - Evidence auto-logged to JSONL with secret redaction
-- Probes: sqli, xss, idor, ssrf, auth, rls, cmdi, lfi, ssti, xxe, deserialization, csrf, nosql, jwt, cors, protopollution, graphql, race, smuggling, cachepoisoning, redirect, csvinjection, authz, clickjacking, headerinjection, websocket, grpc, ratelimit, propertyauthz (29 total)
+- Probes: sqli, xss, idor, ssrf, auth, rls, cmdi, lfi, ssti, xxe, deserialization, csrf, nosql, jwt, cors, protopollution, graphql, race, smuggling, cachepoisoning, redirect, csvinjection, authz, clickjacking, headerinjection, websocket, grpc, ratelimit, propertyauthz, ldap, xpath, fileupload, massassignment (33 total)
 
 ### Layer 3 — Exploit Templates
 
@@ -73,12 +73,20 @@ cli/
     verify_grpc.go                # ensphere verify grpc
     verify_ratelimit.go           # ensphere verify ratelimit
     verify_propertyauthz.go       # ensphere verify propertyauthz
+    verify_ldap.go                # ensphere verify ldap
+    verify_xpath.go               # ensphere verify xpath
+    verify_fileupload.go          # ensphere verify fileupload
+    verify_massassignment.go      # ensphere verify massassignment
     callback.go                   # ensphere callback (OOB listener)
     cloud.go                      # parent: ensphere cloud
     cloud_storage.go              # ensphere cloud storage
     cloud_iam.go                  # ensphere cloud iam
     cloud_network.go              # ensphere cloud network
+    cloud_compute.go              # ensphere cloud compute
+    cloud_logging.go              # ensphere cloud logging
+    cloud_secrets.go              # ensphere cloud secrets
     cloud_parse.go                # ensphere cloud parse-prowler / parse-trivy
+    openapi.go                    # ensphere openapi
     scan.go                       # ensphere scan <dir>
     template.go                   # ensphere template [name]
     evidence.go                   # parent: ensphere evidence
@@ -124,9 +132,13 @@ cli/
       grpc.go                     # gRPC security verification
       ratelimit.go                # Rate limit burst measurement
       propertyauthz.go            # Field-level authorization comparison
-      probe.go                    # HTTPProbe shared request logic + CheckMaxRisk
+      ldap.go                     # LDAP injection (filter, blind boolean, blind error)
+      xpath.go                    # XPath injection (classic, blind boolean, blind error)
+      fileupload.go               # File upload (extension, MIME, polyglot bypass)
+      massassignment.go           # Mass assignment (3-step: GET/mutate/verify)
+      probe.go                    # HTTPProbe + MultipartHTTPProbe shared request logic + CheckMaxRisk
       scope.go                    # CheckScope hostname + CheckCloudScope provider validation
-      model.go                    # Result/config structs (29 measurement types)
+      model.go                    # Result/config structs (33 measurement types)
       throttle.go                 # Rate limiting between probes
     evidence/
       writer.go                   # JSONL append writer
@@ -140,7 +152,14 @@ cli/
       storage.go                  # S3/GCS/Blob storage security probe
       iam.go                      # IAM policy and permission analysis
       network.go                  # Security group / firewall rule analysis
+      compute.go                  # Serverless/compute security probe
+      logging.go                  # Audit logging/trail security probe
+      secrets.go                  # Secrets management security probe
       parser.go                   # Prowler/Trivy output parser
+    openapi/
+      model.go                    # Spec, Endpoint, Parameter data models
+      parser.go                   # OpenAPI v3 JSON/YAML parser
+      parser_test.go              # Parser unit tests
     templates/
       data/                       # 13 template dirs (exploit.py + template.json + README.md)
       embed.go                    # go:embed data/*
@@ -174,7 +193,7 @@ cli/
       enums.go                    # Validation maps for all enum fields
   tools/
     seedgen/main.go               # YAML seeds → SQLite compiler (validates enums at build)
-assets/seeds/                     # 29 YAML seed files (includes authz.yaml)
+assets/seeds/                     # 30 YAML seed files (includes authz.yaml, mass-assignment.yaml)
 skills/                           # Claude Code skill files
   SKILL.md                        # /ensphere entry point
   methodology/                    # 01-recon through 09-api + 08-report, with 07a-d cloud sub-files

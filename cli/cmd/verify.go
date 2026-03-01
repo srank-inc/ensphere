@@ -38,7 +38,11 @@ Available subcommands:
   propertyauthz   Verify property-level authorization
   ratelimit       Verify rate limiting behavior
   websocket       Verify WebSocket security
-  grpc            Verify gRPC security`,
+  grpc            Verify gRPC security
+  ldap            Verify LDAP injection
+  xpath           Verify XPath injection
+  fileupload      Verify file upload vulnerability
+  massassignment  Verify mass assignment vulnerability`,
 }
 
 func init() {

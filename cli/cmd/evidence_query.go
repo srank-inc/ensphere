@@ -53,7 +53,7 @@ func runEvidenceQuery(cmd *cobra.Command, args []string) error {
 	enc.SetIndent("", "  ")
 
 	if evidQuerySummary {
-		entries, err := evidence.ReadAll(evidQueryFile)
+		entries, _, err := evidence.ReadAll(evidQueryFile)
 		if err != nil {
 			return err
 		}

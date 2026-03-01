@@ -21,36 +21,42 @@ type EntryFilter struct {
 }
 
 // ReadAll reads all entries from a JSONL evidence file.
-func ReadAll(path string) ([]Entry, error) {
+// Returns valid entries and count of malformed lines that were skipped.
+func ReadAll(path string) ([]Entry, int, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("open evidence file: %w", err)
+		return nil, 0, fmt.Errorf("open evidence file: %w", err)
 	}
 	defer f.Close()
 
 	var entries []Entry
+	skipped := 0
+	lineNum := 0
 	scanner := bufio.NewScanner(f)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for scanner.Scan() {
+		lineNum++
 		line := scanner.Bytes()
 		if len(line) == 0 {
 			continue
 		}
 		var e Entry
 		if err := json.Unmarshal(line, &e); err != nil {
-			continue // skip malformed lines
+			fmt.Fprintf(os.Stderr, "Warning: skipping malformed evidence line %d: %v\n", lineNum, err)
+			skipped++
+			continue
 		}
 		entries = append(entries, e)
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("read evidence file: %w", err)
+		return nil, skipped, fmt.Errorf("read evidence file: %w", err)
 	}
-	return entries, nil
+	return entries, skipped, nil
 }
 
 // ReadFiltered reads entries matching the given filter.
 func ReadFiltered(path string, filter EntryFilter) ([]Entry, error) {
-	all, err := ReadAll(path)
+	all, _, err := ReadAll(path)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +105,7 @@ func ReadFiltered(path string, filter EntryFilter) ([]Entry, error) {
 
 // CountByResult returns counts grouped by result type.
 func CountByResult(path string) (map[string]int, error) {
-	entries, err := ReadAll(path)
+	entries, _, err := ReadAll(path)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +118,7 @@ func CountByResult(path string) (map[string]int, error) {
 
 // NextID reads the file, counts entries, and returns the next sequential ID.
 func NextID(path string) (string, error) {
-	entries, err := ReadAll(path)
+	entries, _, err := ReadAll(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return "EVID-001", nil
@@ -126,18 +132,19 @@ func NextID(path string) (string, error) {
 type ChainResult struct {
 	Valid          bool   `json:"valid"`
 	EntriesChecked int    `json:"entries_checked"`
+	SkippedLines   int    `json:"skipped_lines"`
 	BrokenAt       string `json:"broken_at,omitempty"`
 	Error          string `json:"error,omitempty"`
 }
 
 // VerifyChain reads an evidence file and validates the hash chain integrity.
 func VerifyChain(path string) (*ChainResult, error) {
-	entries, err := ReadAll(path)
+	entries, skipped, err := ReadAll(path)
 	if err != nil {
 		return nil, err
 	}
 
-	result := &ChainResult{EntriesChecked: len(entries)}
+	result := &ChainResult{EntriesChecked: len(entries), SkippedLines: skipped}
 
 	if len(entries) == 0 {
 		result.Valid = true

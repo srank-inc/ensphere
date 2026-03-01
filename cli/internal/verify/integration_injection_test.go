@@ -427,3 +427,248 @@ func TestIntegration_CSVInjection(t *testing.T) {
 		t.Fatal("expected FormulaFound == true")
 	}
 }
+
+func TestIntegration_LDAP_FilterInjection(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.RawQuery
+		if strings.Contains(q, "uid") && (strings.Contains(q, "%2A") || strings.Contains(q, "*")) {
+			w.WriteHeader(200)
+			fmt.Fprint(w, `[{"uid":"admin"},{"uid":"guest"}]`)
+		} else {
+			w.WriteHeader(200)
+			fmt.Fprint(w, `[]`)
+		}
+	}))
+
+	cfg := LDAPConfig{
+		URL:         ts.URL + "/ldap",
+		Param:       "uid",
+		Technique:   "ldap_filter_injection",
+		Method:      "GET",
+		ProbeConfig: baseProbeConfig(),
+	}
+
+	result, err := VerifyLDAP(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	m, ok := result.Measurements.(LDAPMeasurements)
+	if !ok {
+		t.Fatalf("expected LDAPMeasurements, got %T", result.Measurements)
+	}
+	if m.HashesMatch == nil {
+		t.Fatal("expected HashesMatch to be non-nil")
+	}
+	if *m.HashesMatch {
+		t.Fatal("expected HashesMatch == false")
+	}
+}
+
+func TestIntegration_LDAP_BlindBoolean(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.RawQuery
+		if strings.Contains(q, "cn%3Da") || strings.Contains(q, "cn=a") {
+			w.WriteHeader(200)
+			fmt.Fprint(w, `[{"cn":"admin"}]`)
+		} else {
+			w.WriteHeader(200)
+			fmt.Fprint(w, `[]`)
+		}
+	}))
+
+	cfg := LDAPConfig{
+		URL:         ts.URL + "/ldap",
+		Param:       "uid",
+		Technique:   "ldap_blind_boolean",
+		Method:      "GET",
+		ProbeConfig: baseProbeConfig(),
+	}
+
+	result, err := VerifyLDAP(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	m, ok := result.Measurements.(LDAPMeasurements)
+	if !ok {
+		t.Fatalf("expected LDAPMeasurements, got %T", result.Measurements)
+	}
+	if m.HashesMatch == nil {
+		t.Fatal("expected HashesMatch to be non-nil")
+	}
+	if *m.HashesMatch {
+		t.Fatal("expected HashesMatch == false (true/false should differ)")
+	}
+}
+
+func TestIntegration_LDAP_BlindError(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.RawQuery
+		if strings.Contains(q, "%28%28%28") || strings.Contains(q, "(((") {
+			w.WriteHeader(500)
+			fmt.Fprint(w, "Error: LDAP_FILTER_ERROR: Invalid filter syntax")
+		} else {
+			w.WriteHeader(200)
+			fmt.Fprint(w, `{"result":"ok"}`)
+		}
+	}))
+
+	cfg := LDAPConfig{
+		URL:         ts.URL + "/ldap",
+		Param:       "uid",
+		Technique:   "ldap_blind_error",
+		Method:      "GET",
+		ProbeConfig: baseProbeConfig(),
+	}
+
+	result, err := VerifyLDAP(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	m, ok := result.Measurements.(LDAPMeasurements)
+	if !ok {
+		t.Fatalf("expected LDAPMeasurements, got %T", result.Measurements)
+	}
+	if len(m.MatchedPatterns) == 0 {
+		t.Fatal("expected non-empty MatchedPatterns")
+	}
+}
+
+func TestIntegration_XPath_Injection(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.RawQuery
+		if strings.Contains(q, "1%27%3D%271") || strings.Contains(q, "1'='1") {
+			w.WriteHeader(200)
+			fmt.Fprint(w, `<results><user>admin</user><user>guest</user></results>`)
+		} else {
+			w.WriteHeader(200)
+			fmt.Fprint(w, `<results></results>`)
+		}
+	}))
+
+	cfg := XPathConfig{
+		URL:         ts.URL + "/xml",
+		Param:       "q",
+		Technique:   "xpath_injection",
+		Method:      "GET",
+		ProbeConfig: baseProbeConfig(),
+	}
+
+	result, err := VerifyXPath(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	m, ok := result.Measurements.(XPathMeasurements)
+	if !ok {
+		t.Fatalf("expected XPathMeasurements, got %T", result.Measurements)
+	}
+	if m.HashesMatch == nil {
+		t.Fatal("expected HashesMatch to be non-nil")
+	}
+	if *m.HashesMatch {
+		t.Fatal("expected HashesMatch == false")
+	}
+}
+
+func TestIntegration_XPath_BlindError(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.RawQuery
+		if strings.Contains(q, "%27%5D%5B1") || strings.Contains(q, "'][1") {
+			w.WriteHeader(500)
+			fmt.Fprint(w, "XPathException: Invalid expression")
+		} else {
+			w.WriteHeader(200)
+			fmt.Fprint(w, `<result>ok</result>`)
+		}
+	}))
+
+	cfg := XPathConfig{
+		URL:         ts.URL + "/xml",
+		Param:       "q",
+		Technique:   "xpath_blind_error",
+		Method:      "GET",
+		ProbeConfig: baseProbeConfig(),
+	}
+
+	result, err := VerifyXPath(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	m, ok := result.Measurements.(XPathMeasurements)
+	if !ok {
+		t.Fatalf("expected XPathMeasurements, got %T", result.Measurements)
+	}
+	if len(m.MatchedPatterns) == 0 {
+		t.Fatal("expected non-empty MatchedPatterns")
+	}
+}
+
+func TestIntegration_FileUpload(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.ParseMultipartForm(10 << 20)
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			w.WriteHeader(400)
+			fmt.Fprint(w, `{"error":"no file"}`)
+			return
+		}
+		defer file.Close()
+		w.WriteHeader(200)
+		fmt.Fprintf(w, `{"uploaded":"%s","size":%d}`, header.Filename, header.Size)
+	}))
+
+	cfg := FileUploadConfig{
+		URL:       ts.URL + "/upload",
+		FieldName: "file",
+		Filename:  "shell.php.jpg",
+		Content:   "ensphere_upload_test",
+		MIMEType:  "image/jpeg",
+		Technique: "extension_bypass",
+		Method:    "POST",
+		ProbeConfig: baseProbeConfig(),
+	}
+
+	result, err := VerifyFileUpload(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	m, ok := result.Measurements.(FileUploadMeasurements)
+	if !ok {
+		t.Fatalf("expected FileUploadMeasurements, got %T", result.Measurements)
+	}
+	if !m.UploadAccepted {
+		t.Fatal("expected UploadAccepted == true")
+	}
+	if !m.FilenameInResponse {
+		t.Fatal("expected FilenameInResponse == true")
+	}
+}

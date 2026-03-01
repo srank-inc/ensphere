@@ -19,7 +19,7 @@ Attack surface specific to Laravel PHP applications.
 
 - [ ] Unescaped Blade output — `{!! $variable !!}` renders raw HTML; user-controlled data rendered without escaping leads to stored or reflected XSS
   -> payloads: `ensphere payloads xss --technique reflected`
-  -> verify: `ensphere verify xss --technique reflected --url <endpoint> --param <param> --in-scope <pattern>`
+  -> verify: `ensphere verify xss --url <endpoint> --param <param> --payload "<script>alert(1)</script>" --in-scope <pattern>`
   -> scan: `ensphere scan ./resources --category xss`
 
 ## Debug Mode
@@ -44,7 +44,7 @@ Attack surface specific to Laravel PHP applications.
 
 - [ ] Route model binding authorization bypass — implicit model binding resolves any model by ID without checking ownership; missing `Gate::authorize()` or policy check
   -> payloads: `ensphere payloads idor --technique idor_numeric`
-  -> verify: `ensphere verify idor --technique idor_numeric --url <endpoint> --param id --in-scope <pattern>`
+  -> verify: `ensphere verify idor --url <endpoint>/{id} --id <victim-id> --token <attacker-jwt> --in-scope <pattern>`
 
 ## Queue Deserialization
 
@@ -62,4 +62,4 @@ Attack surface specific to Laravel PHP applications.
 
 - [ ] `.env` file accessible via web — misconfigured web server serves `.env` containing `APP_KEY`, database credentials, API keys, and mail credentials
   -> payloads: `ensphere payloads auth_bypass --technique forced_browsing`
-  -> verify: `ensphere verify auth --technique forced_browsing --url <target>/.env --in-scope <pattern>`
+  -> verify: `ensphere verify auth --technique no_token --url <target>/.env --token <valid-jwt> --in-scope <pattern>`

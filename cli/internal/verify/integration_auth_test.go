@@ -3,6 +3,7 @@ package verify
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -15,8 +16,7 @@ func TestIntegration_Auth_NoToken(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	ts := newTestServer(t,authGateHandler("valid-token"))
-
+	ts := newTestServer(t, authGateHandler("valid-token"))
 
 	cfg := AuthConfig{
 		URL:         ts.URL + "/api",
@@ -48,7 +48,7 @@ func TestIntegration_AuthZ(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	ts := newTestServer(t,http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auth := r.Header.Get("Authorization")
 		if auth == "Bearer high-token" {
 			w.WriteHeader(200)
@@ -58,7 +58,6 @@ func TestIntegration_AuthZ(t *testing.T) {
 			fmt.Fprint(w, `{"error":"forbidden"}`)
 		}
 	}))
-
 
 	cfg := AuthZConfig{
 		URL:           ts.URL + "/admin",
@@ -89,7 +88,7 @@ func TestIntegration_RLS(t *testing.T) {
 
 	const jwtSecret = "test-secret-at-least-32-chars-long"
 
-	ts := newTestServer(t,http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.URL.Path, "/rest/v1/") {
 			w.WriteHeader(404)
 			return
@@ -131,14 +130,13 @@ func TestIntegration_RLS(t *testing.T) {
 		}
 	}))
 
-
 	cfg := RLSConfig{
-		ProjectURL: ts.URL,
-		AnonKey:    "test-anon-key",
-		JWTSecret:  jwtSecret,
-		Table:      "projects",
-		TenantA:    "company-a",
-		TenantB:    "company-b",
+		ProjectURL:  ts.URL,
+		AnonKey:     "test-anon-key",
+		JWTSecret:   jwtSecret,
+		Table:       "projects",
+		TenantA:     "company-a",
+		TenantB:     "company-b",
 		ProbeConfig: baseProbeConfig(),
 	}
 
@@ -162,6 +160,31 @@ func TestIntegration_RLS(t *testing.T) {
 	}
 }
 
+func TestCountJSONRows(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want int
+	}{
+		{"empty array", "[]", 0},
+		{"one row", `[{"id":1}]`, 1},
+		{"two rows", `[{"id":1},{"id":2}]`, 2},
+		{"html error page", "<html>403 Forbidden</html>", -1},
+		{"json object not array", `{"error":"unauthorized"}`, -1},
+		{"empty string", "", -1},
+		{"plain text", "Internal Server Error", -1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := countJSONRows(tt.body)
+			if got != tt.want {
+				t.Errorf("countJSONRows(%q) = %d, want %d", tt.body, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestIntegration_JWT(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
@@ -169,8 +192,7 @@ func TestIntegration_JWT(t *testing.T) {
 
 	const validToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
 
-	ts := newTestServer(t,authGateHandler(validToken))
-
+	ts := newTestServer(t, authGateHandler(validToken))
 
 	cfg := JWTConfig{
 		URL:         ts.URL + "/api",
@@ -202,7 +224,7 @@ func TestIntegration_CORS(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	ts := newTestServer(t,http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 		if origin != "" {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
@@ -211,7 +233,6 @@ func TestIntegration_CORS(t *testing.T) {
 		w.WriteHeader(200)
 		fmt.Fprint(w, `{"status":"ok"}`)
 	}))
-
 
 	cfg := CORSConfig{
 		URL:         ts.URL + "/api",
@@ -238,12 +259,11 @@ func TestIntegration_CSRF(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	ts := newTestServer(t,http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Set-Cookie", "session=abc123; SameSite=Lax; Secure")
 		w.WriteHeader(200)
 		fmt.Fprint(w, `<form><input type="hidden" name="csrf_token" value="xyz"></form>`)
 	}))
-
 
 	cfg := CSRFConfig{
 		URL:         ts.URL + "/form",
@@ -276,12 +296,11 @@ func TestIntegration_IDOR(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	ts := newTestServer(t,http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		// Return resource data regardless of auth (simulates IDOR)
 		fmt.Fprint(w, `{"id":"123","name":"private resource"}`)
 	}))
-
 
 	cfg := IDORConfig{
 		URL:            ts.URL + "/api/resource/{id}",
@@ -306,6 +325,69 @@ func TestIntegration_IDOR(t *testing.T) {
 	}
 	if m.ResourceID != "123" {
 		t.Fatalf("expected ResourceID 123, got %s", m.ResourceID)
+	}
+}
+
+func TestIntegration_MassAssignment(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	// Simulate an API that accepts mass assignment
+	var storedRole string
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "GET":
+			w.WriteHeader(200)
+			if storedRole != "" {
+				fmt.Fprintf(w, `{"name":"test","role":"%s"}`, storedRole)
+			} else {
+				fmt.Fprint(w, `{"name":"test"}`)
+			}
+		case "PUT":
+			body, _ := io.ReadAll(r.Body)
+			var obj map[string]interface{}
+			json.Unmarshal(body, &obj)
+			if role, ok := obj["role"]; ok {
+				storedRole = fmt.Sprintf("%v", role)
+			}
+			w.WriteHeader(200)
+			fmt.Fprint(w, `{"status":"updated"}`)
+		default:
+			w.WriteHeader(405)
+		}
+	}))
+
+	cfg := MassAssignmentConfig{
+		URL:         ts.URL + "/api/user",
+		Method:      "PUT",
+		Body:        `{"name":"test"}`,
+		WatchFields: []string{"role"},
+		Token:       "test-token",
+		ProbeConfig: baseProbeConfig(),
+	}
+
+	result, err := VerifyMassAssignment(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	m, ok := result.Measurements.(MassAssignmentMeasurements)
+	if !ok {
+		t.Fatalf("expected MassAssignmentMeasurements, got %T", result.Measurements)
+	}
+	// After injection, the follow-up GET should show "role" field appeared
+	if m.HashesMatch {
+		t.Fatal("expected HashesMatch == false (body should change after injection)")
+	}
+	if len(m.InjectedFields) == 0 {
+		t.Fatal("expected non-empty InjectedFields")
+	}
+	if m.InjectedFields[0].Name != "role" {
+		t.Fatalf("expected field name 'role', got %s", m.InjectedFields[0].Name)
+	}
+	if !m.InjectedFields[0].InFollowUp {
+		t.Fatal("expected role field to be present in follow-up")
 	}
 }
 

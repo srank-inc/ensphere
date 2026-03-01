@@ -27,3 +27,14 @@ type SinkSummary struct {
 type SinkListOutput struct {
 	Categories []SinkSummary `json:"categories"`
 }
+
+// AbsenceRule represents an IaC security absence pattern.
+type AbsenceRule struct {
+	Name            string   `json:"name" yaml:"name"`
+	Pattern         string   `json:"pattern" yaml:"pattern"`
+	SecurityPattern string   `json:"security_pattern" yaml:"security_pattern"`
+	Window          int      `json:"window" yaml:"window"`
+	Extensions      []string `json:"extensions" yaml:"extensions"`
+	Risk            int      `json:"risk" yaml:"risk"`
+	Description     string   `json:"description" yaml:"description"`
+}
