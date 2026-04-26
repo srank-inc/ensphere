@@ -34,6 +34,7 @@ type RoundResult struct {
 
 // SQLiTimeMeasurements holds blind-time SQLi probe measurements.
 type SQLiTimeMeasurements struct {
+	DBEngine       string        `json:"db_engine"`
 	SleepSeconds   int           `json:"sleep_seconds"`
 	BaselineRounds []RoundResult `json:"baseline_rounds"`
 	PayloadRounds  []RoundResult `json:"payload_rounds"`
@@ -46,6 +47,7 @@ type SQLiTimeMeasurements struct {
 
 // SQLiBooleanMeasurements holds boolean-based SQLi probe measurements.
 type SQLiBooleanMeasurements struct {
+	DBEngine       string        `json:"db_engine"`
 	BaselineRound  RoundResult   `json:"baseline_round"`
 	TrueRounds     []RoundResult `json:"true_rounds"`
 	FalseRounds    []RoundResult `json:"false_rounds"`
@@ -57,6 +59,7 @@ type SQLiBooleanMeasurements struct {
 
 // SQLiErrorMeasurements holds error-based SQLi probe measurements.
 type SQLiErrorMeasurements struct {
+	DBEngine        string      `json:"db_engine"`
 	ProbeRound      RoundResult `json:"probe_round"`
 	MatchedPatterns []string    `json:"matched_patterns"`
 	PayloadUsed     string      `json:"payload_used"`

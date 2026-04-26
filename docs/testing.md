@@ -4,8 +4,9 @@
 
 ```bash
 make test                                          # go vet + go test ./...
-cd cli && go test -short ./...                     # fast: contracts + core + evidence + drift (~258 tests, ~4s)
-cd cli && go test ./...                            # full: everything including integration (~309 tests, ~11s)
+make smoke                                         # build + basic CLI command checks
+cd cli && go test -short ./...                     # fast: contracts + core + evidence + drift
+cd cli && go test ./...                            # full: everything including integration
 cd cli && go test -race ./internal/verify/         # race detector on verify package
 cd cli && go test -race -short ./internal/verify/  # race detector, fast path only
 ```
@@ -16,6 +17,7 @@ cd cli && go test -race -short ./internal/verify/  # race detector, fast path on
 |------|---------|---------|
 | `verify/helpers_test.go` | verify | Shared test utilities (newTestServer, baseProbeConfig, assertScopeErr, handler factories) |
 | `verify/probe_test.go` | verify | Core infrastructure (CheckScope, CheckMaxRisk, HTTPProbe) |
+| `verify/sqli_test.go` | verify | SQLi DB engine normalization and DB-specific payload selection |
 | `verify/contracts_test.go` | verify | Safety gate contracts for all 33 probes (scope, max-risk, technique validation) |
 | `verify/integration_injection_test.go` | verify | Integration: sqli, xss, cmdi, lfi, ssti, xxe, nosql, deserialization, csvinjection, ldap, xpath, fileupload |
 | `verify/integration_auth_test.go` | verify | Integration: auth, authz, rls, jwt, cors, csrf, idor, massassignment, countJSONRows |

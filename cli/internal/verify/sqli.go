@@ -5,46 +5,64 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/srank/ensphere/internal/evidence"
+	"github.com/srank/ensphere/internal/payloads"
 )
 
 const defaultRounds = 3
+const defaultSQLiDBEngine = "postgres"
 
-// SQLi payload templates keyed by technique + boundary
-var sqliPayloads = map[string]map[string]string{
-	"blind_time": {
-		"single_quote": "' AND (SELECT pg_sleep(%d))--",
-		"double_quote": "\" AND (SELECT pg_sleep(%d))--",
-		"numeric":      "1; SELECT pg_sleep(%d)--",
-	},
-	"blind_boolean": {
-		"single_quote_true":  "' AND 1=1--",
-		"single_quote_false": "' AND 1=2--",
-		"double_quote_true":  "\" AND 1=1--",
-		"double_quote_false": "\" AND 1=2--",
-	},
-	"error_based": {
-		"single_quote": "' AND 1=CAST((SELECT version()) AS int)--",
-		"double_quote": "\" AND 1=CAST((SELECT version()) AS int)--",
-		"numeric":      "1 AND 1=CAST((SELECT version()) AS int)",
-	},
+var validSQLiDBEngines = map[string]bool{
+	"postgres": true,
+	"mysql":    true,
+	"mssql":    true,
+	"sqlite":   true,
 }
 
-// PG error patterns
-var pgErrorPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`(?i)ERROR:`),
-	regexp.MustCompile(`(?i)syntax error at or near`),
-	regexp.MustCompile(`(?i)invalid input syntax`),
-	regexp.MustCompile(`(?i)unterminated quoted string`),
-	regexp.MustCompile(`(?i)column .+ does not exist`),
+var sqlErrorPatterns = map[string][]*regexp.Regexp{
+	"postgres": {
+		regexp.MustCompile(`(?i)ERROR:`),
+		regexp.MustCompile(`(?i)syntax error at or near`),
+		regexp.MustCompile(`(?i)invalid input syntax`),
+		regexp.MustCompile(`(?i)unterminated quoted string`),
+		regexp.MustCompile(`(?i)column .+ does not exist`),
+		regexp.MustCompile(`(?i)PostgreSQL`),
+		regexp.MustCompile(`(?i)pq:`),
+	},
+	"mysql": {
+		regexp.MustCompile(`(?i)You have an error in your SQL syntax`),
+		regexp.MustCompile(`(?i)MySQL`),
+		regexp.MustCompile(`(?i)MariaDB`),
+		regexp.MustCompile(`(?i)XPATH syntax error`),
+		regexp.MustCompile(`(?i)Truncated incorrect`),
+		regexp.MustCompile(`(?i)Duplicate entry`),
+	},
+	"mssql": {
+		regexp.MustCompile(`(?i)Microsoft SQL Server`),
+		regexp.MustCompile(`(?i)SQL Server`),
+		regexp.MustCompile(`(?i)ODBC`),
+		regexp.MustCompile(`(?i)Unclosed quotation mark`),
+		regexp.MustCompile(`(?i)Incorrect syntax near`),
+		regexp.MustCompile(`(?i)Conversion failed`),
+	},
+	"sqlite": {
+		regexp.MustCompile(`(?i)SQLite`),
+		regexp.MustCompile(`(?i)sqlite3`),
+		regexp.MustCompile(`(?i)near ".+": syntax error`),
+		regexp.MustCompile(`(?i)unrecognized token`),
+		regexp.MustCompile(`(?i)no such column`),
+		regexp.MustCompile(`(?i)datatype mismatch`),
+	},
 }
 
 // SQLiConfig holds configuration specific to SQLi verification.
 type SQLiConfig struct {
 	URL       string
 	Param     string
+	DBEngine  string // postgres | mysql | mssql | sqlite (default postgres)
 	Technique string // blind_time | blind_boolean | error_based
 	Method    string // GET | POST
 	Boundary  string // single_quote | double_quote | numeric
@@ -60,6 +78,12 @@ func VerifySQLi(cfg SQLiConfig) (*ProbeResult, error) {
 	if err := CheckMaxRisk(3, cfg.MaxRisk); err != nil {
 		return nil, err
 	}
+
+	dbEngine, err := normalizeSQLiDBEngine(cfg.DBEngine)
+	if err != nil {
+		return nil, err
+	}
+	cfg.DBEngine = dbEngine
 
 	timer := NewTimer()
 	throttle := NewThrottle(cfg.ThrottleMs)
@@ -99,10 +123,13 @@ func verifySQLiBlindTime(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *e
 		sleepSec = cfg.TimeoutSec - 2
 	}
 
-	payloadTemplate := sqliPayloads["blind_time"][cfg.Boundary]
-	if payloadTemplate == "" {
-		return nil, &ScopeError{Msg: fmt.Sprintf("no blind_time payload for boundary %q", cfg.Boundary)}
+	payload, err := selectSQLiPayload(cfg, "blind_time", func(p payloads.PayloadResult) bool {
+		return placeholdersAllowed(p.Placeholders, map[string]bool{"SLEEP_SECONDS": true})
+	})
+	if err != nil {
+		return nil, err
 	}
+	payload = strings.ReplaceAll(payload, "SLEEP_SECONDS", strconv.Itoa(sleepSec))
 
 	probeCount := 0
 
@@ -126,8 +153,6 @@ func verifySQLiBlindTime(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *e
 			fmt.Sprintf("%dms", resp.ElapsedMs), "baseline", fmt.Sprintf("round %d", i+1))
 	}
 
-	// Payload probes (pg_sleep)
-	payload := fmt.Sprintf(payloadTemplate, sleepSec)
 	var payloadRounds []RoundResult
 	for i := 0; i < defaultRounds; i++ {
 		throttle.Wait()
@@ -163,6 +188,7 @@ func verifySQLiBlindTime(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *e
 		ProbeCount:    probeCount,
 		Duration:      timer.Elapsed(),
 		Measurements: SQLiTimeMeasurements{
+			DBEngine:       cfg.DBEngine,
 			SleepSeconds:   sleepSec,
 			BaselineRounds: baselineRounds,
 			PayloadRounds:  payloadRounds,
@@ -176,13 +202,9 @@ func verifySQLiBlindTime(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *e
 }
 
 func verifySQLiBlindBoolean(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *evidence.Writer) (*ProbeResult, error) {
-	trueKey := cfg.Boundary + "_true"
-	falseKey := cfg.Boundary + "_false"
-
-	truePayload := sqliPayloads["blind_boolean"][trueKey]
-	falsePayload := sqliPayloads["blind_boolean"][falseKey]
-	if truePayload == "" || falsePayload == "" {
-		return nil, &ScopeError{Msg: fmt.Sprintf("no blind_boolean payloads for boundary %q", cfg.Boundary)}
+	truePayload, falsePayload, err := selectSQLiBooleanPayloads(cfg)
+	if err != nil {
+		return nil, err
 	}
 
 	probeCount := 0
@@ -248,6 +270,7 @@ func verifySQLiBlindBoolean(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew
 		ProbeCount:    probeCount,
 		Duration:      timer.Elapsed(),
 		Measurements: SQLiBooleanMeasurements{
+			DBEngine:       cfg.DBEngine,
 			BaselineRound:  baselineRound,
 			TrueRounds:     trueRounds,
 			FalseRounds:    falseRounds,
@@ -260,9 +283,11 @@ func verifySQLiBlindBoolean(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew
 }
 
 func verifySQLiErrorBased(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *evidence.Writer) (*ProbeResult, error) {
-	payload := sqliPayloads["error_based"][cfg.Boundary]
-	if payload == "" {
-		return nil, &ScopeError{Msg: fmt.Sprintf("no error_based payload for boundary %q", cfg.Boundary)}
+	payload, err := selectSQLiPayload(cfg, "error_based", func(p payloads.PayloadResult) bool {
+		return len(p.Placeholders) == 0
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	probeCount := 0
@@ -278,9 +303,9 @@ func verifySQLiErrorBased(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *
 	writeEvidence(ew, "sqli", "error_based", cfg.URL, cfg.Param, resp.StatusCode,
 		fmt.Sprintf("%dms", resp.ElapsedMs), "probe", payload)
 
-	// Check for PG error signatures — collect all matches
+	// Check for DB-specific error signatures and collect all matches.
 	var matchedPatterns []string
-	for _, re := range pgErrorPatterns {
+	for _, re := range sqlErrorPatterns[cfg.DBEngine] {
 		if re.MatchString(resp.Body) {
 			matchedPatterns = append(matchedPatterns, re.String())
 		}
@@ -306,6 +331,7 @@ func verifySQLiErrorBased(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *
 		ProbeCount:    probeCount,
 		Duration:      timer.Elapsed(),
 		Measurements: SQLiErrorMeasurements{
+			DBEngine:        cfg.DBEngine,
 			ProbeRound:      probeRound,
 			MatchedPatterns: matchedPatterns,
 			PayloadUsed:     payload,
@@ -334,6 +360,122 @@ func probeWithParam(cfg SQLiConfig, value string) ProbeResponse {
 	params.Set(cfg.Param, value)
 	parsed.RawQuery = params.Encode()
 	return HTTPProbe(cfg.Method, parsed.String(), "", cfg.Headers, cfg.TimeoutSec)
+}
+
+func normalizeSQLiDBEngine(dbEngine string) (string, error) {
+	dbEngine = strings.ToLower(strings.TrimSpace(dbEngine))
+	if dbEngine == "" {
+		dbEngine = defaultSQLiDBEngine
+	}
+	if !validSQLiDBEngines[dbEngine] {
+		return "", &ScopeError{Msg: fmt.Sprintf("unsupported db %q — use: postgres, mysql, mssql, sqlite", dbEngine)}
+	}
+	return dbEngine, nil
+}
+
+func sqliSurfaceForMethod(method string) string {
+	if strings.ToUpper(method) == "POST" {
+		return "form_body"
+	}
+	return "query"
+}
+
+func selectSQLiPayload(cfg SQLiConfig, technique string, accept func(payloads.PayloadResult) bool) (string, error) {
+	results, err := querySQLiPayloads(cfg, technique)
+	if err != nil {
+		return "", err
+	}
+	for _, p := range results {
+		if accept == nil || accept(p) {
+			return p.Payload, nil
+		}
+	}
+	return "", &ScopeError{Msg: fmt.Sprintf("no %s payload for db %q boundary %q", technique, cfg.DBEngine, cfg.Boundary)}
+}
+
+func selectSQLiBooleanPayloads(cfg SQLiConfig) (string, string, error) {
+	results, err := querySQLiPayloads(cfg, "blind_boolean")
+	if err != nil {
+		return "", "", err
+	}
+
+	var truePayload, falsePayload string
+	for _, p := range results {
+		if len(p.Placeholders) > 0 {
+			continue
+		}
+		normalized := normalizeSQLiCondition(p.Payload)
+		if truePayload == "" && strings.Contains(normalized, "1=1") {
+			truePayload = p.Payload
+		}
+		if falsePayload == "" && strings.Contains(normalized, "1=2") {
+			falsePayload = p.Payload
+		}
+	}
+	if truePayload == "" || falsePayload == "" {
+		return "", "", &ScopeError{Msg: fmt.Sprintf("no blind_boolean true/false payload pair for db %q boundary %q", cfg.DBEngine, cfg.Boundary)}
+	}
+	return truePayload, falsePayload, nil
+}
+
+func querySQLiPayloads(cfg SQLiConfig, technique string) ([]payloads.PayloadResult, error) {
+	db, cleanup, err := payloads.Open()
+	if err != nil {
+		return nil, fmt.Errorf("open payload database: %w", err)
+	}
+	defer cleanup()
+
+	surfaces := []string{sqliSurfaceForMethod(cfg.Method)}
+	if surfaces[0] != "query" {
+		surfaces = append(surfaces, "query")
+	}
+	surfaces = append(surfaces, "")
+
+	var results []payloads.PayloadResult
+	seen := make(map[string]bool)
+	for _, surface := range surfaces {
+		out, err := payloads.QueryPayloads(db, payloads.PayloadFilter{
+			VulnType:  "sqli",
+			DBEngine:  cfg.DBEngine,
+			Technique: technique,
+			Surface:   surface,
+			Encoding:  "raw",
+			Boundary:  cfg.Boundary,
+			MaxRisk:   cfg.MaxRisk,
+			Limit:     50,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("query SQLi payloads: %w", err)
+		}
+		for _, result := range out.Results {
+			if seen[result.ID] {
+				continue
+			}
+			seen[result.ID] = true
+			results = append(results, result)
+		}
+	}
+
+	if len(results) > 0 {
+		return results, nil
+	}
+
+	return nil, &ScopeError{Msg: fmt.Sprintf("no %s payloads for db %q boundary %q", technique, cfg.DBEngine, cfg.Boundary)}
+}
+
+func placeholdersAllowed(placeholders []string, allowed map[string]bool) bool {
+	for _, ph := range placeholders {
+		if !allowed[ph] {
+			return false
+		}
+	}
+	return true
+}
+
+func normalizeSQLiCondition(payload string) string {
+	payload = strings.ToLower(payload)
+	replacer := strings.NewReplacer(" ", "", "\t", "", "\n", "", "\r", "")
+	return replacer.Replace(payload)
 }
 
 func writeEvidence(ew *evidence.Writer, probeType, technique, url, param string, statusCode int, duration, result, notes string) {
