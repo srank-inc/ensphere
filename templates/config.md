@@ -3,6 +3,7 @@
 ## Target
 - URL: https://localhost:3000
 - Source code: yes | no
+- Cloud: none | aws | gcp | azure | kubernetes | (comma-separated if multiple)
 
 ## Authentication
 - Login URL: /login

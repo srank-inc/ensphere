@@ -1,19 +1,84 @@
 #!/bin/bash
-# Install Ensphere security assessment skills for Claude Code
+# Install Ensphere security assessment skills for Claude Code and Codex.
 
-SKILL_DIR="$HOME/.claude/skills/ensphere"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ACTION="install"
+TARGET="all"
 
-# Uninstall
-if [ "$1" = "--uninstall" ]; then
-  if [ -d "$SKILL_DIR" ]; then
-    rm -rf "$SKILL_DIR"
-    echo "Ensphere skills removed from $SKILL_DIR"
+usage() {
+  echo "Usage: $0 [--uninstall] [--target claude|codex|all]"
+}
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --uninstall)
+      ACTION="uninstall"
+      ;;
+    --target)
+      shift
+      if [ -z "$1" ]; then
+        usage >&2
+        exit 1
+      fi
+      TARGET="$1"
+      ;;
+    --target=*)
+      TARGET="${1#--target=}"
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Error: unknown argument $1" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+target_dirs() {
+  case "$TARGET" in
+    claude)
+      printf '%s\n' "$HOME/.claude/skills/ensphere"
+      ;;
+    codex)
+      printf '%s\n' "$HOME/.codex/skills/ensphere"
+      ;;
+    all)
+      printf '%s\n' "$HOME/.claude/skills/ensphere"
+      printf '%s\n' "$HOME/.codex/skills/ensphere"
+      ;;
+    *)
+      echo "Error: unsupported target $TARGET. Use claude, codex, or all." >&2
+      exit 1
+      ;;
+  esac
+}
+
+install_to() {
+  local skill_dir="$1"
+
+  rm -rf "$skill_dir"
+  mkdir -p "$skill_dir"
+  cp -R "$SCRIPT_DIR/skills/." "$skill_dir/"
+
+  local file_count
+  file_count=$(find "$skill_dir" -name "*.md" | wc -l | tr -d ' ')
+  echo "Ensphere skills installed to $skill_dir ($file_count files)"
+}
+
+uninstall_from() {
+  local skill_dir="$1"
+
+  if [ -d "$skill_dir" ]; then
+    rm -rf "$skill_dir"
+    echo "Ensphere skills removed from $skill_dir"
   else
-    echo "Nothing to remove — $SKILL_DIR does not exist"
+    echo "Nothing to remove: $skill_dir does not exist"
   fi
-  exit 0
-fi
+}
 
 # Verify source files exist
 if [ ! -f "$SCRIPT_DIR/skills/SKILL.md" ]; then
@@ -21,45 +86,28 @@ if [ ! -f "$SCRIPT_DIR/skills/SKILL.md" ]; then
   exit 1
 fi
 
+if [ "$ACTION" = "uninstall" ]; then
+  target_dirs | while read -r skill_dir; do
+    uninstall_from "$skill_dir"
+  done
+  exit 0
+fi
+
 echo "Installing Ensphere skills..."
-
-# Create directories
-mkdir -p "$SKILL_DIR/methodology" "$SKILL_DIR/shared" "$SKILL_DIR/checklists"
-
-# Copy skill files
-cp "$SCRIPT_DIR/skills/SKILL.md" "$SKILL_DIR/"
-# Copy methodology if present
-if ls "$SCRIPT_DIR/skills/methodology/"*.md 1>/dev/null 2>&1; then
-  cp "$SCRIPT_DIR/skills/methodology/"*.md "$SKILL_DIR/methodology/"
-fi
-
-# Copy shared if present
-if ls "$SCRIPT_DIR/skills/shared/"*.md 1>/dev/null 2>&1; then
-  cp "$SCRIPT_DIR/skills/shared/"*.md "$SKILL_DIR/shared/"
-fi
-
-# Copy checklists if present
-if ls "$SCRIPT_DIR/skills/checklists/"*.md 1>/dev/null 2>&1; then
-  cp "$SCRIPT_DIR/skills/checklists/"*.md "$SKILL_DIR/checklists/"
-fi
-
-# Verify
-file_count=$(find "$SKILL_DIR" -name "*.md" | wc -l | tr -d ' ')
-echo "Ensphere skills installed to $SKILL_DIR ($file_count files)"
-echo ""
-echo "Files installed:"
-find "$SKILL_DIR" -name "*.md" | sort | while read -r f; do
-  echo "  $f"
+target_dirs | while read -r skill_dir; do
+  install_to "$skill_dir"
 done
+
 echo ""
 echo "Config template: templates/config.md (copy to your project's ensphere-pentest/config.md)"
-echo "Usage: Open Claude Code in your project directory and say '/ensphere' or 'Run session 01'"
-echo "Uninstall: $0 --uninstall"
+echo "Claude usage: Open Claude Code in your project directory and say '/ensphere' or 'Run session 01'"
+echo "Codex usage: Open Codex in your project directory and say 'ensphere'"
+echo "Uninstall: $0 --uninstall [--target claude|codex|all]"
 
 # Optional: build CLI if Go is available
-if command -v go &> /dev/null; then
+if command -v go >/dev/null 2>&1; then
   echo ""
-  echo "Go detected — building ensphere CLI..."
+  echo "Go detected: building ensphere CLI..."
   if (cd "$SCRIPT_DIR" && make build); then
     echo "CLI built at $SCRIPT_DIR/bin/ensphere"
     echo "Run 'make install' from the repo to install to /usr/local/bin"
@@ -68,5 +116,5 @@ if command -v go &> /dev/null; then
   fi
 else
   echo ""
-  echo "Go not found — skipping CLI build. Install Go 1.23+ and run 'make build' to build the payload database CLI."
+  echo "Go not found: skipping CLI build. Install Go 1.23+ and run 'make build' to build the payload database CLI."
 fi

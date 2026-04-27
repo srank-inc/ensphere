@@ -6,7 +6,7 @@
 
 # Ensphere
 
-Autonomous penetration testing as Claude Code skills. Go CLI binary + skill files (portable markdown).
+Autonomous penetration testing as AI agent skills. Go CLI binary + portable markdown skill files for Claude Code and Codex.
 
 > **Design Principle:** Ensphere produces verifiable facts. The AI produces all security judgments.
 
@@ -17,7 +17,7 @@ All Ensphere tooling — Go CLI, Python templates, payload databases — is pure
 ```bash
 git clone https://github.com/srank/ensphere.git && cd ensphere
 ./install-skills.sh
-# In target project: claude → /ensphere
+# In target project: Claude Code -> /ensphere, or Codex -> ensphere
 ```
 
 ## Sessions
@@ -345,7 +345,7 @@ ensphere checklist --list         # JSON with item counts
 
 ## Requirements
 
-- **Claude Code** (Pro/Max/Team/Enterprise)
+- **Claude Code** (Pro/Max/Team/Enterprise) or **Codex**
 - **Playwright MCP server** for browser-based testing:
   ```bash
   claude mcp add playwright -- npx @anthropic-ai/mcp-playwright@latest
