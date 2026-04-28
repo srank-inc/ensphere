@@ -312,7 +312,7 @@ Categories: `cmdi`, `cors`, `csrf`, `deserialization`, `file_upload`, `header_in
 
 ### compliance — Compliance mapping
 
-Maps 40 vuln types (including 8 cloud categories) to OWASP Top 10 2025, PCI-DSS v4.0.1, SOC 2, ISO 27001, OWASP API Security Top 10 2023.
+Maps 41 vuln types (including 8 cloud categories) to OWASP Top 10 2025, PCI-DSS v4.0.1, SOC 2, ISO 27001, OWASP API Security Top 10 2023.
 
 ```bash
 ensphere compliance sqli
@@ -355,7 +355,8 @@ ensphere checklist --list         # JSON with item counts
 
 ## Sample Reports
 
+Dogfood runbooks live in [docs/dogfood](docs/dogfood/README.md). Regenerate sample reports only from verified local `evidence.jsonl` files and saved transcripts.
+
 - [Juice Shop](sample-reports/ensphere-report-juice-shop.md) — 27 findings (8 critical) in OWASP Juice Shop
 - [crAPI](sample-reports/ensphere-report-crapi.md) — API security assessment
 - [Capital API](sample-reports/ensphere-report-capital-api.md) — Financial API assessment
-
