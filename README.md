@@ -44,7 +44,7 @@ First run prompts creation of `ensphere-pentest/config.md` (target URL, credenti
 
 ## Build
 
-Requires Go 1.23+.
+Requires Go 1.26.2+.
 
 ```bash
 make build        # YAML seeds → SQLite → Go binary (bin/ensphere)
@@ -350,7 +350,7 @@ ensphere checklist --list         # JSON with item counts
   ```bash
   claude mcp add playwright -- npx @anthropic-ai/mcp-playwright@latest
   ```
-- **Go 1.23+** for building CLI
+- **Go 1.26.2+** for building CLI
 - **Optional recon tools**: `nmap`, `subfinder`, `httpx`
 
 ## Sample Reports
