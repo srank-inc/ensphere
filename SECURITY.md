@@ -30,3 +30,9 @@ Reports about third-party targets assessed with Ensphere belong to that target o
 ## Handling Secrets
 
 Do not commit credentials, tokens, evidence from third-party targets, or pentest artifacts. Local evidence and assessment output are ignored by default.
+
+## Dependency Monitoring
+
+GitHub Dependabot vulnerability alerts are enabled for detection. Dependabot version-update pull requests are also enabled through grouped configuration so dependency and GitHub Actions updates are visible, reviewable, and covered by CI before merge.
+
+When GitHub reports a vulnerable dependency, maintainers should review the generated PR or create an equivalent maintainer-authored update, run the full validation gate, and include the alert context in the commit or pull request notes.
