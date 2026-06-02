@@ -1,11 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
 
 	"github.com/srank/ensphere/internal/verify"
@@ -65,12 +60,11 @@ func init() {
 }
 
 func runVerifySQLi(cmd *cobra.Command, args []string) error {
-	headers := make(map[string]string)
-	for _, h := range sqliHeaders {
-		parts := splitOnce(h, ":")
-		if len(parts) == 2 {
-			headers[parts[0]] = parts[1]
-		}
+	headers, err := parseHeaders(sqliHeaders)
+	if err != nil {
+		writeVerifyError(err)
+		osExit(exitForVerifyError(err))
+		return nil
 	}
 
 	cfg := verify.SQLiConfig{
@@ -90,35 +84,7 @@ func runVerifySQLi(cmd *cobra.Command, args []string) error {
 		},
 	}
 
-	result, err := verify.VerifySQLi(cfg)
-	if err != nil {
-		var scopeErr *verify.ScopeError
-		if errors.As(err, &scopeErr) {
-			fmt.Fprintf(os.Stderr, "scope error: %s\n", err)
-			os.Exit(2)
-		}
-		fmt.Fprintf(os.Stderr, "probe error: %s\n", err)
-		os.Exit(3)
-	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(result); err != nil {
-		fmt.Fprintf(os.Stderr, "encode error: %s\n", err)
-		os.Exit(3)
-	}
-	return nil
-}
-
-func splitOnce(s, sep string) []string {
-	idx := -1
-	for i := 0; i < len(s); i++ {
-		if s[i] == sep[0] {
-			idx = i
-			break
-		}
-	}
-	if idx < 0 {
-		return []string{s}
-	}
-	return []string{s[:idx], s[idx+1:]}
+	return runVerify(func() (*verify.ProbeResult, error) {
+		return verify.VerifySQLi(cfg)
+	})
 }

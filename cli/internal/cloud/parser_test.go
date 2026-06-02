@@ -39,6 +39,9 @@ func TestParseProwler(t *testing.T) {
 	if result.ByVulnType["cloud_iam"] != 1 {
 		t.Errorf("expected 1 cloud_iam, got %d", result.ByVulnType["cloud_iam"])
 	}
+	if result.Findings[0].SeveritySource != "source_provided" {
+		t.Fatalf("expected source-provided severity label, got %+v", result.Findings[0])
+	}
 }
 
 func TestParseTrivy(t *testing.T) {
@@ -72,6 +75,9 @@ func TestParseTrivy(t *testing.T) {
 	}
 	if result.ByVulnType["cloud_storage"] != 1 {
 		t.Errorf("expected 1 cloud_storage (AVD-AWS-0086), got %d", result.ByVulnType["cloud_storage"])
+	}
+	if result.Findings[0].SeveritySource != "source_provided" {
+		t.Fatalf("expected source-provided severity label, got %+v", result.Findings[0])
 	}
 }
 

@@ -12,7 +12,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/srank/ensphere/internal/evidence"
 	"github.com/srank/ensphere/internal/sinks"
+)
+
+const (
+	AnalysisDepthPatternMatch = "pattern_match"
+	MaxContextLines           = 5
 )
 
 // DefaultExcludes are directories always skipped during scanning.
@@ -34,6 +40,9 @@ type compiledPattern struct {
 // RunScan scans a directory for sink patterns and returns results.
 func RunScan(cfg ScanConfig) (*ScanResult, error) {
 	start := time.Now()
+	if cfg.ContextLines < 0 || cfg.ContextLines > MaxContextLines {
+		return nil, fmt.Errorf("context lines must be between 0 and %d", MaxContextLines)
+	}
 
 	allPatterns, err := sinks.AllPatterns()
 	if err != nil {
@@ -113,13 +122,13 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 						extUnion[ext] = true
 					}
 					absenceRules = append(absenceRules, compiledAbsenceRule{
-						re:         re,
-						securityRe: secRe,
-						name:       r.Name,
-						category:   cat,
-						risk:       r.Risk,
-						window:     r.Window,
-						extensions: exts,
+						re:          re,
+						securityRe:  secRe,
+						name:        r.Name,
+						category:    cat,
+						risk:        r.Risk,
+						window:      r.Window,
+						extensions:  exts,
 						description: r.Description,
 					})
 				}
@@ -129,15 +138,17 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 
 	if len(compiled) == 0 && len(absenceRules) == 0 {
 		return &ScanResult{
-			Directory: cfg.Directory,
-			Duration:  time.Since(start).Round(time.Millisecond).String(),
-			Matches:   []ScanMatch{},
-			Summary:   []CategoryHit{},
+			Directory:     cfg.Directory,
+			AnalysisDepth: AnalysisDepthPatternMatch,
+			Duration:      time.Since(start).Round(time.Millisecond).String(),
+			Matches:       []ScanMatch{},
+			Summary:       []CategoryHit{},
 		}, nil
 	}
 
 	// Override extensions if specified (merge with absence rule extensions)
 	if len(cfg.Extensions) > 0 {
+		overrideExts := make(map[string]bool)
 		absExts := make(map[string]bool)
 		for _, r := range absenceRules {
 			for ext := range r.extensions {
@@ -150,9 +161,14 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 				ext = "." + ext
 			}
 			extUnion[ext] = true
+			overrideExts[ext] = true
 		}
 		for ext := range absExts {
 			extUnion[ext] = true
+		}
+		for i := range compiled {
+			compiled[i].extensions = overrideExts
+			compiled[i].filenames = nil
 		}
 	}
 
@@ -219,7 +235,7 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 		go func() {
 			defer wg.Done()
 			for path := range fileCh {
-				matches := scanFile(path, cfg.Directory, compiled)
+				matches := scanFile(path, cfg.Directory, compiled, cfg.ContextLines)
 				if len(matches) > 0 {
 					mu.Lock()
 					allMatches = append(allMatches, matches...)
@@ -233,7 +249,7 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 	// Run absence checks if enabled
 	if cfg.AbsenceCheck && len(absenceRules) > 0 {
 		for _, path := range files {
-			absMatches := scanFileAbsence(path, cfg.Directory, absenceRules)
+			absMatches := scanFileAbsence(path, cfg.Directory, absenceRules, cfg.ContextLines)
 			allMatches = append(allMatches, absMatches...)
 		}
 	}
@@ -276,17 +292,18 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 	}
 
 	return &ScanResult{
-		Directory:    cfg.Directory,
-		FilesScanned: len(files),
-		TotalMatches: len(allMatches),
-		Duration:     time.Since(start).Round(time.Millisecond).String(),
-		Matches:      allMatches,
-		Summary:      summary,
+		Directory:     cfg.Directory,
+		AnalysisDepth: AnalysisDepthPatternMatch,
+		FilesScanned:  len(files),
+		TotalMatches:  len(allMatches),
+		Duration:      time.Since(start).Round(time.Millisecond).String(),
+		Matches:       allMatches,
+		Summary:       summary,
 	}, nil
 }
 
 // scanFile scans a single file against applicable patterns.
-func scanFile(path, baseDir string, patterns []compiledPattern) []ScanMatch {
+func scanFile(path, baseDir string, patterns []compiledPattern, contextLines int) []ScanMatch {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil
@@ -321,21 +338,8 @@ func scanFile(path, baseDir string, patterns []compiledPattern) []ScanMatch {
 				continue
 			}
 
-			matched := line[loc[0]:loc[1]]
-			if len(matched) > 100 {
-				matched = matched[:100]
-			}
-
-			// Build context (2 lines before/after)
-			ctxStart := lineIdx - 2
-			if ctxStart < 0 {
-				ctxStart = 0
-			}
-			ctxEnd := lineIdx + 3
-			if ctxEnd > len(lines) {
-				ctxEnd = len(lines)
-			}
-			context := strings.Join(lines[ctxStart:ctxEnd], "\n")
+			matched := redactedSnippet(line[loc[0]:loc[1]])
+			context := redactedContext(lines, lineIdx, contextLines)
 
 			matches = append(matches, ScanMatch{
 				File:        relPath,
@@ -366,7 +370,7 @@ type compiledAbsenceRule struct {
 }
 
 // scanFileAbsence scans a file for resource declarations missing security configuration.
-func scanFileAbsence(path, baseDir string, rules []compiledAbsenceRule) []ScanMatch {
+func scanFileAbsence(path, baseDir string, rules []compiledAbsenceRule, contextLines int) []ScanMatch {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil
@@ -408,19 +412,8 @@ func scanFileAbsence(path, baseDir string, rules []compiledAbsenceRule) []ScanMa
 				}
 			}
 			if !found {
-				matched := line
-				if len(matched) > 100 {
-					matched = matched[:100]
-				}
-				ctxStart := lineIdx - 2
-				if ctxStart < 0 {
-					ctxStart = 0
-				}
-				ctxEnd := lineIdx + 3
-				if ctxEnd > len(lines) {
-					ctxEnd = len(lines)
-				}
-				context := strings.Join(lines[ctxStart:ctxEnd], "\n")
+				matched := redactedSnippet(line)
+				context := redactedContext(lines, lineIdx, contextLines)
 				matches = append(matches, ScanMatch{
 					File:        relPath,
 					Line:        lineIdx + 1,
@@ -436,6 +429,25 @@ func scanFileAbsence(path, baseDir string, rules []compiledAbsenceRule) []ScanMa
 		}
 	}
 	return matches
+}
+
+func redactedSnippet(s string) string {
+	if len(s) > 100 {
+		s = s[:100]
+	}
+	return evidence.RedactSecrets(s)
+}
+
+func redactedContext(lines []string, lineIdx, contextLines int) string {
+	ctxStart := lineIdx - contextLines
+	if ctxStart < 0 {
+		ctxStart = 0
+	}
+	ctxEnd := lineIdx + contextLines + 1
+	if ctxEnd > len(lines) {
+		ctxEnd = len(lines)
+	}
+	return evidence.RedactSecrets(strings.Join(lines[ctxStart:ctxEnd], "\n"))
 }
 
 // matchExclude checks if name or relPath matches an exclude pattern.

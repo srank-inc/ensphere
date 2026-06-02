@@ -12,6 +12,7 @@ import (
 
 var (
 	evidLogFile       string
+	evidLogID         string
 	evidLogProbeType  string
 	evidLogTechnique  string
 	evidLogURL        string
@@ -31,18 +32,19 @@ var evidenceLogCmd = &cobra.Command{
 	Long: `Log a structured evidence entry to a JSONL file with auto-assigned sequential ID.
 
 Examples:
-  ensphere evidence log --probe-type sqli --technique blind_time --url "http://target/api" --result confirmed
-  ensphere evidence log --probe-type xss --technique reflected --url "http://target/search" --result confirmed --session 5 --finding-ref VULN-003`,
+  ensphere evidence log --probe-type sqli --technique blind_time --url "http://target/api" --result probe
+  ensphere evidence log --probe-type xss --technique reflected --url "http://target/search" --result manual_note --session 5 --finding-ref VULN-003`,
 	RunE: runEvidenceLog,
 }
 
 func init() {
 	evidenceLogCmd.Flags().StringVar(&evidLogFile, "file", "./evidence.jsonl", "Evidence file path")
+	evidenceLogCmd.Flags().StringVar(&evidLogID, "id", "", "Optional explicit evidence ID; omitted entries receive EVID-XXX automatically")
 	evidenceLogCmd.Flags().StringVar(&evidLogProbeType, "probe-type", "", "Probe type (required)")
 	evidenceLogCmd.Flags().StringVar(&evidLogTechnique, "technique", "", "Technique used (required)")
 	evidenceLogCmd.Flags().StringVar(&evidLogURL, "url", "", "Target URL (required)")
 	evidenceLogCmd.Flags().StringVar(&evidLogParam, "param", "", "Parameter name")
-	evidenceLogCmd.Flags().StringVar(&evidLogResult, "result", "", "Result: confirmed, potential, safe, baseline, probe (required)")
+	evidenceLogCmd.Flags().StringVar(&evidLogResult, "result", "", "Factual result stage: baseline, probe, payload, control, callback, manual_note (required)")
 	evidenceLogCmd.Flags().StringVar(&evidLogNotes, "notes", "", "Additional notes")
 	evidenceLogCmd.Flags().IntVar(&evidLogStatusCode, "status-code", 0, "HTTP status code")
 	evidenceLogCmd.Flags().StringVar(&evidLogDuration, "duration", "", "Probe duration")
@@ -59,15 +61,17 @@ func init() {
 }
 
 func runEvidenceLog(cmd *cobra.Command, args []string) error {
-	nextID, err := evidence.NextID(evidLogFile)
-	if err != nil {
-		return fmt.Errorf("get next ID: %w", err)
+	if err := evidence.ValidateResult(evidLogResult); err != nil {
+		return err
 	}
 
 	entry := evidence.NewEntry(
 		evidLogProbeType, evidLogTechnique, evidLogURL, evidLogParam,
 		evidLogStatusCode, evidLogDuration, evidLogResult, evidLogNotes,
-	).WithID(nextID)
+	)
+	if evidLogID != "" {
+		entry = entry.WithID(evidLogID)
+	}
 
 	if evidLogSession > 0 {
 		entry = entry.WithSession(evidLogSession)
@@ -85,11 +89,12 @@ func runEvidenceLog(cmd *cobra.Command, args []string) error {
 	}
 	defer ew.Close()
 
-	if err := ew.Write(entry); err != nil {
+	written, err := ew.WriteEntry(entry)
+	if err != nil {
 		return fmt.Errorf("write evidence: %w", err)
 	}
 
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
-	return enc.Encode(entry)
+	return enc.Encode(written)
 }

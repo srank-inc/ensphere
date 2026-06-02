@@ -1,5 +1,9 @@
 # Evidence Standards
 
+## CLI Evidence Rows
+
+`ensphere evidence log` and automated verify/callback/cloud parser writes assign `EVID-XXX` IDs at write time and maintain a hash chain. The `result` field is a factual stage only: `baseline`, `probe`, `payload`, `control`, `callback`, or `manual_note`. Do not store AI/human conclusions such as confirmed, potential, safe, confidence, or exploitability in `result`; put those judgments in session reports and the final report.
+
 ## Proof Levels
 
 | Level | Name | Evidence Required | Classification |

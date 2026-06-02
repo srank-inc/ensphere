@@ -35,6 +35,24 @@ func writeEntries(t *testing.T, path string, entries ...Entry) {
 	}
 }
 
+func appendRawEvidenceLine(t *testing.T, path string, entry Entry) {
+	t.Helper()
+	raw, err := json.Marshal(entry)
+	if err != nil {
+		t.Fatalf("marshal raw evidence: %v", err)
+	}
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		t.Fatalf("open raw evidence file: %v", err)
+	}
+	if _, err := f.Write(append(raw, '\n')); err != nil {
+		t.Fatalf("write raw evidence line: %v", err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatalf("close raw evidence file: %v", err)
+	}
+}
+
 func TestWriteAndReadBack(t *testing.T) {
 	path := tempEvidenceFile(t)
 
@@ -58,6 +76,12 @@ func TestWriteAndReadBack(t *testing.T) {
 	}
 	if entries[2].ProbeType != "cmdi" {
 		t.Fatalf("expected cmdi, got %s", entries[2].ProbeType)
+	}
+	for i, e := range entries {
+		want := "EVID-00" + string(rune('1'+i))
+		if e.ID != want {
+			t.Fatalf("entry %d expected ID %s, got %s", i, want, e.ID)
+		}
 	}
 }
 
@@ -90,7 +114,7 @@ func TestNextID_NonexistentFile(t *testing.T) {
 
 func TestNextID_ExistingEntries(t *testing.T) {
 	path := tempEvidenceFile(t)
-	writeEntries(t, path, testEntry("a", "r1"), testEntry("b", "r2"), testEntry("c", "r3"))
+	writeEntries(t, path, testEntry("a", "baseline"), testEntry("b", "probe"), testEntry("c", "payload"))
 
 	id, err := NextID(path)
 	if err != nil {
@@ -101,9 +125,154 @@ func TestNextID_ExistingEntries(t *testing.T) {
 	}
 }
 
+func TestNextID_UsesMaxNumericID(t *testing.T) {
+	path := tempEvidenceFile(t)
+	appendRawEvidenceLine(t, path, testEntry("a", "baseline").WithID("EVID-001"))
+	appendRawEvidenceLine(t, path, testEntry("b", "probe").WithID("EVID-010"))
+	appendRawEvidenceLine(t, path, testEntry("legacy", "payload"))
+
+	id, err := NextID(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if id != "EVID-011" {
+		t.Fatalf("expected EVID-011, got %s", id)
+	}
+}
+
+func TestWriterAssignsIDAndReturnsWrittenEntry(t *testing.T) {
+	path := tempEvidenceFile(t)
+	w, err := NewWriter(path)
+	if err != nil {
+		t.Fatalf("NewWriter: %v", err)
+	}
+	written, err := w.WriteEntry(testEntry("sqli", "probe"))
+	if err != nil {
+		t.Fatalf("WriteEntry: %v", err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+	if written.ID != "EVID-001" {
+		t.Fatalf("expected assigned ID EVID-001, got %s", written.ID)
+	}
+	if written.Hash == "" {
+		t.Fatal("expected returned entry to include hash")
+	}
+
+	entries, _, err := ReadAll(path)
+	if err != nil {
+		t.Fatalf("ReadAll: %v", err)
+	}
+	if entries[0].ID != written.ID || entries[0].Hash != written.Hash {
+		t.Fatalf("written entry mismatch: file=%+v returned=%+v", entries[0], written)
+	}
+}
+
+func TestWriterContinuesAfterLegacyMissingID(t *testing.T) {
+	path := tempEvidenceFile(t)
+	e1 := testEntry("a", "baseline").WithID("EVID-010")
+	e1.Hash = ComputeHash(e1)
+	appendRawEvidenceLine(t, path, e1)
+	e2 := testEntry("legacy", "probe")
+	e2.PrevHash = e1.Hash
+	e2.Hash = ComputeHash(e2)
+	appendRawEvidenceLine(t, path, e2)
+
+	w, err := NewWriter(path)
+	if err != nil {
+		t.Fatalf("NewWriter: %v", err)
+	}
+	written, err := w.WriteEntry(testEntry("new", "payload"))
+	if err != nil {
+		t.Fatalf("WriteEntry: %v", err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+	if written.ID != "EVID-011" {
+		t.Fatalf("expected EVID-011, got %s", written.ID)
+	}
+	if written.PrevHash != e2.Hash {
+		t.Fatalf("expected prev_hash %s, got %s", e2.Hash, written.PrevHash)
+	}
+}
+
+func TestWriterRejectsDuplicateIDs(t *testing.T) {
+	path := tempEvidenceFile(t)
+	writeEntries(t, path, testEntry("a", "baseline").WithID("EVID-001"))
+
+	w, err := NewWriter(path)
+	if err != nil {
+		t.Fatalf("NewWriter: %v", err)
+	}
+	defer w.Close()
+	if err := w.Write(testEntry("b", "probe").WithID("EVID-001")); err == nil {
+		t.Fatal("expected duplicate ID error")
+	}
+}
+
+func TestNewWriterRejectsExistingDuplicateIDs(t *testing.T) {
+	path := tempEvidenceFile(t)
+	appendRawEvidenceLine(t, path, testEntry("a", "baseline").WithID("EVID-001"))
+	appendRawEvidenceLine(t, path, testEntry("b", "probe").WithID("EVID-001"))
+
+	if _, err := NewWriter(path); err == nil {
+		t.Fatal("expected existing duplicate ID error")
+	}
+}
+
+func TestWriterRejectsInvalidResult(t *testing.T) {
+	path := tempEvidenceFile(t)
+	w, err := NewWriter(path)
+	if err != nil {
+		t.Fatalf("NewWriter: %v", err)
+	}
+	defer w.Close()
+	if err := w.Write(testEntry("sqli", "confirmed")); err == nil {
+		t.Fatal("expected invalid result error")
+	}
+}
+
+func TestWriterLockContention(t *testing.T) {
+	path := tempEvidenceFile(t)
+	w1, err := NewWriter(path)
+	if err != nil {
+		t.Fatalf("NewWriter w1: %v", err)
+	}
+
+	errCh := make(chan error, 1)
+	go func() {
+		w2, err := NewWriter(path)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		errCh <- w2.Close()
+	}()
+
+	select {
+	case err := <-errCh:
+		t.Fatalf("second writer should wait for lock, got early result: %v", err)
+	case <-time.After(150 * time.Millisecond):
+	}
+
+	if err := w1.Close(); err != nil {
+		t.Fatalf("Close w1: %v", err)
+	}
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("second writer after lock release: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("second writer did not acquire lock after release")
+	}
+}
+
 func TestHashChainIntegrity(t *testing.T) {
 	path := tempEvidenceFile(t)
-	writeEntries(t, path, testEntry("a", "r1"), testEntry("b", "r2"), testEntry("c", "r3"))
+	writeEntries(t, path, testEntry("a", "baseline"), testEntry("b", "probe"), testEntry("c", "payload"))
 
 	result, err := VerifyChain(path)
 	if err != nil {
@@ -121,9 +290,9 @@ func TestHashChainTamper(t *testing.T) {
 	path := tempEvidenceFile(t)
 
 	// Use entries with IDs so BrokenAt is populated
-	e1 := testEntry("a", "r1").WithID("EVID-001")
-	e2 := testEntry("b", "r2").WithID("EVID-002")
-	e3 := testEntry("c", "r3").WithID("EVID-003")
+	e1 := testEntry("a", "baseline").WithID("EVID-001")
+	e2 := testEntry("b", "probe").WithID("EVID-002")
+	e3 := testEntry("c", "payload").WithID("EVID-003")
 	writeEntries(t, path, e1, e2, e3)
 
 	// Read file, tamper with middle entry's hash, rewrite
@@ -318,11 +487,11 @@ func TestReadAll_MalformedLines(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	e1 := Entry{ProbeType: "sqli", Result: "completed", Timestamp: time.Now().UTC().Format(time.RFC3339)}
+	e1 := Entry{ProbeType: "sqli", Result: "baseline", Timestamp: time.Now().UTC().Format(time.RFC3339)}
 	if err := ew.Write(e1); err != nil {
 		t.Fatal(err)
 	}
-	e2 := Entry{ProbeType: "xss", Result: "completed", Timestamp: time.Now().UTC().Format(time.RFC3339)}
+	e2 := Entry{ProbeType: "xss", Result: "probe", Timestamp: time.Now().UTC().Format(time.RFC3339)}
 	if err := ew.Write(e2); err != nil {
 		t.Fatal(err)
 	}
@@ -345,7 +514,7 @@ func TestReadAll_MalformedLines(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	e3 := Entry{ProbeType: "csrf", Result: "completed", Timestamp: time.Now().UTC().Format(time.RFC3339)}
+	e3 := Entry{ProbeType: "csrf", Result: "payload", Timestamp: time.Now().UTC().Format(time.RFC3339)}
 	if err := ew2.Write(e3); err != nil {
 		t.Fatal(err)
 	}

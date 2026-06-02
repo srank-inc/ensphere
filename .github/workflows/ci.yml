@@ -1,0 +1,31 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+
+      - name: Verify packages
+        working-directory: cli
+        run: |
+          go vet ./...
+          go test ./...
+          go test -race -short ./internal/verify/
+
+      - name: Smoke
+        run: make smoke
+
+      - name: Generated artifact drift
+        run: make verify-generated

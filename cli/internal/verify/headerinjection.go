@@ -60,7 +60,7 @@ func VerifyHeaderInjection(cfg HeaderInjectionConfig) (*ProbeResult, error) {
 	probeCount++
 
 	injectedHeader := "X-Ensphere-Injected"
-	injectedValue := "crlf-confirmed"
+	injectedValue := "crlf-marker"
 	// Use %0d%0a in a manually-constructed RawQuery to preserve
 	// literal CRLF bytes. url.Values.Encode() would double-encode % to %25.
 	crlfPayload := "test%0d%0a" + injectedHeader + ":%20" + injectedValue

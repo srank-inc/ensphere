@@ -52,7 +52,7 @@ ensphere cloud secrets --provider gcp --in-scope "gcp://PROJECT_ID"
 ensphere evidence log \
   --probe-type cloud_compute --technique cli_verification \
   --url "gcp://PROJECT_ID/functions/FUNCTION_NAME" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "Cloud Function allows allUsers invocation — unauthenticated access"
 ```
@@ -99,7 +99,7 @@ gcloud container binauthz policy export --project=PROJECT_ID
 ensphere evidence log \
   --probe-type cloud_compute --technique cli_verification \
   --url "gcp://PROJECT_ID/run/SERVICE_NAME" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "Cloud Run service allows allUsers invocation with ingress=all"
 ```
@@ -136,7 +136,7 @@ gcloud firestore operations list --project=PROJECT_ID --format=json 2>/dev/null
 ensphere evidence log \
   --probe-type cloud_storage --technique cli_verification \
   --url "gcp://PROJECT_ID/firestore" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "Firestore rules allow any authenticated user to read all collections"
 ```
@@ -176,7 +176,7 @@ gcloud pubsub subscriptions list \
 ensphere evidence log \
   --probe-type cloud_network --technique cli_verification \
   --url "gcp://PROJECT_ID/pubsub/TOPIC_NAME" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "Pub/Sub topic grants allAuthenticatedUsers roles/pubsub.publisher"
 ```
@@ -215,7 +215,7 @@ curl -s -H "Authorization: Bearer $(gcloud auth print-access-token)" \
 ensphere evidence log \
   --probe-type cloud_iam --technique cli_verification \
   --url "gcp://PROJECT_ID/identity-platform" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "Identity Platform allows anonymous auth — anonymous users can access Firestore"
 ```
@@ -269,9 +269,9 @@ gcloud storage buckets describe gs://BUCKET_NAME \
 ensphere evidence log \
   --probe-type cloud_storage --technique anonymous_access \
   --url "gcp://PROJECT_ID/gcs/BUCKET_NAME" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
-  --notes "GCS bucket grants allUsers roles/storage.objectViewer — anonymous read confirmed"
+  --notes "GCS bucket grants allUsers roles/storage.objectViewer"
 ```
 
 ---
@@ -339,7 +339,7 @@ gcloud organizations get-iam-policy ORG_ID --format=json 2>/dev/null
 ensphere evidence log \
   --probe-type cloud_iam --technique iam_escalation \
   --url "gcp://PROJECT_ID/iam/SA_EMAIL" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "Service account has iam.serviceAccountKeys.create on project — can create keys for any SA"
 ```
@@ -389,7 +389,7 @@ gcloud container binauthz policy export --project=PROJECT_ID
 ensphere evidence log \
   --probe-type cloud_k8s --technique cli_verification \
   --url "gcp://PROJECT_ID/gke/CLUSTER_NAME" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "GKE cluster has legacy ABAC enabled — RBAC policies are not enforced"
 ```

@@ -1,11 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
 
 	"github.com/srank/ensphere/internal/verify"
@@ -57,12 +52,11 @@ func init() {
 }
 
 func runVerifyCMDi(cmd *cobra.Command, args []string) error {
-	headers := make(map[string]string)
-	for _, h := range cmdiHeaders {
-		parts := splitOnce(h, ":")
-		if len(parts) == 2 {
-			headers[parts[0]] = parts[1]
-		}
+	headers, err := parseHeaders(cmdiHeaders)
+	if err != nil {
+		writeVerifyError(err)
+		osExit(exitForVerifyError(err))
+		return nil
 	}
 
 	cfg := verify.CMDiConfig{
@@ -80,21 +74,7 @@ func runVerifyCMDi(cmd *cobra.Command, args []string) error {
 		},
 	}
 
-	result, err := verify.VerifyCMDi(cfg)
-	if err != nil {
-		var scopeErr *verify.ScopeError
-		if errors.As(err, &scopeErr) {
-			fmt.Fprintf(os.Stderr, "scope error: %s\n", err)
-			os.Exit(2)
-		}
-		fmt.Fprintf(os.Stderr, "probe error: %s\n", err)
-		os.Exit(3)
-	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(result); err != nil {
-		fmt.Fprintf(os.Stderr, "encode error: %s\n", err)
-		os.Exit(3)
-	}
-	return nil
+	return runVerify(func() (*verify.ProbeResult, error) {
+		return verify.VerifyCMDi(cfg)
+	})
 }

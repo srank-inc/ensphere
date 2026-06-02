@@ -1,6 +1,7 @@
 # ── Build artifacts ──────────────────────────────────────────────
 bin/
-cli/internal/payloads/payloads.sqlite
+cli/ensphere
+cli/.gocache/
 
 # ── Go ──────────────────────────────────────────────────────────
 *.exe
@@ -23,7 +24,10 @@ vendor/
 
 # ── Runtime / session data ──────────────────────────────────────
 pentest/
+ensphere-pentest/
 evidence.jsonl
+evidence.jsonl.lock
+*.tmp
 
 # ── Environment & secrets ───────────────────────────────────────
 .env

@@ -21,8 +21,8 @@ type ProwlerFinding struct {
 
 // TrivyFinding represents a single Trivy misconfiguration finding.
 type TrivyFinding struct {
-	Type     string `json:"Type"`
-	Target   string `json:"Target"`
+	Type           string `json:"Type"`
+	Target         string `json:"Target"`
 	MisconfSummary struct {
 		Successes  int `json:"Successes"`
 		Failures   int `json:"Failures"`
@@ -44,22 +44,23 @@ type TrivyReport struct {
 
 // MappedFinding represents a finding mapped to an Ensphere vuln type.
 type MappedFinding struct {
-	CheckID     string `json:"check_id"`
-	CheckTitle  string `json:"check_title"`
-	Severity    string `json:"severity"`
-	ResourceARN string `json:"resource_arn"`
-	VulnType    string `json:"vuln_type"`
-	Description string `json:"description"`
+	CheckID        string `json:"check_id"`
+	CheckTitle     string `json:"check_title"`
+	Severity       string `json:"severity"`
+	SeveritySource string `json:"severity_source"`
+	ResourceARN    string `json:"resource_arn"`
+	VulnType       string `json:"vuln_type"`
+	Description    string `json:"description"`
 }
 
 // ParseResult is the JSON output of a parser run.
 type ParseResult struct {
-	SchemaVersion int            `json:"schema_version"`
-	Source        string         `json:"source"`
-	TotalFindings int            `json:"total_findings"`
-	FailFindings  int            `json:"fail_findings"`
-	BySeverity    map[string]int `json:"by_severity"`
-	ByVulnType    map[string]int `json:"by_vuln_type"`
+	SchemaVersion int             `json:"schema_version"`
+	Source        string          `json:"source"`
+	TotalFindings int             `json:"total_findings"`
+	FailFindings  int             `json:"fail_findings"`
+	BySeverity    map[string]int  `json:"by_severity"`
+	ByVulnType    map[string]int  `json:"by_vuln_type"`
 	Findings      []MappedFinding `json:"findings"`
 }
 
@@ -94,12 +95,13 @@ func ParseProwler(filePath string) (*ParseResult, error) {
 		result.ByVulnType[vulnType]++
 
 		result.Findings = append(result.Findings, MappedFinding{
-			CheckID:     f.CheckID,
-			CheckTitle:  f.CheckTitle,
-			Severity:    f.Severity,
-			ResourceARN: f.ResourceARN,
-			VulnType:    vulnType,
-			Description: f.Description,
+			CheckID:        f.CheckID,
+			CheckTitle:     f.CheckTitle,
+			Severity:       f.Severity,
+			SeveritySource: "source_provided",
+			ResourceARN:    f.ResourceARN,
+			VulnType:       vulnType,
+			Description:    f.Description,
 		})
 	}
 
@@ -138,12 +140,13 @@ func ParseTrivy(filePath string) (*ParseResult, error) {
 			result.ByVulnType[vulnType]++
 
 			result.Findings = append(result.Findings, MappedFinding{
-				CheckID:     m.ID,
-				CheckTitle:  m.Title,
-				Severity:    m.Severity,
-				ResourceARN: tr.Target,
-				VulnType:    vulnType,
-				Description: m.Description,
+				CheckID:        m.ID,
+				CheckTitle:     m.Title,
+				Severity:       m.Severity,
+				SeveritySource: "source_provided",
+				ResourceARN:    tr.Target,
+				VulnType:       vulnType,
+				Description:    m.Description,
 			})
 		}
 	}

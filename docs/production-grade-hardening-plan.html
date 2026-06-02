@@ -1,0 +1,1040 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ensphere Production-Grade Hardening Plan</title>
+  <style>
+    :root{--bg:#f7f8fb;--panel:#fff;--ink:#18202f;--muted:#596274;--line:#d9deea;--soft:#eef2f8;--accent:#0f766e;--warn:#b54708;--danger:#b42318;--shadow:0 1px 2px rgba(16,24,40,.08);--r:8px;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;--sans:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55}a{color:#175cd3;text-underline-offset:2px}
+    .shell{display:grid;grid-template-columns:280px minmax(0,1fr);min-height:100vh}nav{position:sticky;top:0;height:100vh;overflow:auto;border-right:1px solid var(--line);background:#fbfcfe;padding:20px 16px}nav h1{margin:0 0 4px;font-size:18px;line-height:1.2}.subtitle{margin:0 0 18px;color:var(--muted);font-size:13px}.nav-section{margin:18px 0 8px;color:#344054;font-size:12px;font-weight:700;text-transform:uppercase}nav a{display:block;padding:7px 8px;border-radius:6px;color:#344054;font-size:13px;text-decoration:none}nav a:hover{background:var(--soft);color:var(--ink)}
+    main{min-width:0}.hero{border-bottom:1px solid var(--line);background:#fff;padding:34px 42px 28px}.hero h2{max-width:1050px;margin:0 0 12px;font-size:34px;line-height:1.12}.hero p{max-width:980px;margin:0 0 18px;color:var(--muted);font-size:16px}section{padding:30px 42px;border-bottom:1px solid var(--line)}section>h2{margin:0 0 12px;font-size:24px;line-height:1.2}section>p{max-width:1000px;color:var(--muted)}h3{margin:24px 0 10px;font-size:18px;line-height:1.25}h4{margin:20px 0 8px;font-size:15px}
+    .meta-grid,.grid-2,.grid-3{display:grid;gap:14px}.meta-grid{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:20px}.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .metric,.band,.gap,.owner,.progress-wrap{border:1px solid var(--line);border-radius:var(--r);background:#fff;box-shadow:var(--shadow)}.metric{padding:12px}.metric .value{display:block;font-size:22px;font-weight:750;line-height:1.1}.metric .label,.small{color:var(--muted);font-size:12px}.band{padding:16px;margin:14px 0}.progress-wrap{margin-top:22px;padding:14px}.progress-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px}.progress-row strong{font-size:14px}.progress-row span{color:var(--muted);font-size:13px}.progress-bar{height:10px;overflow:hidden;border-radius:999px;background:#e6eaf2}.progress-bar>div{width:0;height:100%;background:var(--accent);transition:width .18s ease}
+    .callout{border-left:4px solid var(--accent);background:#f0fdfa;padding:12px 14px;border-radius:0 var(--r) var(--r) 0;margin:16px 0}.callout.warn{border-left-color:var(--warn);background:#fff7ed}.callout.danger{border-left-color:var(--danger);background:#fff1f3}.callout p{margin:0}.pill-row,.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.pill{display:inline-flex;align-items:center;min-height:26px;border:1px solid var(--line);border-radius:999px;background:#fff;padding:4px 9px;color:#344054;font-size:12px;font-weight:650}.pill.p0{border-color:#fecdd3;color:#9f1239;background:#fff1f3}.pill.p1{border-color:#fed7aa;color:#9a3412;background:#fff7ed}.pill.p2{border-color:#bfdbfe;color:#1e40af;background:#eff6ff}.pill.p3{border-color:#bbf7d0;color:#166534;background:#f0fdf4}
+    table{width:100%;border-collapse:collapse;margin:14px 0;border:1px solid var(--line);background:#fff;font-size:13px}th,td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#f2f4f7;color:#344054;font-size:12px;text-transform:uppercase}tr:last-child td{border-bottom:0}
+    code,pre{font-family:var(--mono)}code{border:1px solid #d0d5dd;border-radius:4px;background:#f8fafc;color:#18202f;padding:1px 4px;font-size:.92em}pre{overflow:auto;border:1px solid #d0d5dd;border-radius:var(--r);background:#f8fafc;color:#18202f;padding:14px;font-size:12px;line-height:1.5;white-space:pre}pre code{border:0;background:transparent;color:inherit;padding:0;font-size:inherit}
+    ul,ol{padding-left:22px}li{margin:5px 0}.gap{margin:24px 0 34px;overflow:hidden}.gap-header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:start;border-bottom:1px solid var(--line);background:#fbfcfe;padding:16px}.gap-header h3{margin:0 0 8px;font-size:20px}.gap-header p{margin:0;color:var(--muted)}.gap-body{padding:16px}.task-list{display:grid;gap:8px;margin:12px 0}.task{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;align-items:start;border:1px solid var(--line);border-radius:6px;background:#fff;padding:9px 10px;font-size:13px}.task input{margin-top:3px}.task span{display:block}.owner{min-width:150px;padding:10px;text-align:right;font-size:12px}.owner strong{display:block;color:#344054;font-size:13px}button{border:1px solid var(--line);border-radius:6px;background:#fff;color:#344054;cursor:pointer;font:inherit;font-size:13px;font-weight:650;padding:8px 10px}button:hover{border-color:#98a2b3;background:#f9fafb}.print-note{display:none}
+    @media (max-width:980px){.shell{grid-template-columns:1fr}nav{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}.hero,section{padding-left:20px;padding-right:20px}.meta-grid,.grid-2,.grid-3,.gap-header{grid-template-columns:1fr}.owner{text-align:left}}
+    @media print{body{background:#fff}nav,.toolbar,button{display:none}.shell{display:block}.hero,section{padding:18px 0}.gap,.band,table{break-inside:avoid;box-shadow:none}.print-note{display:block}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <nav aria-label="Plan navigation">
+      <h1>Ensphere Hardening</h1>
+      <p class="subtitle">Production-grade plan for AI-agent execution.</p>
+      <div class="nav-section">Start</div>
+      <a href="#summary">Summary</a>
+      <a href="#locked-decisions">Locked Decisions</a>
+      <a href="#agent-protocol">Agent Protocol</a>
+      <a href="#roadmap">Roadmap</a>
+      <a href="#definition-of-done">Definition of Done</a>
+      <div class="nav-section">10 Gaps</div>
+      <a href="#gap-01">1. CI Pipeline</a>
+      <a href="#gap-02">2. Command Tests</a>
+      <a href="#gap-03">3. Untested Packages</a>
+      <a href="#gap-04">4. Evidence IDs</a>
+      <a href="#gap-05">5. Judgment Boundary</a>
+      <a href="#gap-06">6. Static Scanner</a>
+      <a href="#gap-07">7. Command Boilerplate</a>
+      <a href="#gap-08">8. CLI Schema Tests</a>
+      <a href="#gap-09">9. Payload DB Workflow</a>
+      <a href="#gap-10">10. Repo Hygiene</a>
+      <div class="nav-section">Finish</div>
+      <a href="#risk-register">Risk Register</a>
+      <a href="#validation-matrix">Validation Matrix</a>
+      <a href="#agent-prompt">Agent Prompt</a>
+      <a href="#release-checklist">Release Checklist</a>
+    </nav>
+
+    <main>
+      <header class="hero">
+        <h2>Ensphere Production-Grade Hardening Plan</h2>
+        <p>
+          A standalone execution plan for closing the 10 identified maturity gaps in the
+          Ensphere repository. The plan is written for an AI coding agent, but keeps human
+          review gates explicit so the project improves in reliability, maintainability,
+          and auditability without diluting its core design principle.
+        </p>
+
+        <div class="pill-row" aria-label="Project facts">
+          <span class="pill p3">Go CLI</span>
+          <span class="pill p3">Embedded SQLite payload DB</span>
+          <span class="pill p3">AI-agent skill files</span>
+          <span class="pill p2">Measurement-only verify core</span>
+          <span class="pill p1">10 hardening gaps</span>
+        </div>
+
+        <div class="meta-grid">
+          <div class="metric">
+            <span class="value">10</span>
+            <span class="label">Maturity gaps to close</span>
+          </div>
+          <div class="metric">
+            <span class="value">4</span>
+            <span class="label">Execution phases</span>
+          </div>
+          <div class="metric">
+            <span class="value">33</span>
+            <span class="label">Verify probes to protect</span>
+          </div>
+          <div class="metric">
+            <span class="value">1206</span>
+            <span class="label">Payloads to keep deterministic</span>
+          </div>
+        </div>
+
+        <div class="progress-wrap" aria-live="polite">
+          <div class="progress-row">
+            <strong>Plan Progress</strong>
+            <span id="progressText">0 of 0 tasks complete</span>
+          </div>
+          <div class="progress-bar" aria-hidden="true"><div id="progressBar"></div></div>
+        </div>
+      </header>
+
+      <section id="summary">
+        <h2>Summary</h2>
+        <p>
+          Ensphere already has a strong core: the verify layer returns raw measurements,
+          scope validation prevents accidental probing outside authorization, evidence is
+          hash-chained, payloads are generated from YAML seeds, and the main Go test suite
+          passes. The remaining work is about making that quality repeatable, observable,
+          and enforceable.
+        </p>
+
+        <div class="grid-2">
+          <div class="band">
+            <h3>Current Strengths</h3>
+            <ul>
+              <li>Deterministic measurement model in verify outputs.</li>
+              <li>Mandatory in-scope checks for verify commands.</li>
+              <li>Payload database generated from YAML with enum validation.</li>
+              <li>Evidence JSONL writer with tamper-evident hash chain.</li>
+              <li>Meaningful tests in core packages such as <code>verify</code>, <code>evidence</code>, <code>openapi</code>, <code>cvss</code>, and <code>callback</code>.</li>
+            </ul>
+          </div>
+          <div class="band">
+            <h3>Production-Grade Target</h3>
+            <ul>
+              <li>Every push and pull request runs repeatable quality gates.</li>
+              <li>CLI behavior is tested at the binary boundary, not only through internal packages.</li>
+              <li>Evidence IDs and classification ownership are consistent everywhere.</li>
+              <li>Generated assets cannot silently drift from source data.</li>
+              <li>Static scanning is accurately framed, tested, and incrementally improved.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="callout">
+          <p>
+            Non-negotiable principle: Ensphere code may measure, compare, hash, count, validate,
+            redact, and calculate from fixed inputs. It must not assign exploitability,
+            confidence, confirmed status, or security judgment unless the value is explicitly
+            recorded as external AI/human analysis.
+          </p>
+        </div>
+      </section>
+
+      <section id="locked-decisions">
+        <h2>Locked Decisions</h2>
+        <p>
+          These decisions remove ambiguity from the workstreams below. An AI agent should
+          treat this table as binding unless a human maintainer explicitly revises the plan.
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>Decision</th>
+              <th>Implementation Consequence</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Evidence IDs</td>
+              <td><code>evidence.Writer</code> assigns <code>EVID-XXX</code> IDs at write time for entries missing an ID.</td>
+              <td>Automated verify evidence must be directly referenceable without report-stage ID assignment.</td>
+            </tr>
+            <tr>
+              <td>Evidence writer concurrency</td>
+              <td>Use a standard-library lock file next to the evidence file for cross-process writes.</td>
+              <td>Acquire <code>&lt;evidence&gt;.lock</code> with exclusive create, retry every 50 ms for up to 5 seconds, and remove it on close. Do not auto-delete stale locks; fail clearly after timeout. Do not add a dependency.</td>
+            </tr>
+            <tr>
+              <td>Evidence result meaning</td>
+              <td><code>Entry.Result</code> is factual only.</td>
+              <td>Allowed values for this pass: <code>baseline</code>, <code>probe</code>, <code>payload</code>, <code>control</code>, <code>callback</code>, <code>manual_note</code>. Map detailed variants into notes. No <code>confirmed</code>, <code>potential</code>, or <code>safe</code>.</td>
+            </tr>
+            <tr>
+              <td>Classification location</td>
+              <td>Security judgments live only in AI/human reports.</td>
+              <td>Do not add <code>analysis_status</code> fields to CLI evidence in this hardening pass.</td>
+            </tr>
+            <tr>
+              <td>CI platform</td>
+              <td>Use GitHub Actions only.</td>
+              <td>Create <code>.github/workflows/ci.yml</code>; do not add GitLab, CircleCI, or other CI configs.</td>
+            </tr>
+            <tr>
+              <td>Go version in CI</td>
+              <td>Use <code>go-version-file: cli/go.mod</code> and fail fast if unavailable.</td>
+              <td>Do not silently downgrade the Go toolchain to make CI pass.</td>
+            </tr>
+            <tr>
+              <td>Command tests</td>
+              <td>Start with subprocess CLI tests.</td>
+              <td>Do not refactor command handlers until representative command behavior is locked by tests.</td>
+            </tr>
+            <tr>
+              <td>Header parsing</td>
+              <td>Malformed <code>--header</code> values are usage errors.</td>
+              <td>Reject with exit code <code>2</code>; split valid headers only once so values may contain colons.</td>
+            </tr>
+            <tr>
+              <td>Scanner scope</td>
+              <td>Do Track A only for this pass.</td>
+              <td>Keep scanner regex-based, label output as pattern matching, add tests and redaction. Do not implement AST scanning yet.</td>
+            </tr>
+            <tr>
+              <td>Scanner context</td>
+              <td>Redact scanner output context by default.</td>
+              <td>Reuse or share existing redaction logic so matched context cannot dump tokens or secrets.</td>
+            </tr>
+            <tr>
+              <td>Sink regex validation</td>
+              <td>Broken embedded sink regexes fail tests.</td>
+              <td>Runtime should not be the first place invalid sink data is discovered.</td>
+            </tr>
+            <tr>
+              <td>Schema tests</td>
+              <td>Use semantic JSON assertions first.</td>
+              <td>Avoid brittle exact golden snapshots except for stable fixtures. Do not add a JSON Schema dependency in this pass.</td>
+            </tr>
+            <tr>
+              <td>Generated DB drift</td>
+              <td>Make seedgen deterministic, then enforce byte-for-byte drift checks.</td>
+              <td>Remove timestamp nondeterminism and run <code>make verify-generated</code> in CI.</td>
+            </tr>
+            <tr>
+              <td>Checklist generation</td>
+              <td>Delete generated checklist data before copying current checklists.</td>
+              <td>Removed source checklist files must not leave stale embedded files behind.</td>
+            </tr>
+            <tr>
+              <td>Repo hygiene</td>
+              <td>Ignore local build/test artifacts only.</td>
+              <td>Ignore <code>bin/</code>, <code>cli/.gocache/</code>, <code>cli/ensphere</code>, local evidence, and <code>ensphere-pentest/</code>. Do not ignore committed embedded assets.</td>
+            </tr>
+            <tr>
+              <td>Coverage goals</td>
+              <td>Use explicit package-level targets.</td>
+              <td><code>verify/evidence/openapi &gt;=70%</code>, <code>cvss &gt;=90%</code>, <code>callback &gt;=80%</code>, <code>scan/sinks/templates/compliance/checklist &gt;=50%</code>. <code>cmd</code> requires representative subprocess tests, not a hard percentage.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="agent-protocol">
+        <h2>Agent Protocol</h2>
+        <p>
+          The work should be performed as small, reviewable changes. The agent must preserve
+          existing user changes, run targeted tests before broad tests, and keep generated
+          artifacts synchronized with their sources.
+        </p>
+
+        <div class="band">
+          <h3>Preflight Commands</h3>
+          <pre><code>git status --short --branch
+go version
+cd cli &amp;&amp; go list ./...
+make test
+make smoke
+cd cli &amp;&amp; go test -race -short ./internal/verify/</code></pre>
+        </div>
+
+        <div class="grid-3">
+          <div class="band">
+            <h3>Worktree Rules</h3>
+            <ul>
+              <li>Do not revert changes you did not make.</li>
+              <li>Keep generated changes intentional and documented.</li>
+              <li>Prefer scoped commits by gap or phase.</li>
+              <li>Use <code>apply_patch</code> for manual edits.</li>
+            </ul>
+          </div>
+          <div class="band">
+            <h3>Test Rules</h3>
+            <ul>
+              <li>Run package-level tests after each focused change.</li>
+              <li>Run <code>make test</code> before finishing each phase.</li>
+              <li>Run <code>make smoke</code> after build or generated DB changes.</li>
+              <li>Run race checks for concurrency or verify changes.</li>
+            </ul>
+          </div>
+          <div class="band">
+            <h3>Review Rules</h3>
+            <ul>
+              <li>Confirm CLI output remains JSON where promised.</li>
+              <li>Confirm verify commands remain measurement-only.</li>
+              <li>Confirm scope and max-risk gates execute before requests.</li>
+              <li>Confirm docs match behavior.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="roadmap">
+        <h2>Roadmap</h2>
+        <p>
+          Execute in this order. Earlier phases create safety rails that make later changes
+          easier to verify.
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Phase</th>
+              <th>Primary Goal</th>
+              <th>Gaps Covered</th>
+              <th>Exit Gate</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Phase 0</td>
+              <td>Baseline and repo hygiene</td>
+              <td>10</td>
+              <td>Clean ignore rules, baseline tests pass, no accidental tracked changes.</td>
+            </tr>
+            <tr>
+              <td>Phase 1</td>
+              <td>Automated quality gates</td>
+              <td>1, 8, 9</td>
+              <td>CI runs test, smoke, drift, and schema checks on PRs.</td>
+            </tr>
+            <tr>
+              <td>Phase 2</td>
+              <td>Evidence and boundary correctness</td>
+              <td>4, 5</td>
+              <td>Evidence IDs and judgment ownership are consistent in code and docs.</td>
+            </tr>
+            <tr>
+              <td>Phase 3</td>
+              <td>Coverage and maintainability</td>
+              <td>2, 3, 6, 7</td>
+              <td>Command UX tested, untested packages covered, scanner clarified or improved, boilerplate reduced.</td>
+            </tr>
+            <tr>
+              <td>Phase 4</td>
+              <td>Release readiness</td>
+              <td>All</td>
+              <td>All acceptance criteria pass, final audit complete, release checklist signed off.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="definition-of-done">
+        <h2>Definition of Done</h2>
+        <div class="task-list">
+          <label class="task"><input type="checkbox" data-key="dod-01"><span>Every changed package has focused tests or a documented reason tests are not applicable.</span></label>
+          <label class="task"><input type="checkbox" data-key="dod-02"><span><code>make test</code>, <code>make smoke</code>, and <code>cd cli &amp;&amp; go test -race -short ./internal/verify/</code> pass locally.</span></label>
+          <label class="task"><input type="checkbox" data-key="dod-03"><span>CI enforces the same gates on pull requests.</span></label>
+          <label class="task"><input type="checkbox" data-key="dod-04"><span>Generated payload DB and checklist assets are verified as in sync with source files.</span></label>
+          <label class="task"><input type="checkbox" data-key="dod-05"><span>Docs, skill files, README examples, and CLI behavior agree.</span></label>
+          <label class="task"><input type="checkbox" data-key="dod-06"><span>No command or verify path introduces CLI-owned vulnerability classification.</span></label>
+          <label class="task"><input type="checkbox" data-key="dod-07"><span>All new errors are wrapped with useful context.</span></label>
+          <label class="task"><input type="checkbox" data-key="dod-08"><span>Git status is clean except for intentional deliverables.</span></label>
+        </div>
+      </section>
+
+      <section id="gaps">
+        <h2>Gap Workstreams</h2>
+        <p>
+          Each workstream includes implementation tasks, edge cases, acceptance criteria,
+          validation commands, and suggested file areas. Complete P0 and P1 items first.
+        </p>
+
+        <article class="gap" id="gap-01">
+          <div class="gap-header">
+            <div>
+              <h3>1. Add a CI Pipeline</h3>
+              <p>Make quality gates automatic for every push and pull request.</p>
+              <div class="pill-row">
+                <span class="pill p0">Priority P0</span>
+                <span class="pill">Phase 1</span>
+                <span class="pill">CI/CD</span>
+              </div>
+            </div>
+            <div class="owner"><strong>Primary files</strong>.github/workflows/*.yml<br>Makefile<br>docs/testing.md</div>
+          </div>
+          <div class="gap-body">
+            <div class="grid-2">
+              <div>
+                <h4>Implementation Plan</h4>
+                <ol>
+                  <li>Create <code>.github/workflows/ci.yml</code>.</li>
+                  <li>Install Go using <code>go-version-file: cli/go.mod</code>; fail fast if that version is unavailable.</li>
+                  <li>Cache Go modules and build cache using stable cache keys.</li>
+                  <li>Run <code>go vet ./...</code>, <code>go test ./...</code>, <code>make smoke</code>, and a short race test for <code>internal/verify</code>.</li>
+                  <li>Add a generated-artifact drift check by running <code>make verify-generated</code>.</li>
+                  <li>Document the CI gates in <code>docs/testing.md</code>.</li>
+                </ol>
+              </div>
+              <div>
+                <h4>Edge Cases</h4>
+                <ul>
+                  <li>Go version uses <code>1.26.x</code>, which may not exist on some public CI images when this plan is executed. CI must fail clearly; do not downgrade Go.</li>
+                  <li><code>make smoke</code> regenerates <code>payloads.sqlite</code> and checklist data, so CI must detect unintended drift.</li>
+                  <li>Race tests can be slower; keep them short and package-scoped.</li>
+                  <li>CI must run from repo root, while most Go commands run from <code>cli/</code>.</li>
+                </ul>
+              </div>
+            </div>
+
+            <h4>Suggested Workflow Skeleton</h4>
+            <pre><code>name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+      - name: Verify packages
+        working-directory: cli
+        run: |
+          go vet ./...
+          go test ./...
+          go test -race -short ./internal/verify/
+      - name: Smoke
+        run: make smoke
+      - name: Generated artifact drift
+        run: make verify-generated</code></pre>
+
+            <h4>Acceptance Criteria</h4>
+            <div class="task-list">
+              <label class="task"><input type="checkbox" data-key="gap01-01"><span>CI workflow exists and runs on push plus pull request.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap01-02"><span>CI runs vet, full tests, smoke, and verify package race test.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap01-03"><span>CI runs <code>make verify-generated</code> and fails when generated payload/checklist artifacts drift.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap01-04"><span><code>docs/testing.md</code> documents local and CI gates.</span></label>
+            </div>
+          </div>
+        </article>
+
+        <article class="gap" id="gap-02">
+          <div class="gap-header">
+            <div>
+              <h3>2. Add Command-Layer Tests</h3>
+              <p>Test the CLI as users experience it: flags, output, exit behavior, and command wiring.</p>
+              <div class="pill-row">
+                <span class="pill p0">Priority P0</span>
+                <span class="pill">Phase 3</span>
+                <span class="pill">CLI UX</span>
+              </div>
+            </div>
+            <div class="owner"><strong>Primary files</strong>cli/cmd/*<br>cli/cmd/*_test.go<br>cli/main.go</div>
+          </div>
+          <div class="gap-body">
+            <div class="callout warn">
+              <p>
+                Current command functions frequently call <code>os.Exit</code>. That makes
+                direct unit tests difficult. Use subprocess-based tests first so real binary
+                behavior is locked before any command-handler refactor.
+              </p>
+            </div>
+
+            <h4>Implementation Plan</h4>
+            <ol>
+              <li>Add subprocess tests that build or invoke the CLI for representative commands.</li>
+              <li>Cover help output, required flag errors, invalid enum values, JSON output, and exit codes.</li>
+              <li>Start with low-risk deterministic commands: <code>payloads</code>, <code>cvss</code>, <code>template --list</code>, <code>checklist --list</code>, <code>compliance --list</code>, <code>openapi --file</code>.</li>
+              <li>Add one representative verify command test for scope failure and no network execution.</li>
+              <li>Do not refactor command handlers in this workstream. Defer command-runner abstractions to Gap 7 after subprocess tests exist.</li>
+            </ol>
+
+            <h4>Edge Cases</h4>
+            <ul>
+              <li>Subprocess tests must isolate temp files and not write evidence into the repo root.</li>
+              <li>Tests must not depend on exact help text formatting except for important command names or flags.</li>
+              <li>JSON tests should parse output rather than string-compare pretty formatting.</li>
+              <li>Scope failure tests must prove no HTTP request is attempted.</li>
+              <li>Invalid arguments should return the intended code: usage/scope errors as 2, runtime failures as 3, root execution errors as documented.</li>
+              <li>Malformed <code>--header</code> values should be asserted as usage errors once header parsing is centralized.</li>
+            </ul>
+
+            <h4>Acceptance Criteria</h4>
+            <div class="task-list">
+              <label class="task"><input type="checkbox" data-key="gap02-01"><span>At least 8 command-level tests cover representative CLI paths.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap02-02"><span>Tests parse JSON output for deterministic commands.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap02-03"><span>Tests assert required flag failures and scope failures.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap02-04"><span>Command tests use temp directories for generated files and evidence.</span></label>
+            </div>
+
+            <h4>Validation Commands</h4>
+            <pre><code>cd cli &amp;&amp; go test ./cmd
+cd cli &amp;&amp; go test ./...
+make smoke</code></pre>
+          </div>
+        </article>
+
+        <article class="gap" id="gap-03">
+          <div class="gap-header">
+            <div>
+              <h3>3. Cover Untested Packages</h3>
+              <p>Raise confidence in data loaders, static scan helpers, materializers, mappings, and generators.</p>
+              <div class="pill-row">
+                <span class="pill p1">Priority P1</span>
+                <span class="pill">Phase 3</span>
+                <span class="pill">Testing</span>
+              </div>
+            </div>
+            <div class="owner"><strong>Primary packages</strong>scan<br>sinks<br>templates<br>checklist<br>compliance<br>seedgen</div>
+          </div>
+          <div class="gap-body">
+            <h4>Implementation Plan</h4>
+            <ol>
+              <li>Add focused tests for <code>scan.RunScan</code> using temp repositories with known matches and excludes.</li>
+              <li>Add tests for <code>sinks.ListCategories</code>, <code>sinks.GetCategory</code>, and invalid category handling.</li>
+              <li>Add tests for <code>templates.ListTemplates</code>, <code>TemplateNames</code>, and <code>Materialize</code> into a temp dir.</li>
+              <li>Add tests for <code>compliance.ListMappings</code>, valid lookups, invalid vuln types, and no-mapping behavior.</li>
+              <li>Add checklist loader tests that assert copied embedded files parse and list correctly.</li>
+              <li>For <code>seedgen</code>, add a testable internal function or keep subprocess tests that compile minimal YAML into a temp SQLite DB.</li>
+              <li>Use explicit coverage targets: <code>scan</code>, <code>sinks</code>, <code>templates</code>, <code>compliance</code>, and <code>checklist</code> should each reach at least 50% statement coverage.</li>
+            </ol>
+
+            <h4>Edge Cases</h4>
+            <ul>
+              <li>Scanner excludes: directory name, recursive pattern, suffix pattern, and relative-path glob.</li>
+              <li>Scanner file filtering: extension-only patterns, filename-only patterns, custom extensions.</li>
+              <li>Scanner large lines: confirm scanner buffer limit behavior is acceptable and documented.</li>
+              <li>Templates: invalid template name must not write partial output.</li>
+              <li>Compliance: mappings may include vuln types not present in payload DB, so tests should assert intended scope rather than assuming all sets are identical.</li>
+              <li>Seedgen: duplicate payload IDs should fail deterministically.</li>
+            </ul>
+
+            <h4>Acceptance Criteria</h4>
+            <div class="task-list">
+              <label class="task"><input type="checkbox" data-key="gap03-01"><span><code>scan</code> has tests for positive matches, no matches, excludes, absence rules, and extension overrides.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap03-02"><span><code>sinks</code>, <code>templates</code>, <code>checklist</code>, and <code>compliance</code> have loader and invalid-input tests.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap03-03"><span><code>seedgen</code> generation can be tested against a minimal fixture.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap03-04"><span><code>scan</code>, <code>sinks</code>, <code>templates</code>, <code>compliance</code>, and <code>checklist</code> each reach at least 50% statement coverage.</span></label>
+            </div>
+
+            <h4>Validation Commands</h4>
+            <pre><code>cd cli &amp;&amp; go test -cover ./internal/scan ./internal/sinks ./internal/templates ./internal/compliance ./internal/checklist ./tools/seedgen
+cd cli &amp;&amp; go test -cover ./...</code></pre>
+          </div>
+        </article>
+
+        <article class="gap" id="gap-04">
+          <div class="gap-header">
+            <div>
+              <h3>4. Fix Evidence ID Consistency</h3>
+              <p>Ensure automated and manual evidence entries can be referenced reliably.</p>
+              <div class="pill-row">
+                <span class="pill p0">Priority P0</span>
+                <span class="pill">Phase 2</span>
+                <span class="pill">Evidence</span>
+              </div>
+            </div>
+            <div class="owner"><strong>Primary files</strong>internal/evidence/*<br>internal/verify/sqli.go<br>cmd/evidence_log.go<br>skills/*</div>
+          </div>
+          <div class="gap-body">
+            <h4>Locked Decision</h4>
+            <div class="callout">
+              <p>
+                <code>evidence.Writer</code> assigns sequential <code>EVID-XXX</code> IDs
+                at write time for entries missing an ID. Automated verify evidence must
+                be directly referenceable without report-stage ID assignment.
+              </p>
+            </div>
+
+            <h4>Implementation Plan</h4>
+            <ol>
+              <li>Extend <code>Writer</code> to recover the next sequence number from existing entries.</li>
+              <li>If an entry has no <code>ID</code>, assign <code>EVID-%03d</code>.</li>
+              <li>Update <code>evidence log</code> so it does not precompute IDs with <code>NextID</code>; let <code>Writer.Write</code> assign the ID.</li>
+              <li>Preserve explicitly supplied IDs for manual log entries, but reject duplicate IDs deterministically.</li>
+              <li>Update <code>NextID</code> to use max numeric ID, not just count, so malformed or filtered entries do not cause collisions.</li>
+              <li>Add a standard-library lock file next to the evidence file, using exclusive create on <code>&lt;evidence&gt;.lock</code>, retry every 50 ms for up to 5 seconds, and cleanup on close.</li>
+              <li>Add tests for empty file, missing file, existing entries, mixed ID/no-ID entries, duplicate IDs, append continuity, malformed lines, and two writer instances.</li>
+              <li>Update skill and report docs to state automated evidence has IDs at write time.</li>
+            </ol>
+
+            <h4>Edge Cases</h4>
+            <ul>
+              <li>Existing evidence files may contain entries without IDs.</li>
+              <li>Existing files may have non-sequential IDs, such as <code>EVID-001</code> and <code>EVID-010</code>.</li>
+              <li>Malformed lines are currently skipped; ID recovery must still be deterministic.</li>
+              <li>Concurrent writers can race on sequence numbers. The lock file must protect separate writer instances and separate processes.</li>
+              <li>Stale lock files should fail clearly after 5 seconds; do not wait forever and do not auto-delete the stale lock.</li>
+              <li>Hash computation must include the assigned ID and previous hash exactly once.</li>
+            </ul>
+
+            <h4>Acceptance Criteria</h4>
+            <div class="task-list">
+              <label class="task"><input type="checkbox" data-key="gap04-01"><span>Automated verify evidence entries receive stable <code>EVID-XXX</code> IDs at write time.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap04-02"><span>Hash-chain verification passes after ID assignment.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap04-03"><span>Evidence tests cover append continuity, mixed legacy entries, duplicate IDs, and lock contention.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap04-04"><span>Manual <code>evidence log</code> still writes hash-chained, ID-assigned entries, but uses factual result values only.</span></label>
+            </div>
+
+            <h4>Validation Commands</h4>
+            <pre><code>cd cli &amp;&amp; go test ./internal/evidence ./internal/verify
+make test</code></pre>
+          </div>
+        </article>
+
+        <article class="gap" id="gap-05">
+          <div class="gap-header">
+            <div>
+              <h3>5. Clarify Judgment Boundary</h3>
+              <p>Keep Ensphere as the measurement engine and make all classifications externally owned.</p>
+              <div class="pill-row">
+                <span class="pill p0">Priority P0</span>
+                <span class="pill">Phase 2</span>
+                <span class="pill">Product Integrity</span>
+              </div>
+            </div>
+            <div class="owner"><strong>Primary files</strong>cmd/evidence_log.go<br>internal/evidence/model.go<br>README.md<br>skills/SKILL.md<br>skills/shared/*</div>
+          </div>
+          <div class="gap-body">
+            <h4>Implementation Plan</h4>
+            <ol>
+              <li>Treat <code>Entry.Result</code> as factual measurement stage only.</li>
+              <li>Restrict result values to <code>baseline</code>, <code>probe</code>, <code>payload</code>, <code>control</code>, <code>callback</code>, and <code>manual_note</code> for this pass.</li>
+              <li>Add centralized validation for <code>Entry.Result</code> in the evidence package and update verify evidence writes to use the allowed values.</li>
+              <li>Move detailed stage names such as <code>true_probe</code>, <code>false_probe</code>, <code>high_priv</code>, <code>low_priv</code>, <code>injection</code>, and <code>verify</code> into <code>Notes</code> instead of <code>Result</code>.</li>
+              <li>Do not add <code>analysis_status</code>, <code>analysis_source</code>, or <code>analysis_at</code> fields in this hardening pass. Classification remains in AI/human reports.</li>
+              <li>Update <code>evidence log</code> examples so they do not imply the CLI generated <code>confirmed</code> or <code>safe</code>.</li>
+              <li>Search all code and docs for <code>confirmed</code>, <code>potential</code>, <code>safe</code>, <code>confidence</code>, and <code>status</code> in CLI-owned contexts.</li>
+              <li>Add tests or lints that fail if verify result JSON gains forbidden fields such as <code>status</code>, <code>confidence</code>, or <code>confirmed</code>.</li>
+            </ol>
+
+            <h4>Edge Cases</h4>
+            <ul>
+              <li>CVSS severity is deterministic from user-supplied metrics and is allowed, but docs should explain the user supplies the security judgment inputs.</li>
+              <li>Cloud parser ingests third-party severity from Prowler/Trivy. It should label that as source-provided, not Ensphere-generated.</li>
+              <li>Manual evidence logging must not record external conclusions in <code>Entry.Result</code>; use reports for conclusions.</li>
+              <li>Skill files may instruct the AI to classify. That is allowed because the AI layer owns judgment.</li>
+              <li>Existing evidence files with old result values should still be readable, but new writes must use the allowed values.</li>
+            </ul>
+
+            <h4>Acceptance Criteria</h4>
+            <div class="task-list">
+              <label class="task"><input type="checkbox" data-key="gap05-01"><span>CLI-owned verify outputs remain measurement-only.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap05-02"><span><code>Entry.Result</code> docs and examples are factual-only and exclude <code>confirmed</code>, <code>potential</code>, and <code>safe</code>.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap05-03"><span>Docs no longer imply Ensphere itself confirms vulnerabilities.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap05-04"><span>Tests reject new evidence writes with unsupported result values and reject forbidden judgment fields in verify outputs.</span></label>
+            </div>
+          </div>
+        </article>
+
+        <article class="gap" id="gap-06">
+          <div class="gap-header">
+            <div>
+              <h3>6. Upgrade and Reframe Static Scanner</h3>
+              <p>Make the scanner honest, tested, and incrementally stronger without pretending it is full SAST.</p>
+              <div class="pill-row">
+                <span class="pill p1">Priority P1</span>
+                <span class="pill">Phase 3</span>
+                <span class="pill">Scanner</span>
+              </div>
+            </div>
+            <div class="owner"><strong>Primary files</strong>internal/scan/*<br>internal/sinks/data/sinks.yaml<br>cmd/scan.go<br>README.md</div>
+          </div>
+          <div class="gap-body">
+            <h4>Locked Scope</h4>
+            <div class="callout">
+              <p>
+                Do Track A only in this hardening pass: keep the scanner regex-based,
+                make it honest, tested, bounded, and redacted. Do not implement AST
+                scanning yet.
+              </p>
+            </div>
+
+            <h4>Implementation Plan</h4>
+            <ol>
+              <li>Add tests for <code>RunScan</code>, <code>scanFile</code>, absence rules, excludes, and sorting.</li>
+              <li>Add a field like <code>engine: "regex"</code> or <code>analysis_depth: "pattern_match"</code> in scan output.</li>
+              <li>Document that matches are leads for AI/human review, not confirmed vulnerabilities.</li>
+              <li>Redact scanner context by default using shared redaction logic so matched tokens or secrets are not dumped.</li>
+              <li>Add <code>--context-lines</code> with bounds: default 2, minimum 0, maximum 5.</li>
+              <li>Add tests that compile every embedded sink regex and fail on invalid patterns.</li>
+            </ol>
+
+            <h4>Edge Cases</h4>
+            <ul>
+              <li>Binary files or huge generated files should be skipped or bounded.</li>
+              <li>Symlink loops should not cause infinite traversal.</li>
+              <li>Regexes may be invalid in sink YAML; invalid patterns must fail in tests, not only warn at runtime.</li>
+              <li>Scanner context can include secrets; redact sensitive values in output.</li>
+              <li>Absence rules can produce false positives when security settings are declared outside the fixed window.</li>
+            </ul>
+
+            <h4>Acceptance Criteria</h4>
+            <div class="task-list">
+              <label class="task"><input type="checkbox" data-key="gap06-01"><span>Scanner has positive, negative, exclude, and absence-rule tests.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap06-02"><span>Scan output clearly labels pattern-match analysis depth.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap06-03"><span>Docs call scanner results sink candidates, not vulnerabilities.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap06-04"><span>Context output is bounded, configurable, and redacted by default.</span></label>
+            </div>
+          </div>
+        </article>
+
+        <article class="gap" id="gap-07">
+          <div class="gap-header">
+            <div>
+              <h3>7. Reduce Verify Command Boilerplate</h3>
+              <p>Keep command files simple while removing repeated error handling, JSON encoding, and header parsing.</p>
+              <div class="pill-row">
+                <span class="pill p2">Priority P2</span>
+                <span class="pill">Phase 3</span>
+                <span class="pill">Maintainability</span>
+              </div>
+            </div>
+            <div class="owner"><strong>Primary files</strong>cmd/verify_*.go<br>cmd/root.go<br>cmd/helpers.go</div>
+          </div>
+          <div class="gap-body">
+            <h4>Implementation Plan</h4>
+            <ol>
+              <li>Add command helper functions for header parsing, JSON encoding, and verify error-to-exit-code handling.</li>
+              <li>Refactor 2 or 3 representative verify commands first: one simple command, one token command, one multi-URL command.</li>
+              <li>Run tests and compare help/output behavior before refactoring the rest.</li>
+              <li>Move repeated defaults into shared constants where appropriate.</li>
+              <li>Do not over-abstract command-specific flags into a complex framework unless repetition remains painful after small helpers.</li>
+            </ol>
+
+            <h4>Required Helper Surface</h4>
+            <pre><code>func parseHeaders(raw []string) map[string]string
+func encodeJSON(out interface{}) error
+func exitForVerifyError(err error) int
+func runVerify(fn func() (*verify.ProbeResult, error)) error</code></pre>
+
+            <h4>Edge Cases</h4>
+            <ul>
+              <li>Header values may contain colons. Split only once.</li>
+              <li>Invalid header syntax must be rejected as a usage error with exit code <code>2</code>.</li>
+              <li><code>RunE</code> handlers that call <code>os.Exit</code> are hard to test. A helper can preserve behavior while exposing testable logic.</li>
+              <li>Some commands have multiple URLs, such as CSV injection submit/export and RLS project URLs.</li>
+              <li>Exit codes must remain backward compatible.</li>
+            </ul>
+
+            <h4>Acceptance Criteria</h4>
+            <div class="task-list">
+              <label class="task"><input type="checkbox" data-key="gap07-01"><span>Common command helpers exist and are unit tested.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap07-02"><span>At least 5 representative verify commands use the helper path.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap07-03"><span>Exit-code behavior remains compatible with existing docs.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap07-04"><span>No business logic moves into <code>cli/cmd</code>.</span></label>
+            </div>
+          </div>
+        </article>
+
+        <article class="gap" id="gap-08">
+          <div class="gap-header">
+            <div>
+              <h3>8. Add CLI Golden and Schema Tests</h3>
+              <p>Protect the public JSON contract consumed by AI agents, scripts, and reports.</p>
+              <div class="pill-row">
+                <span class="pill p1">Priority P1</span>
+                <span class="pill">Phase 1</span>
+                <span class="pill">Contracts</span>
+              </div>
+            </div>
+            <div class="owner"><strong>Primary files</strong>cli/testdata/*<br>cmd/*_test.go<br>internal/verify/contracts_test.go</div>
+          </div>
+          <div class="gap-body">
+            <h4>Implementation Plan</h4>
+            <ol>
+              <li>Create representative semantic JSON tests for <code>payloads</code>, <code>cvss</code>, <code>template --list</code>, <code>checklist --list</code>, <code>compliance --list</code>, <code>openapi</code>, <code>evidence query</code>, and one verify output.</li>
+              <li>Parse JSON and assert fields, types, counts, schema versions, and stable invariants. Do not add a JSON Schema dependency in this pass.</li>
+              <li>Use exact golden fixtures only for stable, intentionally frozen sample outputs.</li>
+              <li>Add a forbidden-field assertion for verify outputs: no <code>status</code>, <code>confidence</code>, <code>confirmed</code>, <code>safe</code>, or <code>potential</code>.</li>
+              <li>Document schema versioning rules: breaking changes require version bump.</li>
+            </ol>
+
+            <h4>Edge Cases</h4>
+            <ul>
+              <li>Payload ordering must be deterministic if golden files assert exact arrays.</li>
+              <li>Pretty indentation should not be the main contract; parsed JSON shape is the contract.</li>
+              <li>Version fields should be asserted where present.</li>
+              <li>Schema tests should cover empty result sets and invalid filters.</li>
+              <li>Timestamp and duration values should be asserted by format/type, not exact value.</li>
+            </ul>
+
+            <h4>Acceptance Criteria</h4>
+            <div class="task-list">
+              <label class="task"><input type="checkbox" data-key="gap08-01"><span>Representative CLI JSON outputs have semantic contract tests.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap08-02"><span>Verify JSON output has forbidden-judgment-field checks.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap08-03"><span>Docs explain schema versioning expectations.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap08-04"><span>Exact golden fixtures are used only for stable sample outputs and are reviewed intentionally when changed.</span></label>
+            </div>
+          </div>
+        </article>
+
+        <article class="gap" id="gap-09">
+          <div class="gap-header">
+            <div>
+              <h3>9. Tighten Generated Payload DB Workflow</h3>
+              <p>Prevent YAML seeds, embedded SQLite, enum validation, and docs from drifting.</p>
+              <div class="pill-row">
+                <span class="pill p1">Priority P1</span>
+                <span class="pill">Phase 1</span>
+                <span class="pill">Generated Assets</span>
+              </div>
+            </div>
+            <div class="owner"><strong>Primary files</strong>assets/seeds/*.yaml<br>tools/seedgen<br>internal/payloads<br>README.md<br>docs/testing.md</div>
+          </div>
+          <div class="gap-body">
+            <h4>Implementation Plan</h4>
+            <ol>
+              <li>Add a <code>make verify-generated</code> target that regenerates seeds and checklist data, then checks <code>git diff --exit-code</code>.</li>
+              <li>Add seedgen tests for minimal fixtures, enum failures, duplicate IDs, invalid risk, missing required fields, and placeholder JSON.</li>
+              <li>Add a command or test that reports payload counts by vuln type and checks docs canaries.</li>
+              <li>Ensure seedgen output is deterministic: sort file inputs, use a fixed generated timestamp, keep SQLite pragmas stable, and vacuum consistently.</li>
+              <li>Update <code>make checklists</code> so it deletes <code>cli/internal/checklist/data/</code> before copying current checklist files.</li>
+              <li>Add CI coverage for <code>make verify-generated</code>.</li>
+            </ol>
+
+            <h4>Edge Cases</h4>
+            <ul>
+              <li>Timestamps in generated DB can cause non-deterministic binary changes if regenerated at different times; use a fixed timestamp.</li>
+              <li>SQLite file bytes may vary by SQLite version or pragma behavior; CI should use the same Go/SQLite dependency versions from <code>go.sum</code>.</li>
+              <li>Two payloads can generate the same ID if vuln type, technique, surface, and payload match.</li>
+              <li>Docs may reference total payload count, vuln type count, or supported DB engines in multiple places.</li>
+              <li>Checklist copy target can hide stale files if removed source files are not deleted first.</li>
+            </ul>
+
+            <h4>Acceptance Criteria</h4>
+            <div class="task-list">
+              <label class="task"><input type="checkbox" data-key="gap09-01"><span><code>make verify-generated</code> exists and fails on generated drift.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap09-02"><span>Seedgen has fixture-based tests for valid and invalid seed files.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap09-03"><span>Generated DB output is deterministic and suitable for byte-for-byte drift checks.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap09-04"><span>Payload counts in docs, tests, and DB stay synchronized.</span></label>
+            </div>
+          </div>
+        </article>
+
+        <article class="gap" id="gap-10">
+          <div class="gap-header">
+            <div>
+              <h3>10. Improve Repo Hygiene</h3>
+              <p>Keep local artifacts out of status and make developer setup predictable.</p>
+              <div class="pill-row">
+                <span class="pill p2">Priority P2</span>
+                <span class="pill">Phase 0</span>
+                <span class="pill">Repository</span>
+              </div>
+            </div>
+            <div class="owner"><strong>Primary files</strong>.gitignore<br>Makefile<br>README.md<br>docs/testing.md</div>
+          </div>
+          <div class="gap-body">
+            <h4>Implementation Plan</h4>
+            <ol>
+              <li>Add or update <code>.gitignore</code> for local Go caches, local binaries, evidence files, temporary PoC output, and OS/editor noise.</li>
+              <li>Keep intentional build outputs clear: <code>bin/ensphere</code> may be generated, while committed generated assets are limited to known embedded data.</li>
+              <li>Document expected local artifacts after running tests and smoke commands.</li>
+              <li>Add <code>make clean</code> coverage for all local generated artifacts, without deleting committed source data accidentally.</li>
+              <li>Run final <code>git status --short</code> after all validation commands.</li>
+            </ol>
+
+            <h4>Candidate Ignore Entries</h4>
+            <pre><code>cli/.gocache/
+cli/ensphere
+bin/
+evidence.jsonl
+ensphere-pentest/
+*.tmp
+.DS_Store</code></pre>
+
+            <h4>Edge Cases</h4>
+            <ul>
+              <li>Do not ignore committed generated files such as <code>cli/internal/payloads/payloads.sqlite</code>.</li>
+              <li>Do not ignore <code>cli/internal/checklist/data/</code> if it is intentionally embedded and tracked.</li>
+              <li>Ignore local evidence by default, but document how assessment artifacts should be stored when intentionally shared.</li>
+              <li>Ensure <code>make clean</code> does not erase source YAML seeds or skill files.</li>
+            </ul>
+
+            <h4>Acceptance Criteria</h4>
+            <div class="task-list">
+              <label class="task"><input type="checkbox" data-key="gap10-01"><span>Local artifacts such as <code>cli/.gocache/</code> and <code>cli/ensphere</code> no longer appear as untracked files.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap10-02"><span><code>.gitignore</code> does not hide committed generated assets that CI must verify.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap10-03"><span><code>make clean</code> removes expected local build artifacts safely.</span></label>
+              <label class="task"><input type="checkbox" data-key="gap10-04"><span>Developer docs explain what files should and should not remain after smoke/test runs.</span></label>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section id="risk-register">
+        <h2>Risk Register</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Risk</th>
+              <th>Impact</th>
+              <th>Mitigation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Over-refactoring command handlers</td>
+              <td>Breaks CLI behavior while trying to remove duplication.</td>
+              <td>Introduce helpers gradually; add command tests before broad refactors.</td>
+            </tr>
+            <tr>
+              <td>Generated DB byte drift</td>
+              <td>CI fails unpredictably or misses real source drift.</td>
+              <td>Make seedgen deterministic; compare semantic counts if binary bytes are not stable.</td>
+            </tr>
+            <tr>
+              <td>Evidence ID migration breaks existing files</td>
+              <td>Old assessments become hard to query or verify.</td>
+              <td>Support mixed ID/no-ID legacy files; add migration tests.</td>
+            </tr>
+            <tr>
+              <td>Judgment labels creep back into verify output</td>
+              <td>Violates core product principle.</td>
+              <td>Add forbidden-field tests and documentation rules.</td>
+            </tr>
+            <tr>
+              <td>Scanner marketed beyond capability</td>
+              <td>Users treat regex leads as confirmed vulnerabilities.</td>
+              <td>Label scan output as candidates and include analysis depth.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="validation-matrix">
+        <h2>Validation Matrix</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Command</th>
+              <th>When</th>
+              <th>Expected Outcome</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>git status --short --branch</code></td>
+              <td>Before and after each phase</td>
+              <td>Only intentional files are modified or untracked.</td>
+            </tr>
+            <tr>
+              <td><code>cd cli &amp;&amp; go test ./internal/evidence</code></td>
+              <td>After evidence changes</td>
+              <td>Evidence ID, redaction, reading, filtering, and hash-chain tests pass.</td>
+            </tr>
+            <tr>
+              <td><code>cd cli &amp;&amp; go test ./internal/scan ./internal/sinks</code></td>
+              <td>After scanner changes</td>
+              <td>Pattern matching, absence rules, excludes, and loaders pass.</td>
+            </tr>
+            <tr>
+              <td><code>cd cli &amp;&amp; go test ./cmd</code></td>
+              <td>After command-layer changes</td>
+              <td>CLI flag/output/exit behavior is protected.</td>
+            </tr>
+            <tr>
+              <td><code>make test</code></td>
+              <td>After each phase</td>
+              <td>Vet and full Go test suite pass.</td>
+            </tr>
+            <tr>
+              <td><code>make smoke</code></td>
+              <td>After generated asset, build, or CLI changes</td>
+              <td>Seeds compile, binary builds, and representative commands run.</td>
+            </tr>
+            <tr>
+              <td><code>cd cli &amp;&amp; go test -race -short ./internal/verify/</code></td>
+              <td>After verify, throttle, race, or evidence writer changes</td>
+              <td>No data races in short verify tests.</td>
+            </tr>
+            <tr>
+              <td><code>cd cli &amp;&amp; go test -cover ./...</code></td>
+              <td>At final audit</td>
+              <td><code>verify/evidence/openapi &gt;=70%</code>, <code>cvss &gt;=90%</code>, <code>callback &gt;=80%</code>, <code>scan/sinks/templates/compliance/checklist &gt;=50%</code>. <code>cmd</code> has representative subprocess tests.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="agent-prompt">
+        <h2>Reusable Agent Prompt</h2>
+        <p>
+          Use this prompt to hand one gap at a time to an AI coding agent. Keep the scope
+          narrow and require tests before moving to the next gap.
+        </p>
+        <pre><code>You are working in /Users/Zyepher/Developer/ensphere.
+
+Read AGENTS.md first. Preserve any user changes. Do not revert unrelated work.
+
+Goal: close Gap [NUMBER] from docs/production-grade-hardening-plan.html.
+
+Rules:
+- Treat the "Locked Decisions" section as binding.
+- Keep Ensphere as a deterministic measurement engine.
+- Do not add CLI-owned vulnerability status, confidence, or exploitability judgments.
+- Keep evidence Entry.Result factual only. Allowed values for this pass: baseline, probe, payload, control, callback, manual_note.
+- Ensure automated evidence receives EVID-XXX IDs at write time if this task touches evidence.
+- Put business logic in cli/internal/*, not cli/cmd/*.
+- Use focused tests for the changed behavior.
+- Run targeted tests first, then make test. Run make smoke if build, CLI, generated assets, or payload DB behavior changed.
+- Report exact files changed, tests run, and any residual risk.
+
+Start by inspecting the relevant files and proposing a short implementation plan.
+Then implement, test, and summarize.</code></pre>
+      </section>
+
+      <section id="release-checklist">
+        <h2>Release Checklist</h2>
+        <div class="grid-2">
+          <div class="band">
+            <h3>Engineering</h3>
+            <div class="task-list">
+              <label class="task"><input type="checkbox" data-key="rel-01"><span>CI pipeline green on main and pull request.</span></label>
+              <label class="task"><input type="checkbox" data-key="rel-02"><span>All high-priority gaps P0 and P1 are closed.</span></label>
+              <label class="task"><input type="checkbox" data-key="rel-03"><span>No forbidden judgment fields in verify JSON outputs.</span></label>
+              <label class="task"><input type="checkbox" data-key="rel-04"><span>Generated artifacts are synchronized and verified.</span></label>
+              <label class="task"><input type="checkbox" data-key="rel-05"><span>Command tests cover representative CLI usage.</span></label>
+            </div>
+          </div>
+          <div class="band">
+            <h3>Documentation</h3>
+            <div class="task-list">
+              <label class="task"><input type="checkbox" data-key="rel-06"><span>README and skill files describe current behavior accurately.</span></label>
+              <label class="task"><input type="checkbox" data-key="rel-07"><span>Testing docs include local and CI workflows.</span></label>
+              <label class="task"><input type="checkbox" data-key="rel-08"><span>Scanner docs state pattern-match limitations.</span></label>
+              <label class="task"><input type="checkbox" data-key="rel-09"><span>Evidence docs explain ID assignment and classification ownership.</span></label>
+              <label class="task"><input type="checkbox" data-key="rel-10"><span>Final audit records test output and residual risks.</span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="toolbar" aria-label="Progress controls">
+          <button type="button" id="resetProgress">Reset Progress</button>
+          <button type="button" id="printPlan">Print</button>
+        </div>
+        <p class="small print-note">Printed from the standalone Ensphere production-grade hardening plan.</p>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    (()=>{const p="ensphere-hardening:",b=[...document.querySelectorAll('input[type="checkbox"][data-key]')],t=document.getElementById("progressText"),bar=document.getElementById("progressBar"),up=()=>{const c=b.filter(x=>x.checked).length,n=b.length,pc=n?Math.round(c/n*100):0;t.textContent=`${c} of ${n} tasks complete (${pc}%)`;bar.style.width=pc+"%"};b.forEach(x=>{x.checked=localStorage.getItem(p+x.dataset.key)==="1";x.onchange=()=>{localStorage.setItem(p+x.dataset.key,x.checked?"1":"0");up()}});document.getElementById("resetProgress")?.addEventListener("click",()=>{if(confirm("Reset all saved checklist progress for this plan?")){b.forEach(x=>{x.checked=false;localStorage.removeItem(p+x.dataset.key)});up()}});document.getElementById("printPlan")?.addEventListener("click",()=>print());up()})();
+  </script>
+</body>
+</html>
