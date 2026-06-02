@@ -80,7 +80,7 @@ Read `ensphere-pentest/01-recon/report.md` for infrastructure clues discovered d
 2. No cloud CLI credentials are available (Step 1 below finds nothing)
 3. No IaC files are present in the source code (Step 2 below finds nothing, or assessment is BLACK_BOX)
 
-If skipping: write a brief report to `ensphere-pentest/07-cloud/report.md` stating "No cloud infrastructure in scope — session skipped", mark session SKIPPED in `progress.md`, and proceed to Session 09.
+If skipping: write a brief report to `ensphere-pentest/07-cloud/report.md` stating "No cloud infrastructure in scope — session skipped", mark session SKIPPED in `progress.md`, and proceed to Session 08.
 
 ### Step 1 — Detect Cloud Providers
 
