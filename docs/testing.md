@@ -74,7 +74,7 @@ CLI JSON tests assert parsed semantics rather than pretty formatting. Breaking o
 
 ## Conventions
 
-- Integration tests skip with `testing.Short()` — use `-short` for fast CI
+- Integration tests skip with `testing.Short()` - use `-short` for fast CI
 - Assertions are **relational** (e.g., `PayloadAvgMs > BaselineAvgMs`), never exact values or message strings
 - No `t.Parallel()` in timing-sensitive or raw-TCP tests
 - Use `newTestServer(t, handler)` for all test HTTP servers (IPv4-only, auto-cleanup); never use `httptest.NewServer` directly
