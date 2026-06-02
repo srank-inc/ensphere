@@ -116,7 +116,7 @@ func CountByResult(path string) (map[string]int, error) {
 	return counts, nil
 }
 
-// NextID reads the file, counts entries, and returns the next sequential ID.
+// NextID reads the file and returns the next ID after the max numeric EVID-XXX value.
 func NextID(path string) (string, error) {
 	entries, _, err := ReadAll(path)
 	if err != nil {
@@ -125,7 +125,13 @@ func NextID(path string) (string, error) {
 		}
 		return "", err
 	}
-	return fmt.Sprintf("EVID-%03d", len(entries)+1), nil
+	maxID := 0
+	for _, e := range entries {
+		if n, ok := parseEvidenceID(e.ID); ok && n > maxID {
+			maxID = n
+		}
+	}
+	return fmt.Sprintf("EVID-%03d", maxID+1), nil
 }
 
 // ChainResult holds the result of evidence chain verification.

@@ -53,7 +53,7 @@ ensphere cloud secrets --provider aws --in-scope "aws://ACCOUNT_ID"
 ensphere evidence log \
   --probe-type cloud_compute --technique cli_verification \
   --url "aws://ACCOUNT_ID/lambda/FUNCTION_NAME" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "Lambda function URL with AuthType=NONE — unauthenticated invocation"
 ```
@@ -101,7 +101,7 @@ aws apigatewayv2 get-routes --api-id API_ID \
 ensphere evidence log \
   --probe-type cloud_network --technique cli_verification \
   --url "aws://ACCOUNT_ID/apigateway/API_ID" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "API Gateway method GET /admin has AuthorizationType=NONE"
 ```
@@ -145,7 +145,7 @@ aws dynamodb list-global-tables
 ensphere evidence log \
   --probe-type cloud_storage --technique cli_verification \
   --url "aws://ACCOUNT_ID/dynamodb/TABLE_NAME" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "DynamoDB table uses AWS-owned CMK, PITR disabled"
 ```
@@ -188,7 +188,7 @@ aws sqs get-queue-attributes --queue-url QUEUE_URL --attribute-names SqsManagedS
 ensphere evidence log \
   --probe-type cloud_network --technique cli_verification \
   --url "aws://ACCOUNT_ID/sqs/QUEUE_NAME" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "SQS queue policy allows Principal:* with no condition restrictions"
 ```
@@ -229,7 +229,7 @@ aws cognito-identity get-identity-pool-roles --identity-pool-id POOL_ID
 ensphere evidence log \
   --probe-type cloud_iam --technique cli_verification \
   --url "aws://ACCOUNT_ID/cognito/POOL_ID" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "Cognito identity pool unauthenticated role has s3:GetObject on sensitive bucket"
 ```
@@ -283,7 +283,7 @@ aws s3 cp s3://BUCKET_NAME/index.html /dev/null --no-sign-request 2>/dev/null &&
 ensphere evidence log \
   --probe-type cloud_storage --technique anonymous_access \
   --url "aws://ACCOUNT_ID/s3/BUCKET_NAME" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "S3 bucket allows anonymous ListBucket via --no-sign-request"
 ```
@@ -353,7 +353,7 @@ aws iam list-mfa-devices --user-name USERNAME
 ensphere evidence log \
   --probe-type cloud_iam --technique iam_escalation \
   --url "aws://ACCOUNT_ID/iam/user/USERNAME" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "User has iam:PassRole + lambda:CreateFunction — escalation to any Lambda-assumable role"
 ```
@@ -404,7 +404,7 @@ aws iam list-open-id-connect-providers
 ensphere evidence log \
   --probe-type cloud_compute --technique cli_verification \
   --url "aws://ACCOUNT_ID/ecs/CLUSTER/SERVICE" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "ECS task definition contains plaintext DB_PASSWORD in environment variables"
 ```
@@ -455,7 +455,7 @@ aws rds describe-db-instances --db-instance-identifier INSTANCE_ID \
 ensphere evidence log \
   --probe-type cloud_storage --technique cli_verification \
   --url "aws://ACCOUNT_ID/rds/INSTANCE_ID" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "RDS instance publicly accessible with security group allowing 0.0.0.0/0 on port 5432"
 ```
@@ -483,15 +483,15 @@ aws ec2 describe-instances \
   --query 'Reservations[*].Instances[*].{ID:InstanceId,State:State.Name,IMDS:MetadataOptions.{HttpTokens:HttpTokens,HttpEndpoint:HttpEndpoint}}'
 ```
 
-If SSRF was confirmed in Session 06 and IMDSv1 is enabled, this is a critical chained finding.
+If the Session 06 report classifies SSRF and IMDSv1 is enabled, this is a critical chained finding.
 
 ```bash
 ensphere evidence log \
   --probe-type cloud_compute --technique metadata_access \
   --url "aws://ACCOUNT_ID/ec2/INSTANCE_ID" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
-  --notes "IMDSv1 enabled on instance hosting SSRF-vulnerable application — credential theft confirmed"
+  --notes "IMDSv1 enabled on instance associated with SSRF evidence"
 ```
 
 ---

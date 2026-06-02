@@ -1,11 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
 
 	"github.com/srank/ensphere/internal/verify"
@@ -86,21 +81,7 @@ func runVerifyRLS(cmd *cobra.Command, args []string) error {
 		},
 	}
 
-	result, err := verify.VerifyRLS(cfg)
-	if err != nil {
-		var scopeErr *verify.ScopeError
-		if errors.As(err, &scopeErr) {
-			fmt.Fprintf(os.Stderr, "scope error: %s\n", err)
-			os.Exit(2)
-		}
-		fmt.Fprintf(os.Stderr, "probe error: %s\n", err)
-		os.Exit(3)
-	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(result); err != nil {
-		fmt.Fprintf(os.Stderr, "encode error: %s\n", err)
-		os.Exit(3)
-	}
-	return nil
+	return runVerify(func() (*verify.ProbeResult, error) {
+		return verify.VerifyRLS(cfg)
+	})
 }

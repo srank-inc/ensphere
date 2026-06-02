@@ -5,15 +5,18 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
-	"time"
+	"sort"
 
-	_ "modernc.org/sqlite"
 	"gopkg.in/yaml.v3"
+	_ "modernc.org/sqlite"
 
 	"github.com/srank/ensphere/internal/enums"
 )
+
+const fixedGeneratedAt = "1970-01-01T00:00:00Z"
 
 const schema = `
 CREATE TABLE IF NOT EXISTS payloads (
@@ -88,71 +91,93 @@ func main() {
 		os.Exit(1)
 	}
 
-	seedsDir := os.Args[1]
-	outputPath := os.Args[2]
+	if err := runSeedgen(os.Args[1], os.Args[2], os.Stdout); err != nil {
+		fmt.Fprintf(os.Stderr, "seedgen: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func runSeedgen(seedsDir, outputPath string, out io.Writer) error {
+	if out == nil {
+		out = io.Discard
+	}
 
 	// Remove existing DB
-	os.Remove(outputPath)
+	if err := os.Remove(outputPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove existing db: %w", err)
+	}
 
 	db, err := sql.Open("sqlite", outputPath)
 	if err != nil {
-		fatal("open db: %v", err)
+		return fmt.Errorf("open db: %w", err)
 	}
 	defer db.Close()
 
-	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
-		fatal("set journal mode: %v", err)
+	if _, err := db.Exec("PRAGMA journal_mode=DELETE"); err != nil {
+		return fmt.Errorf("set journal mode: %w", err)
+	}
+	if _, err := db.Exec("PRAGMA synchronous=OFF"); err != nil {
+		return fmt.Errorf("set synchronous mode: %w", err)
 	}
 
 	if _, err := db.Exec(schema); err != nil {
-		fatal("create schema: %v", err)
+		return fmt.Errorf("create schema: %w", err)
 	}
 
 	files, err := filepath.Glob(filepath.Join(seedsDir, "*.yaml"))
 	if err != nil {
-		fatal("glob seeds: %v", err)
+		return fmt.Errorf("glob seeds: %w", err)
 	}
+	sort.Strings(files)
 	if len(files) == 0 {
-		fatal("no .yaml files found in %s", seedsDir)
+		return fmt.Errorf("no .yaml files found in %s", seedsDir)
 	}
 
-	now := time.Now().UTC().Format(time.RFC3339)
+	now := fixedGeneratedAt
 	totalPayloads := 0
 	totalTags := 0
+	seenIDs := make(map[string]string)
 
 	tx, err := db.Begin()
 	if err != nil {
-		fatal("begin tx: %v", err)
+		return fmt.Errorf("begin tx: %w", err)
 	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback()
+		}
+	}()
 
 	payloadStmt, err := tx.Prepare(`INSERT INTO payloads
 		(id, vuln_type, db_engine, runtime, technique, injection_surface, content_type, encoding, string_boundary, evidence_type, risk, payload, placeholders, notes, source, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
-		fatal("prepare payload stmt: %v", err)
+		return fmt.Errorf("prepare payload stmt: %w", err)
 	}
 	defer payloadStmt.Close()
 
 	tagStmt, err := tx.Prepare(`INSERT INTO payload_tags (payload_id, tag) VALUES (?, ?)`)
 	if err != nil {
-		fatal("prepare tag stmt: %v", err)
+		return fmt.Errorf("prepare tag stmt: %w", err)
 	}
 	defer tagStmt.Close()
 
 	for _, file := range files {
 		data, err := os.ReadFile(file)
 		if err != nil {
-			fatal("read %s: %v", file, err)
+			return fmt.Errorf("read %s: %w", file, err)
 		}
 
 		var seed SeedFile
 		if err := yaml.Unmarshal(data, &seed); err != nil {
-			fatal("parse %s: %v", file, err)
+			return fmt.Errorf("parse %s: %w", file, err)
 		}
 
-		fmt.Printf("Processing %s (%d payloads)\n", filepath.Base(file), len(seed.Payloads))
+		fmt.Fprintf(out, "Processing %s (%d payloads)\n", filepath.Base(file), len(seed.Payloads))
 
 		for i, p := range seed.Payloads {
+			sourceRef := fmt.Sprintf("%s: payload %d", filepath.Base(file), i)
 			vulnType := coalesce(p.VulnType, seed.Defaults.VulnType)
 			dbEngine := coalesce(p.DBEngine, seed.Defaults.DBEngine)
 			runtime := coalesce(p.Runtime, seed.Defaults.Runtime)
@@ -161,22 +186,22 @@ func main() {
 			source := coalesce(p.Source, seed.Defaults.Source)
 
 			if vulnType == "" {
-				fatal("%s: payload %d: vuln_type required", filepath.Base(file), i)
+				return fmt.Errorf("%s: vuln_type required", sourceRef)
 			}
 			if p.Technique == "" {
-				fatal("%s: payload %d: technique required", filepath.Base(file), i)
+				return fmt.Errorf("%s: technique required", sourceRef)
 			}
 			if p.InjectionSurface == "" {
-				fatal("%s: payload %d: injection_surface required", filepath.Base(file), i)
+				return fmt.Errorf("%s: injection_surface required", sourceRef)
 			}
 			if p.EvidenceType == "" {
-				fatal("%s: payload %d: evidence_type required", filepath.Base(file), i)
+				return fmt.Errorf("%s: evidence_type required", sourceRef)
 			}
 			if p.Risk < 1 || p.Risk > 5 {
-				fatal("%s: payload %d: risk must be 1-5, got %d", filepath.Base(file), i, p.Risk)
+				return fmt.Errorf("%s: risk must be 1-5, got %d", sourceRef, p.Risk)
 			}
 			if p.Payload == "" {
-				fatal("%s: payload %d: payload required", filepath.Base(file), i)
+				return fmt.Errorf("%s: payload required", sourceRef)
 			}
 			if encoding == "" {
 				encoding = "raw"
@@ -184,10 +209,14 @@ func main() {
 
 			// Validate enum values at build time
 			if err := enums.ValidateSeedPayload(vulnType, dbEngine, runtime, p.Technique, p.InjectionSurface, encoding, p.StringBoundary, p.EvidenceType, filepath.Base(file), i); err != nil {
-				fatal("%v", err)
+				return err
 			}
 
 			id := generateID(vulnType, p.Technique, p.InjectionSurface, p.Payload)
+			if previous, ok := seenIDs[id]; ok {
+				return fmt.Errorf("%s: duplicate payload ID %s already generated by %s", sourceRef, id, previous)
+			}
+			seenIDs[id] = sourceRef
 
 			placeholdersJSON, _ := json.Marshal(p.Placeholders)
 			if p.Placeholders == nil {
@@ -202,13 +231,13 @@ func main() {
 				now, now,
 			)
 			if err != nil {
-				fatal("%s: payload %d: insert: %v", filepath.Base(file), i, err)
+				return fmt.Errorf("%s: insert: %w", sourceRef, err)
 			}
 			totalPayloads++
 
 			for _, tag := range p.Tags {
 				if _, err := tagStmt.Exec(id, tag); err != nil {
-					fatal("%s: payload %d: tag %q: %v", filepath.Base(file), i, tag, err)
+					return fmt.Errorf("%s: tag %q: %w", sourceRef, tag, err)
 				}
 				totalTags++
 			}
@@ -216,18 +245,20 @@ func main() {
 	}
 
 	if err := tx.Commit(); err != nil {
-		fatal("commit: %v", err)
+		return fmt.Errorf("commit: %w", err)
 	}
+	committed = true
 
 	if _, err := db.Exec("PRAGMA journal_mode=DELETE"); err != nil {
-		fatal("switch journal mode: %v", err)
+		return fmt.Errorf("switch journal mode: %w", err)
 	}
 
 	if _, err := db.Exec("VACUUM"); err != nil {
-		fatal("vacuum: %v", err)
+		return fmt.Errorf("vacuum: %w", err)
 	}
 
-	fmt.Printf("\nDone: %d payloads, %d tags → %s\n", totalPayloads, totalTags, outputPath)
+	fmt.Fprintf(out, "\nDone: %d payloads, %d tags -> %s\n", totalPayloads, totalTags, outputPath)
+	return nil
 }
 
 func generateID(vulnType, technique, surface, payload string) string {
@@ -249,9 +280,4 @@ func nullableStr(s string) any {
 		return nil
 	}
 	return s
-}
-
-func fatal(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, "seedgen: "+format+"\n", args...)
-	os.Exit(1)
 }

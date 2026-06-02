@@ -146,9 +146,9 @@ Include when Assessment Mode is BLACK_BOX:
 
 ## Appendix A: Evidence Index
 
-| Evidence ID | Session | Probe Type | Technique | URL | Result | Finding Ref |
-|-------------|---------|------------|-----------|-----|--------|-------------|
-| EVID-001 | 02 | sqli | blind_time | ... | confirmed | VULN-001 |
+| Evidence ID | Session | Probe Type | Technique | URL | Result Stage | Finding Ref |
+|-------------|---------|------------|-----------|-----|--------------|-------------|
+| EVID-001 | 02 | sqli | blind_time | ... | payload | VULN-001 |
 | ... | ... | ... | ... | ... | ... | ... |
 
 ## Appendix B: Compliance Summary
@@ -227,9 +227,9 @@ Include in each finding the affected framework controls (OWASP Top 10, PCI-DSS, 
 ## Evidence Cross-Referencing
 
 1. Read all `evidence.jsonl` files from sessions 02-07 and 09 using `ensphere evidence query --file <path>`
-2. Assign sequential EVID-{NNN} starting from EVID-001 across all sessions
-3. Cross-reference each evidence entry with its corresponding VULN-{NNN} finding
-4. Populate Appendix A with all evidence entries
+2. Preserve evidence IDs assigned by `ensphere evidence log` or verify commands at write time
+3. Cross-reference each relevant evidence entry with its corresponding VULN-{NNN} finding
+4. Populate Appendix A with all evidence entries using factual result stages (`baseline`, `probe`, `payload`, `control`, `callback`, `manual_note`)
 
 ## Rules
 - Sessions marked SKIPPED in progress.md still have a report.md — read it for the skip reason and note it in Assessment Coverage

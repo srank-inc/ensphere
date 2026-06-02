@@ -18,6 +18,7 @@ var (
 	scanExitZero     bool
 	scanMinRisk      int
 	scanAbsenceCheck bool
+	scanContextLines int
 )
 
 var scanCmd = &cobra.Command{
@@ -31,7 +32,8 @@ SQL construction, command execution, and other security-relevant code patterns.
 Examples:
   ensphere scan ./src                          # scan all categories
   ensphere scan ./src --category sqli,xss      # filter by category
-  ensphere scan ./src --exclude "test/**"      # exclude patterns`,
+  ensphere scan ./src --exclude "test/**"      # exclude patterns
+  ensphere scan ./src --context-lines 0        # omit surrounding context`,
 	Args: cobra.ExactArgs(1),
 	RunE: runScan,
 }
@@ -43,6 +45,7 @@ func init() {
 	scanCmd.Flags().BoolVar(&scanExitZero, "exit-zero", false, "Always exit 0, even when matches are found")
 	scanCmd.Flags().IntVar(&scanMinRisk, "min-risk", 0, "Only exit 1 if matches at or above this risk level (1-5)")
 	scanCmd.Flags().BoolVar(&scanAbsenceCheck, "absence-check", false, "Enable IaC absence detection (missing security config)")
+	scanCmd.Flags().IntVar(&scanContextLines, "context-lines", 2, "Context lines before/after each match (0-5)")
 
 	rootCmd.AddCommand(scanCmd)
 }
@@ -70,6 +73,7 @@ func runScan(cmd *cobra.Command, args []string) error {
 		Extensions:   scanExtensions,
 		Excludes:     scanExcludes,
 		AbsenceCheck: scanAbsenceCheck,
+		ContextLines: scanContextLines,
 	}
 
 	result, err := scan.RunScan(cfg)

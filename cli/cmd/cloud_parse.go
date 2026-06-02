@@ -96,7 +96,7 @@ func logParseEvidence(result *cloud.ParseResult) {
 
 	for _, f := range result.Findings {
 		entry := evidence.NewEntry(f.VulnType, "cloud_audit", f.ResourceARN, f.CheckID, 0,
-			"", result.Source+"_finding", fmt.Sprintf("[%s] %s: %s", f.Severity, f.CheckTitle, f.Description))
+			"", evidence.ResultControl, fmt.Sprintf("source=%s stage=finding severity_source_provided=%s title=%s description=%s", result.Source, f.Severity, f.CheckTitle, f.Description))
 		_ = ew.Write(entry)
 	}
 }

@@ -4,8 +4,40 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"time"
 )
+
+const (
+	ResultBaseline   = "baseline"
+	ResultProbe      = "probe"
+	ResultPayload    = "payload"
+	ResultControl    = "control"
+	ResultCallback   = "callback"
+	ResultManualNote = "manual_note"
+)
+
+var allowedResults = map[string]bool{
+	ResultBaseline:   true,
+	ResultProbe:      true,
+	ResultPayload:    true,
+	ResultControl:    true,
+	ResultCallback:   true,
+	ResultManualNote: true,
+}
+
+// ValidResult reports whether result is an allowed factual evidence stage.
+func ValidResult(result string) bool {
+	return allowedResults[result]
+}
+
+// ValidateResult rejects CLI-owned security judgment labels in evidence Result.
+func ValidateResult(result string) error {
+	if ValidResult(result) {
+		return nil
+	}
+	return fmt.Errorf("invalid evidence result %q: use one of baseline, probe, payload, control, callback, manual_note", result)
+}
 
 // Entry represents a single evidence record written to the JSONL file.
 type Entry struct {

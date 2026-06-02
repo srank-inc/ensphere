@@ -58,7 +58,7 @@ ensphere cloud secrets --provider azure --in-scope "azure://SUBSCRIPTION_ID"
 ensphere evidence log \
   --probe-type cloud_compute --technique cli_verification \
   --url "azure://SUBSCRIPTION_ID/functionapp/FUNCTION_APP" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "Azure Function HTTP trigger has authLevel=anonymous — unauthenticated invocation"
 ```
@@ -110,7 +110,7 @@ az webapp cors show --name APP_NAME --resource-group RG
 ensphere evidence log \
   --probe-type cloud_compute --technique cli_verification \
   --url "azure://SUBSCRIPTION_ID/webapp/APP_NAME" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "App Service has remote debugging enabled and no IP access restrictions"
 ```
@@ -157,7 +157,7 @@ az cosmosdb sql database list --account-name ACCOUNT_NAME --resource-group RG -o
 ensphere evidence log \
   --probe-type cloud_storage --technique cli_verification \
   --url "azure://SUBSCRIPTION_ID/cosmosdb/ACCOUNT_NAME" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "Cosmos DB allows connections from all Azure datacenters (0.0.0.0 in IP rules)"
 ```
@@ -204,7 +204,7 @@ az monitor diagnostic-settings list \
 ensphere evidence log \
   --probe-type cloud_network --technique cli_verification \
   --url "azure://SUBSCRIPTION_ID/servicebus/NAMESPACE" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "Service Bus namespace has RootManageSharedAccessKey with public network access enabled"
 ```
@@ -249,7 +249,7 @@ az ad sp list --filter "appId eq 'APP_ID'" --query '[].{Name:displayName,AppRole
 ensphere evidence log \
   --probe-type cloud_iam --technique cli_verification \
   --url "azure://SUBSCRIPTION_ID/b2c/APP_ID" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "Azure AD B2C application has localhost redirect URI registered in production"
 ```
@@ -303,7 +303,7 @@ az monitor diagnostic-settings list \
 ensphere evidence log \
   --probe-type cloud_storage --technique anonymous_access \
   --url "azure://SUBSCRIPTION_ID/storage/ACCOUNT_NAME/CONTAINER" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "Blob container allows anonymous list — 200 response on unauthenticated container listing"
 ```
@@ -368,7 +368,7 @@ az rest --method GET \
 ensphere evidence log \
   --probe-type cloud_iam --technique iam_escalation \
   --url "azure://SUBSCRIPTION_ID/rbac/PRINCIPAL_ID" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "Service principal has User Access Administrator at subscription scope — can grant itself Owner"
 ```
@@ -420,7 +420,7 @@ kubectl get clusterrolebindings -o json | grep -B2 -A5 'cluster-admin'
 ensphere evidence log \
   --probe-type cloud_k8s --technique cli_verification \
   --url "azure://SUBSCRIPTION_ID/aks/CLUSTER_NAME" \
-  --result confirmed --session 7 \
+  --result control --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
   --notes "AKS cluster API server publicly accessible with no authorized IP ranges configured"
 ```

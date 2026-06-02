@@ -517,10 +517,10 @@ ensphere evidence log \
   --probe-type cloud_config \
   --technique prowler_audit \
   --url "aws://account-id/resource-arn" \
-  --result confirmed \
+  --result control \
   --session 7 \
   --file ./ensphere-pentest/07-cloud/evidence.jsonl \
-  --notes "S3 bucket publicly accessible — anonymous list/read confirmed"
+  --notes "S3 bucket permits anonymous list/read access"
 ```
 
 Use `probe-type` values: `cloud_config`, `cloud_iam`, `cloud_storage`, `cloud_network`, `cloud_compute`, `cloud_logging`, `iac_misconfig`, `cloud_k8s`.

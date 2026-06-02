@@ -280,17 +280,20 @@ ensphere template sqli-time-postgres --out ./poc/sqli
 ensphere scan ./src
 ensphere scan ./src --category sqli,xss
 ensphere scan ./src --exclude "test/**"
+ensphere scan ./src --context-lines 0
 ```
 
-JSON output with match details, file locations, risk levels. Exit 1 if matches found. Use `--exit-zero` to always exit 0, or `--min-risk N` to only fail on matches at or above risk level N.
+Regex-based sink discovery only: scan output is labeled with `analysis_depth: "pattern_match"` and should be treated as review leads, not confirmed vulnerabilities. JSON output includes match details, file locations, risk levels, bounded redacted context, and summaries. Exit 1 if matches found. Use `--exit-zero` to always exit 0, or `--min-risk N` to only fail on matches at or above risk level N.
 
 ### evidence — Evidence management
 
 ```bash
-ensphere evidence log --probe-type sqli --technique blind_time --url "http://target/api" --result confirmed --session 2
-ensphere evidence query --file ./evidence.jsonl --result confirmed --summary
+ensphere evidence log --probe-type sqli --technique blind_time --url "http://target/api" --result manual_note --session 2
+ensphere evidence query --file ./evidence.jsonl --result manual_note --summary
 ensphere evidence verify --file ./evidence.jsonl  # verify hash chain integrity
 ```
+
+New entries receive `EVID-XXX` IDs at write time and are protected by a hash chain. `result` is a factual stage only: `baseline`, `probe`, `payload`, `control`, `callback`, or `manual_note`. Vulnerability classification belongs in AI/human reports, not CLI evidence rows.
 
 ### cvss — CVSS calculator
 

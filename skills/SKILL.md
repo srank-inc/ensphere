@@ -95,7 +95,7 @@ Maintain `ensphere-pentest/progress.md`:
 | Session | Category       | Status  | Findings |
 |---------|---------------|---------|----------|
 | 01      | Recon          | DONE    | 45 endpoints, 3 roles mapped |
-| 02      | Injection      | DONE    | 2 SQLi confirmed |
+| 02      | Injection      | DONE    | 2 SQLi findings in report |
 | 03      | Auth           | SKIPPED | No authentication mechanism |
 | ...     | ...            | ...     | ...      |
 ```
@@ -248,7 +248,7 @@ ensphere payloads sqli --tag pg_sleep
 - `--technique`: blind_time, blind_boolean, error_based, union, metadata_access, internal_service, etc.
 - `--surface`: query, json_body, form_body, header, cookie, path
 - `--boundary`: single_quote, double_quote, numeric, unquoted
-- `--max-risk`: 1 (safe) to 5 (destructive) — default: 3
+- `--max-risk`: 1 (lowest-risk) to 5 (destructive) — default: 3
 - `--tag`: filter by semantic tag (pg_sleep, bypass, cloud, etc.)
 
 Output is JSON with `query` (echoed filters), `count`, and `results[]` (each with payload, placeholders, evidence_type, risk, notes, tags).
@@ -287,11 +287,11 @@ ensphere template <name> --out ./poc/<name>            # write to directory
 2. Materialize a matching template: `ensphere template sqli-time-postgres --out ./poc/sqli`
 3. Edit the config variables in `exploit.py`
 4. Run: `python3 exploit.py`
-5. If confirmed, use `ensphere verify` for multi-round verification
+5. If behavior warrants deeper measurement, use `ensphere verify` for multi-round verification
 
 ## Verification
 
-Targeted verification probes that confirm vulnerabilities with multiple rounds, evidence logging, and structured JSON output.
+Targeted verification probes that collect multi-round measurements with evidence logging and structured JSON output.
 
 ### `ensphere verify sqli`
 
@@ -440,16 +440,17 @@ Output is JSON with `vuln_type`, `framework_count`, and `mappings[]` (each with 
 
 ## Code Scanning
 
-Scan source code for dangerous sink patterns across all categories.
+Scan source code for dangerous sink pattern candidates across all categories.
 
 ### Usage
 ```bash
 ensphere scan <directory>                    # scan all categories
 ensphere scan ./src --category sqli,xss      # filter by category
 ensphere scan ./src --exclude "test/**"      # exclude patterns
+ensphere scan ./src --context-lines 0        # omit surrounding context
 ```
 
-Output is JSON with `directory`, `files_scanned`, `total_matches`, `matches[]`, and `summary[]`. Exit code 1 if matches found (CI-friendly). Use `--exit-zero` to always exit 0 (for JSON-only CI workflows), or `--min-risk N` to only exit 1 if matches at or above risk level N (1-5).
+Output is JSON with `directory`, `analysis_depth: "pattern_match"`, `files_scanned`, `total_matches`, redacted `matches[]`, and `summary[]`. Matches are leads for AI/human review, not confirmed vulnerabilities. Exit code 1 if matches found (CI-friendly). Use `--exit-zero` to always exit 0 (for JSON-only CI workflows), or `--min-risk N` to only exit 1 if matches at or above risk level N (1-5).
 
 ## OpenAPI Parser
 
@@ -926,19 +927,19 @@ Log and query structured evidence entries for audit trails.
 
 ### Log Evidence
 ```bash
-ensphere evidence log --probe-type sqli --technique blind_time --url "http://target/api" --result confirmed --session 2
-ensphere evidence log --probe-type xss --technique reflected --url "http://target/search" --result confirmed --finding-ref VULN-003
+ensphere evidence log --probe-type sqli --technique blind_time --url "http://target/api" --result manual_note --session 2
+ensphere evidence log --probe-type xss --technique reflected --url "http://target/search" --result manual_note --finding-ref VULN-003
 ```
 
-Auto-assigns sequential EVID-XXX IDs. Required flags: `--probe-type`, `--technique`, `--url`, `--result`.
+Auto-assigns sequential EVID-XXX IDs at write time and records hash-chain fields. Required flags: `--probe-type`, `--technique`, `--url`, `--result`.
 
 ```
---result: confirmed | potential | safe | baseline | probe
+--result: baseline | probe | payload | control | callback | manual_note
 ```
 
 ### Query Evidence
 ```bash
-ensphere evidence query --file ./evidence.jsonl --result confirmed
+ensphere evidence query --file ./evidence.jsonl --result manual_note
 ensphere evidence query --file ./evidence.jsonl --summary
 ensphere evidence query --file ./evidence.jsonl --probe-type sqli --limit 10
 ```

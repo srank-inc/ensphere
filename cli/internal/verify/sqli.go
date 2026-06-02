@@ -482,10 +482,22 @@ func writeEvidence(ew *evidence.Writer, probeType, technique, url, param string,
 	if ew == nil {
 		return
 	}
+	result, notes = normalizeEvidenceStage(result, notes)
 	entry := evidence.NewEntry(probeType, technique, url, param, statusCode, duration, result, notes)
 	if err := ew.Write(entry); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: evidence write failed: %v\n", err)
 	}
+}
+
+func normalizeEvidenceStage(result, notes string) (string, string) {
+	if evidence.ValidResult(result) {
+		return result, notes
+	}
+	stageNote := "stage=" + result
+	if notes == "" {
+		return evidence.ResultProbe, stageNote
+	}
+	return evidence.ResultProbe, stageNote + "; " + notes
 }
 
 func avgFromRounds(rounds []RoundResult) int64 {

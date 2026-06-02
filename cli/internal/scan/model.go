@@ -15,12 +15,13 @@ type ScanMatch struct {
 
 // ScanResult holds the complete output of a scan.
 type ScanResult struct {
-	Directory    string        `json:"directory"`
-	FilesScanned int           `json:"files_scanned"`
-	TotalMatches int           `json:"total_matches"`
-	Duration     string        `json:"duration"`
-	Matches      []ScanMatch   `json:"matches"`
-	Summary      []CategoryHit `json:"summary"`
+	Directory     string        `json:"directory"`
+	AnalysisDepth string        `json:"analysis_depth"`
+	FilesScanned  int           `json:"files_scanned"`
+	TotalMatches  int           `json:"total_matches"`
+	Duration      string        `json:"duration"`
+	Matches       []ScanMatch   `json:"matches"`
+	Summary       []CategoryHit `json:"summary"`
 }
 
 // CategoryHit summarizes matches for a single category.
@@ -37,4 +38,5 @@ type ScanConfig struct {
 	Extensions   []string // override file extensions; empty = use pattern defaults
 	Excludes     []string // glob patterns to skip
 	AbsenceCheck bool     // enable IaC absence detection
+	ContextLines int      // lines before/after a match, bounded 0-5
 }

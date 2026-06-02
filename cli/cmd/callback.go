@@ -94,8 +94,8 @@ func runCallback(cmd *cobra.Command, args []string) error {
 			defer ew.Close()
 			for _, cb := range result.Callbacks {
 				entry := evidence.NewEntry("callback", "oob", cb.Path, "", 200,
-					fmt.Sprintf("%dms", cb.ElapsedMs), "callback_received",
-					fmt.Sprintf("source=%s method=%s body_len=%d", cb.SourceIP, cb.Method, cb.BodyLength))
+					fmt.Sprintf("%dms", cb.ElapsedMs), evidence.ResultCallback,
+					fmt.Sprintf("stage=received source=%s method=%s body_len=%d", cb.SourceIP, cb.Method, cb.BodyLength))
 				_ = ew.Write(entry)
 			}
 		}

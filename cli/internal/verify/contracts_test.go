@@ -2,6 +2,8 @@ package verify
 
 import (
 	"errors"
+	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -477,5 +479,83 @@ func TestContracts_AdditionalConfigValidation(t *testing.T) {
 				t.Fatalf("expected *ScopeError, got %T: %v", err, err)
 			}
 		})
+	}
+}
+
+func TestContracts_NoForbiddenJudgmentJSONFields(t *testing.T) {
+	types := []interface{}{
+		ProbeResult{},
+		RoundResult{},
+		SQLiTimeMeasurements{},
+		SQLiBooleanMeasurements{},
+		SQLiErrorMeasurements{},
+		XSSMeasurements{},
+		IDORMeasurements{},
+		SSRFMeasurements{},
+		AuthMeasurements{},
+		RLSMeasurements{},
+		CMDiTimeMeasurements{},
+		LFIMeasurements{},
+		SSTIMeasurements{},
+		SSTIProbeResult{},
+		XXEMeasurements{},
+		DeserializationMeasurements{},
+		CSRFMeasurements{},
+		NoSQLMeasurements{},
+		JWTMeasurements{},
+		CORSMeasurements{},
+		CORSProbeResult{},
+		ProtoPollutionMeasurements{},
+		GraphQLMeasurements{},
+		RaceMeasurements{},
+		SmugglingMeasurements{},
+		CachePoisoningMeasurements{},
+		ClickjackingMeasurements{},
+		HeaderInjectionMeasurements{},
+		RedirectMeasurements{},
+		CSVInjectionMeasurements{},
+		AuthZMeasurements{},
+		OriginCheckResult{},
+		WebSocketMeasurements{},
+		PropertyAuthZMeasurements{},
+		WatchFieldResult{},
+		RateLimitMeasurements{},
+		LDAPMeasurements{},
+		GRPCMeasurements{},
+		XPathMeasurements{},
+		FileUploadMeasurements{},
+		MassAssignmentMeasurements{},
+		MassAssignFieldResult{},
+	}
+	for _, typ := range types {
+		assertNoForbiddenJSONTags(t, reflect.TypeOf(typ))
+	}
+}
+
+func assertNoForbiddenJSONTags(t *testing.T, typ reflect.Type) {
+	t.Helper()
+	for typ.Kind() == reflect.Pointer || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array {
+		typ = typ.Elem()
+	}
+	if typ.Kind() != reflect.Struct {
+		return
+	}
+	forbidden := map[string]bool{
+		"status":     true,
+		"confidence": true,
+		"confirmed":  true,
+		"safe":       true,
+		"potential":  true,
+	}
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+		tag := field.Tag.Get("json")
+		if tag != "" && tag != "-" {
+			name := strings.Split(tag, ",")[0]
+			if forbidden[name] {
+				t.Fatalf("%s.%s uses forbidden judgment JSON field %q", typ.Name(), field.Name, name)
+			}
+		}
+		assertNoForbiddenJSONTags(t, field.Type)
 	}
 }

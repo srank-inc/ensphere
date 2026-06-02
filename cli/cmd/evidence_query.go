@@ -28,7 +28,7 @@ var evidenceQueryCmd = &cobra.Command{
 	Long: `Query evidence entries from a JSONL file with optional filters.
 
 Examples:
-  ensphere evidence query --file ./evidence.jsonl --result confirmed
+  ensphere evidence query --file ./evidence.jsonl --result probe
   ensphere evidence query --file ./evidence.jsonl --probe-type sqli --limit 10
   ensphere evidence query --file ./evidence.jsonl --summary`,
 	RunE: runEvidenceQuery,
