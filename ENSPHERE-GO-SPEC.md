@@ -39,7 +39,7 @@ Templates: idor-uuid, sqli-time-postgres, ssrf-probe, auth-header-replay, upload
 ```
 cli/
   main.go                         # entry point → cmd.Execute()
-  go.mod                          # github.com/srank/ensphere, go 1.26.2
+  go.mod                          # github.com/srank/ensphere, go 1.26.3
   cmd/
     root.go                       # Cobra root command
     payloads.go                   # ensphere payloads <vuln_type>
