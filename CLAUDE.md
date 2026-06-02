@@ -56,8 +56,8 @@ make clean        # remove build artifacts
 ## Testing
 
 ```bash
-cd cli && go test -short ./...    # fast: ~258 tests, ~4s
-cd cli && go test ./...           # full: ~309 tests, ~11s
+cd cli && go test -short ./...    # fast suite
+cd cli && go test ./...           # full suite
 ```
 
 See `docs/testing.md` for the full test file inventory, conventions, and drift guard details.
@@ -95,6 +95,9 @@ See `docs/testing.md` for the full test file inventory, conventions, and drift g
 | Topic | File |
 |-------|------|
 | Full docs index | docs/index.md |
+| CLI reference | docs/cli-reference.md |
+| Agent workflow | docs/agent-workflow.md |
+| Development guide | docs/development.md |
 | Test inventory & conventions | docs/testing.md |
 | Monetization strategy | docs/monetization/monetization.md |
 | Billing API spec | docs/monetization/billing-api-spec.md |
