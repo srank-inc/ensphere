@@ -32,6 +32,26 @@ make verify-generated
 
 Do not edit generated files by hand.
 
+## Dependency Updates
+
+Dependency updates are maintained through controlled Dependabot pull requests plus maintainer review. Dependabot alerts provide vulnerability detection, and `.github/dependabot.yml` groups routine Go module and GitHub Actions updates so the repository gets a small number of reviewable PRs instead of update noise.
+
+For manual verification or maintainer-driven updates:
+
+```bash
+cd cli
+go list -m -u all
+go get <module>@<version>
+go mod tidy
+cd ..
+make test
+make smoke
+make verify-generated
+cd cli && go test -race -short ./internal/verify/
+```
+
+Merge dependency PRs only after CI passes and the change is understood. Do not auto-merge major updates or updates that alter generated assets without reviewing the regenerated output.
+
 ## Pull Requests
 
 Every pull request should describe:
