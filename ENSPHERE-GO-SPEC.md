@@ -196,7 +196,7 @@ cli/
 assets/seeds/                     # 30 YAML seed files (includes authz.yaml, mass-assignment.yaml)
 skills/                           # Claude Code skill files
   SKILL.md                        # /ensphere entry point
-  methodology/                    # 01-recon through 09-api + 08-report, with 07a-d cloud sub-files
+  methodology/                    # 01-recon through 09-report, with 07a-d cloud sub-files
   checklists/                     # 13 security checklists (4 web framework + 6 web framework + 3 cloud)
 ```
 

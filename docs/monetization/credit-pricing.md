@@ -194,8 +194,8 @@ A full 9-session web application assessment typically involves:
 | 05 | XSS | ~13 (5 verify + 8 payloads) |
 | 06 | SSRF | ~9 (4 verify + 4 payloads + 1 callback) |
 | 07 | Cloud | ~8 (6 cloud + 2 parse) |
-| 09 | API | ~11 (6 verify + 5 payloads) |
-| 08 | Report | evidence queries only |
+| 08 | API | ~11 (6 verify + 5 payloads) |
+| 09 | Report | evidence queries only |
 | **Total** | | **~86 tool calls** |
 
 All unlimited on any plan.

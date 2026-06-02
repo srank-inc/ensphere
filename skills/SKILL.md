@@ -111,8 +111,8 @@ Maintain `ensphere-pentest/progress.md`:
 | 05 | [methodology/05-xss.md](methodology/05-xss.md) | Cross-site scripting (reflected, stored, DOM) |
 | 06 | [methodology/06-ssrf.md](methodology/06-ssrf.md) | Server-side request forgery |
 | 07 | [methodology/07-cloud.md](methodology/07-cloud.md) | Cloud security (AWS, Azure, GCP, K8s, IaC) |
-| 09 | [methodology/09-api.md](methodology/09-api.md) | API security (rate limiting, property authz, mass assignment, pagination) |
-| 08 | [methodology/08-report.md](methodology/08-report.md) | Executive summary synthesis |
+| 08 | [methodology/08-api.md](methodology/08-api.md) | API security (rate limiting, property authz, mass assignment, pagination) |
+| 09 | [methodology/09-report.md](methodology/09-report.md) | Executive summary synthesis |
 
 ## Universal Rules
 
@@ -152,12 +152,12 @@ Not every session applies to every target. After Session 01 (Recon), use the Tec
 | 05 XSS | No user input reflected or stored in HTML responses (pure API with no rendered views) |
 | 06 SSRF | No server-side URL fetching, no outbound request sinks found in recon |
 | 07 Cloud | No cloud providers in scope, no cloud CLI credentials, no IaC files (see 07-cloud.md Phase 0) |
-| 09 API | No REST API, GraphQL, or gRPC endpoints discovered in recon |
+| 08 API | No REST API, GraphQL, or gRPC endpoints discovered in recon |
 
 **Rules:**
-- Session 01 (Recon) and Session 08 (Report) always run — never skip
+- Session 01 (Recon) and Session 09 (Report) always run — never skip
 - When in doubt, **run the session** — behavioral probing may discover attack surface that recon missed
-- A skipped session still gets a `report.md` (e.g., "No authentication mechanism detected — session skipped") so Session 08 can reference all sessions
+- A skipped session still gets a `report.md` (e.g., "No authentication mechanism detected — session skipped") so Session 09 can reference all sessions
 - The End Protocol plan for the next session should note applicability concerns based on current findings
 - The user can always force a session with `ensphere <number>` regardless of applicability
 

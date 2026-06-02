@@ -28,8 +28,8 @@ Run one session at a time and clear context between sessions. Progress persists 
 | 05 | XSS | Reflected, stored, DOM-based execution paths |
 | 06 | SSRF | Classic, blind, semi-blind, stored SSRF, redirect chains |
 | 07 | Cloud | AWS, Azure, GCP, Kubernetes, IaC, scanner ingestion |
-| 09 | API | Rate limiting, property authz, mass assignment, pagination, webhooks |
-| 08 | Report | Executive and technical report from evidence-backed findings |
+| 08 | API | Rate limiting, property authz, mass assignment, pagination, webhooks |
+| 09 | Report | Executive and technical report from evidence-backed findings |
 
 First run creates `ensphere-pentest/config.md` with target URL, credentials, authorization boundaries, and scope. The template lives at [../templates/config.md](../templates/config.md).
 

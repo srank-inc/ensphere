@@ -1,4 +1,4 @@
-# Session 08: Executive Report
+# Session 09: Executive Report
 
 Synthesize all category reports into a final security assessment.
 
@@ -22,7 +22,7 @@ Synthesize all category reports into a final security assessment.
    - `ensphere-pentest/05-xss/report.md`
    - `ensphere-pentest/06-ssrf/report.md`
    - `ensphere-pentest/07-cloud/report.md`
-   - `ensphere-pentest/09-api/report.md`
+   - `ensphere-pentest/08-api/report.md`
 
 2. Read external scan results (if they exist):
    - `ensphere-pentest/01-recon/nmap.txt`
@@ -31,19 +31,19 @@ Synthesize all category reports into a final security assessment.
 
 3. Read `ensphere-pentest/config.md` for target details and authorization statement.
 
-4. Read all evidence files from sessions 02-07 and 09:
+4. Read all evidence files from sessions 02-08:
    - `ensphere-pentest/02-injection/evidence.jsonl`
    - `ensphere-pentest/03-auth/evidence.jsonl`
    - `ensphere-pentest/04-authz/evidence.jsonl`
    - `ensphere-pentest/05-xss/evidence.jsonl`
    - `ensphere-pentest/06-ssrf/evidence.jsonl`
    - `ensphere-pentest/07-cloud/evidence.jsonl`
-   - `ensphere-pentest/09-api/evidence.jsonl`
+   - `ensphere-pentest/08-api/evidence.jsonl`
    Use `ensphere evidence query --file <path>` to read entries from each.
 
 ## Report Template
 
-Write to `ensphere-pentest/08-report/report.md`:
+Write to `ensphere-pentest/09-report/report.md`:
 
 ```markdown
 # Security Assessment Report

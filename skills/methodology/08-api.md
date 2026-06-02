@@ -1,4 +1,4 @@
-# Session 09: API Security
+# Session 08: API Security
 
 Assess API-specific vulnerabilities: rate limiting, property-level authorization, mass assignment, pagination abuse, API documentation exposure, and webhook security.
 
@@ -252,7 +252,7 @@ Probe different API version prefixes (`/api/v1/`, `/api/v2/`) to find deprecated
 
 ## Evidence Logging
 
-Log all findings to `ensphere-pentest/09-api/evidence.jsonl`:
+Log all findings to `ensphere-pentest/08-api/evidence.jsonl`:
 
 ```bash
 ensphere evidence log \
@@ -260,16 +260,16 @@ ensphere evidence log \
   --technique rate_limit_bypass \
   --url "TARGET/api/login" \
   --result probe \
-  --session 9 \
+  --session 8 \
   --notes "No rate limiting detected: 100 requests in 10s, 0 throttled"
 ```
 
 ## Report Format
 
-Write to `ensphere-pentest/09-api/report.md`:
+Write to `ensphere-pentest/08-api/report.md`:
 
 ```markdown
-# Session 09: API Security Report
+# Session 08: API Security Report
 
 ## Summary
 [Brief overview of API security posture]
