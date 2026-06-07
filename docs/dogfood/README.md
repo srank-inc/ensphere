@@ -2,6 +2,8 @@
 
 These runbooks are for running Ensphere against intentionally vulnerable local targets and producing sample reports from real evidence.
 
+For a quick target-to-report map, see [index.md](index.md).
+
 Targets:
 
 | Target | Runbook | Primary DB/Profile |

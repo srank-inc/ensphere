@@ -8,24 +8,24 @@ Covers: Reflected, Stored, and DOM-based XSS.
 |------|------|------|
 | Reflection check | Tier 1 | `ensphere verify xss` |
 | Initial payload testing | Tier 2 | `curl` via Bash |
-| DOM execution proof (L3 evidence) | Tier 3 | Playwright MCP (**REQUIRED** for confirmed XSS) |
+| DOM execution measurement | Tier 3 | Playwright MCP for browser evidence and screenshots |
 
 **Decision flow:**
 1. Use `ensphere verify xss` to check if payloads are reflected unencoded
 2. Use `curl` for rapid payload iteration and filter bypass testing
-3. Use Playwright for DOM execution proof — **required for L3 evidence**:
+3. Use Playwright for DOM execution evidence when browser proof is in scope:
    - `browser_navigate` to vulnerable page
    - Inject payload via `browser_type` / `browser_fill_form` or URL parameter
    - `browser_evaluate` to verify JS executed: `document.querySelector('#xss-proof') !== null` or `window.__xss_executed === true`
    - `browser_take_screenshot` → save to `ensphere-pentest/05-xss/screenshots/xss-{vuln-id}.png`
    - Record screenshot path and evaluate result in evidence
-   - Demonstrate impact: `browser_evaluate → document.cookie`, `localStorage.getItem('token')`, DOM data extraction
+   - Keep proof non-sensitive in Session 05. Credential or DOM data extraction belongs in Session 10.
 
 **Black-box note:** In BLACK_BOX mode, `ensphere sinks` is not available. Rely on reflection-based detection and JS analysis from Session 01 instead.
 
 ## Black-Box Path
 
-When assessment mode is BLACK_BOX, replace Phase A (sink-to-source analysis) with the following reflection-based approach. Phase B (Exploitation) still applies after this.
+When assessment mode is BLACK_BOX, replace Phase A (sink-to-source analysis) with the following reflection-based approach. Do not run exploitation by default; record candidate findings for Session 09 and optional Session 10.
 
 ### Phase A-BB: Reflection-Based XSS Detection (replaces sink-to-source analysis)
 
@@ -79,7 +79,7 @@ Build a filter profile: "This endpoint HTML-encodes `<>` but passes `"'()` throu
 - Compare page with JS enabled vs JS disabled (via curl): if input only reflected when JS runs, it's DOM-based
 
 **Step 6 — Stored XSS Testing**: For each write endpoint that accepts user input (profile name, comment, message, etc.):
-1. Submit a payload via the write endpoint (e.g., `POST /api/comments {"body":"<script>alert(1)</script>"}`)
+1. Submit a benign proof payload via the write endpoint (e.g., `POST /api/comments {"body":"<script>window.__xss_executed=true</script>"}`)
 2. Navigate to the read endpoint where stored content renders (e.g., `GET /comments` page)
 3. Use Playwright for execution proof:
    - `browser_navigate` to the page
@@ -87,7 +87,7 @@ Build a filter profile: "This endpoint HTML-encodes `<>` but passes `"'()` throu
    - `browser_take_screenshot` for L3 evidence
    - Save screenshot to `ensphere-pentest/05-xss/screenshots/`
 
-After Phase A-BB, proceed to **Phase B: Exploitation** (same as white-box path).
+After Phase A-BB, write evidence-backed findings and optional Session 10 candidates. Do not run prove-by-exploitation from Session 05 unless the user explicitly forces Session 10 later.
 
 ## Phase A: Sink-to-Source Analysis
 
@@ -133,9 +133,11 @@ For each sink:
 
 Mismatch = vulnerable. HTML encoding in a JS string context does NOT prevent XSS.
 
-## Phase B: Exploitation
+## Phase B: Verification and Session 10 Candidate Selection
 
-For each vulnerable path, craft context-aware payloads:
+For each vulnerable path, craft context-aware payloads to collect browser
+evidence. Do not use Session 05 to perform credential theft, unauthorized
+actions, or persistence. Those are optional Session 10 activities.
 
 ### Payload Strategy
 1. Start with the `witness_payload` from analysis
@@ -151,12 +153,15 @@ For each vulnerable path, craft context-aware payloads:
 - Parser differentials and mutation XSS (mXSS)
 - CSP bypasses: JSONP endpoints, script gadgets in allowed libraries, base-uri manipulation
 
-### Impact Demonstration
-Go beyond `alert(1)`:
-- **Session hijacking**: steal cookies (`document.cookie`) or JWTs from localStorage
-- **Unauthorized actions**: CSRF via XSS
-- **Credential harvesting**: inject convincing phishing forms
-- **Information disclosure**: extract sensitive data from DOM
+### Impact Candidate Selection
+Mark as Session 10 candidates when deeper proof would require:
+- Session hijacking with owned test sessions
+- Unauthorized actions through XSS
+- Credential harvesting simulation
+- Sensitive DOM data extraction
+
+Session 10 must define approvals, stop conditions, cleanup, and evidence paths
+before these actions run.
 
 ### Advanced Considerations
 - **DOM Clobbering**: inject HTML with id/name attributes to overwrite global JS variables
@@ -167,6 +172,7 @@ Go beyond `alert(1)`:
 ## Report Format
 
 Write to `ensphere-pentest/05-xss/report.md`:
-- Successfully Exploited (with type: Reflected/Stored/DOM, full payload, impact evidence)
+- Evidence-backed XSS findings (with type: Reflected/Stored/DOM, full payload, browser evidence)
+- Optional Session 10 candidates for impact proof
 - Vectors Confirmed Secure (table: Source | Endpoint | Defense | Render Context | Verdict)
 - CSP analysis and bypass attempts

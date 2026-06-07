@@ -39,6 +39,86 @@ ensphere payloads sqli --tag pg_sleep --limit 5
 
 Output includes `query`, `count`, and `results[]` with payload, placeholders, evidence type, risk, notes, and tags. Invalid filters return valid values.
 
+## Run
+
+Create and inspect the `ensphere-pentest/` workspace used by the agent
+workflow. The runner is conservative: it writes deterministic workspace files,
+`next-action.md`, and `agent-prompt.md`; it does not run AI reasoning or execute
+exploit attempts by itself.
+
+```bash
+ensphere run init \
+  --target "https://staging.example.com" \
+  --source yes \
+  --target-type api_backend \
+  --in-scope staging.example.com
+
+ensphere run status
+ensphere run plan
+ensphere run next
+ensphere run report
+
+# Only after Session 09 is DONE, exploitation is enabled, and findings are selected:
+ensphere run exploit --finding VULN-001 --finding VULN-004
+
+# Only after Session 10 writes exploit outcomes:
+ensphere run final
+```
+
+Common flags:
+
+```text
+--workspace              Workspace directory, default ensphere-pentest
+--target                 Target URL for run init
+--source                 Source availability: yes or no
+--target-type            auto, web_app, api_backend, static_site, mobile_client_remote_backend, mobile_client_offline, desktop_or_extension_client, cloud_only, library_or_cli
+--cloud                  none, aws, gcp, azure, kubernetes, or comma-separated
+--exploitation-enabled   Write config with optional Session 10 enabled
+--force                  For run plan, overwrite an existing assessment plan from config
+--finding                Finding ID for run exploit, repeatable
+```
+
+`run plan` writes `assessment-plan.yaml` and mirrors it to
+`01.5-session-plan/assessment-plan.yaml` when no plan exists. Existing plans are
+validated, copied to the Session 01.5 mirror, and not overwritten unless
+`--force` is set. The generated plan is deterministic. It starts from
+`config.md` and, when present, incorporates
+`01-recon/target-profile.yaml` for Recon-generated target type, backend
+inventory, client-only limitations, and session applicability signals.
+
+`run init` refuses to overwrite a workspace that already contains `config.md`
+or `progress.md`; use `run status` or `run next` to resume an initialized
+assessment.
+
+`run report` writes `09-report/report-gate.yaml` and
+`09-report/report-gate.md`. It blocks report readiness when required session
+reports are missing, sessions 01, 01.5, or 02-08 are not terminal,
+`assessment-plan.yaml` is missing or invalid, evidence hash-chain verification
+fails, or an existing finding registry contains uncited findings, missing
+required registry fields, invalid finding buckets, invalid confidence/severity
+values, invalid evidence categories, invalid coverage labels, or unsafe
+absolute/escaping transcript, artifact, or cleanup paths.
+
+`run exploit` validates and prepares selected finding files for Session 10. It
+refuses to run unless exploitation is explicitly enabled in `config.md` or
+`assessment-plan.yaml`, Session 09 is marked `DONE`,
+`09-report/finding-registry.yaml` exists and is valid, and every selected
+finding ID exists in that registry. It writes
+`10-exploitation/selected-findings.yaml` with `max_risk`, allowed actions,
+forbidden actions, cleanup requirements, required human/environment/plan gates,
+and workspace-relative evidence paths. It does not execute exploitation and
+still requires the Session 10 gates from the skill methodology. `run next`
+exposes Session 10 only after that handoff file exists and resolves against the
+valid Session 09 registry; it exposes Session 11 only after Session 10 is marked
+`DONE`.
+
+`run final` validates `10-exploitation/exploit-outcomes.yaml` against the
+Session 09 finding registry and Session 10 selected-finding handoff. It blocks
+when a selected finding has no outcome, an exploited outcome lacks proof
+citations, cleanup status is missing, or citation paths are unsafe. On success
+it writes a derived `11-final-report/finding-registry.yaml` plus evidence
+appendix. It does not modify `09-report/finding-registry.yaml` or evidence rows.
+
 ## Verify
 
 All verify commands require `--in-scope`. Output is JSON schema v2 with measurements only. No verify command emits CLI-owned vulnerability status, confidence, or exploitability.

@@ -1,6 +1,6 @@
 # Session 07: Cloud Security
 
-Covers: Cloud configuration auditing (AWS, Azure, GCP, Kubernetes), infrastructure-as-code scanning, and cloud-specific exploitation.
+Covers: Cloud configuration auditing (AWS, Azure, GCP, Kubernetes), infrastructure-as-code scanning, and cloud-specific verification.
 
 ## Tool Selection
 
@@ -174,7 +174,7 @@ Parse Prowler JSON results and organize findings by severity:
 
 | Priority | Severity | Action |
 |----------|----------|--------|
-| 1 | Critical | Investigate immediately — likely exploitable |
+| 1 | Critical | Investigate immediately and verify with native evidence |
 | 2 | High | Investigate — significant risk |
 | 3 | Medium | Document — remediation recommended |
 | 4 | Low | Document — best practice improvement |
@@ -303,9 +303,9 @@ ensphere cloud parse-prowler ./prowler-output.json --evidence ./evidence.jsonl
 ensphere cloud parse-trivy ./trivy-results.json --evidence ./evidence.jsonl
 ```
 
-## Phase B: Verification & Exploitation
+## Phase B: Verification and Evidence Capture
 
-Validate critical findings from Prowler and Trivy with native CLI commands. This phase confirms automated scanner results and tests for exploitability.
+Validate critical findings from Prowler and Trivy with native CLI commands. Imported scanner results are source-provided leads until corroborated by native cloud provider evidence or manual proof. Do not run destructive exploitation from Session 07; selected exploit proof belongs in Session 10.
 
 ### Step 1 — Validate Critical Prowler Findings
 
@@ -481,7 +481,7 @@ Check for cloud credentials exposed through various vectors:
 # Look for: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, GOOGLE_APPLICATION_CREDENTIALS, AZURE_CLIENT_SECRET
 # These may have been discovered in Sessions 01-02
 
-# Metadata service (if SSRF was confirmed in Session 06)
+# Metadata service (if Session 06 recorded strong SSRF evidence)
 # IMDSv1: http://169.254.169.254/latest/meta-data/iam/security-credentials/
 # IMDSv2 requires token — test if PUT to /latest/api/token works
 

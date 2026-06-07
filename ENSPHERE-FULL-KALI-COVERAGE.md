@@ -32,7 +32,7 @@ Ensphere is an autonomous penetration testing framework that combines Claude Cod
 
 | Layer | Component | Purpose |
 |-------|-----------|---------|
-| **Methodology** | 13 markdown skill files (sessions 01-09 + 4 cloud sub-files) | Tells the AI *what to do* — recon, injection, auth, authz, XSS, SSRF, cloud, API security, report |
+| **Methodology** | Markdown skill files (sessions 01-11 + 01.5 planner + 4 cloud sub-files) | Tells the AI *what to do* — recon, planning, injection, auth, authz, XSS, SSRF, cloud, API security, report, optional exploitation, final report |
 | **Payloads** | Curated SQLite database (1206 payloads, 27 vuln types, 65+ techniques) | Provides battle-tested attack strings instead of LLM-hallucinated payloads |
 | **Verification** | 33 Go-based probes (SQLi, XSS, IDOR, SSRF, Auth, RLS, CMDi, LFI, SSTI, XXE, Deserialization, CSRF, NoSQL, JWT, CORS, Prototype Pollution, GraphQL, Race, Smuggling, Cache Poisoning, Redirect, CSV Injection, AuthZ, Clickjacking, Header Injection, WebSocket, gRPC, LDAP, XPath, File Upload, Mass Assignment, Rate Limit, Property AuthZ) | Confirms findings with deterministic multi-round testing |
 | **Templates** | 13 Python exploit scripts (IDOR, SQLi, SSRF, auth replay, upload bypass, XSS, NoSQL, JWT, CMDi, deserialization, SSTI, LFI, XXE) | Pre-built exploit scaffolds |
@@ -984,8 +984,8 @@ Even with full Kali coverage, some penetration testing activities are fundamenta
 
 | Component | Current State | What's Needed |
 |-----------|--------------|---------------|
-| **Methodology files** | 9 sessions (recon → injection → auth → authz → XSS → SSRF → cloud → API → report) + 4 cloud sub-files (AWS, GCP, Azure, K8s) | Additional session tracks: network exploitation, privilege escalation, Active Directory, lateral movement, post-exploitation. Could be structured as optional "expansion packs" that activate based on engagement scope. |
-| **Payload database** | 27 vuln types, 1206 payloads (web/application layer) | New categories: network service payloads (SSH, SMB, FTP attack strings), privilege escalation commands per OS/kernel version, AD attack queries, cloud-specific exploitation payloads |
+| **Methodology files** | Standard 01-09 assessment sessions + 01.5 planner + optional 10-11 exploitation/final report + 4 cloud sub-files (AWS, GCP, Azure, K8s) | Additional session tracks: network exploitation, privilege escalation, Active Directory, lateral movement, post-exploitation. Could be structured as optional "expansion packs" that activate based on engagement scope. |
+| **Payload database** | 27 vuln types, 1206 payloads (web/application layer) | New categories: network service payloads (SSH, SMB, FTP attack strings), privilege escalation commands per OS/kernel version, AD attack queries, cloud impact-verification payloads |
 | **Verification probes** | 33 probes (SQLi, XSS, IDOR, SSRF, Auth, RLS, CMDi, LFI, SSTI, XXE, Deserialization, CSRF, NoSQL, JWT, CORS, Prototype Pollution, GraphQL, Race, Smuggling, Cache Poisoning, Redirect, CSV Injection, AuthZ, Clickjacking, Header Injection, WebSocket, gRPC, Rate Limit, Property AuthZ, LDAP, XPath, File Upload, Mass Assignment) | New probes: `ensphere verify service` (test network service auth), `ensphere verify privesc` (confirm privilege escalation), `ensphere verify ad` (test AD permissions) |
 | **Evidence system** | JSONL with secret redaction | Expand redaction to cover AD hashes, cloud credentials, internal IP addresses. Add screenshot support for post-exploitation proof. |
 | **Compliance mapping** | 5 frameworks, 40 vuln types | Add NIST 800-53, HIPAA. Expand existing frameworks to cover network/infrastructure controls. |

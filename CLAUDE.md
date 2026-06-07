@@ -38,7 +38,7 @@ Go CLI binary (`ensphere`) + Claude Code skill files (`skills/`). CLI commands a
 | `cli/tools/seedgen/` | YAML → SQLite compiler |
 | `assets/seeds/` | YAML payload seed files |
 | `skills/` | Claude Code skill files |
-| `skills/methodology/` | Session methodology (01-09, plus 07a-d cloud sub-files) |
+| `skills/methodology/` | Session methodology (01-11, plus 01.5 planner and 07a-d cloud sub-files) |
 | `skills/checklists/` | Security checklists |
 | `skills/shared/` | Evidence standards and proof-level definitions |
 
@@ -94,11 +94,12 @@ See `docs/testing.md` for the full test file inventory, conventions, and drift g
 
 | Topic | File |
 |-------|------|
+| Project index | index.md |
 | Full docs index | docs/index.md |
 | CLI reference | docs/cli-reference.md |
 | Agent workflow | docs/agent-workflow.md |
+| Methodology index | skills/methodology/index.md |
+| Workflow contract | skills/shared/workflow-contract.md |
 | Development guide | docs/development.md |
 | Test inventory & conventions | docs/testing.md |
-| Monetization strategy | docs/monetization/monetization.md |
-| Billing API spec | docs/monetization/billing-api-spec.md |
-| Credit pricing | docs/monetization/credit-pricing.md |
+| Autonomous pentest expansion plan | docs/ensphere-autonomous-pentest-expansion-plan.html |

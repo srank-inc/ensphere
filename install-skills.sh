@@ -112,9 +112,9 @@ if command -v go >/dev/null 2>&1; then
     echo "CLI built at $SCRIPT_DIR/bin/ensphere"
     echo "Run 'make install' from the repo to install to /usr/local/bin"
   else
-    echo "CLI build failed (non-fatal). Install Go 1.26.2+ and run 'make build' manually."
+    echo "CLI build failed (non-fatal). Install Go 1.26.4+ and run 'make build' manually."
   fi
 else
   echo ""
-  echo "Go not found: skipping CLI build. Install Go 1.26.2+ and run 'make build' to build the payload database CLI."
+  echo "Go not found: skipping CLI build. Install Go 1.26.4+ and run 'make build' to build the payload database CLI."
 fi

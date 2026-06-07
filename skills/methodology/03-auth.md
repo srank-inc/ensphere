@@ -1,24 +1,24 @@
 # Session 03: Authentication
 
-Analyze and exploit authentication mechanisms — identity verification and session management.
+Analyze authentication mechanisms — identity verification and session management.
 
 ## Tool Selection
 
 | Need | Tier | Tool |
 |------|------|------|
 | Token/session bypass | Tier 1 | `ensphere verify auth` |
-| Custom auth flows, brute force, rate limiting | Tier 2 | `curl` via Bash |
+| Custom auth flows and rate limiting | Tier 2 | `curl` via Bash |
 | OAuth/SSO redirect flows | Tier 3 | Playwright MCP (only when browser state required) |
 
 **Decision flow:**
 1. Use `ensphere verify auth --technique <type>` for automated bypass verification (no_token, expired_token, alg_none, method_override)
-2. Use `curl` for custom auth flows, brute force attempts, and rate limiting checks
+2. Use `curl` for custom auth flows, controlled abuse-defense checks, and rate limiting measurements
 3. Use Playwright ONLY for OAuth/SSO redirect flows requiring browser state:
    - `browser_navigate` to SSO login page
    - `browser_click` on SSO provider button
    - Observe redirect chain via `browser_network_requests`
-   - Capture tokens from URL fragments or cookies
-   - `browser_evaluate` to extract `document.cookie` or `localStorage`
+   - Record where tokens are stored in URL fragments, cookies, or browser storage
+   - `browser_evaluate` to inspect token storage using owned test sessions, redacting values
    - `browser_take_screenshot` for evidence
    - Test token replay and state parameter manipulation
 
@@ -51,7 +51,7 @@ If auth uses JWT (detected in Session 01 Technology Profile):
 - Send login with invalid-username + wrong-password → record response time
 - Timing difference >100ms suggests different code paths = user enumeration possible
 
-After these adjustments, proceed with the standard Phase A checklist and Phase B (Exploitation).
+After these adjustments, proceed with the standard Phase A checklist and Phase B bounded verification.
 
 ## Phase A: Analysis (9-Point Checklist)
 
@@ -117,32 +117,39 @@ Create a task for each checklist item.
 - **nOAuth check**: User identification uses immutable `sub` claim, NOT mutable attributes (`email`, `preferred_username`, `name`). Using mutable attributes allows attackers to impersonate users via their own OAuth tenant.
 → If failed: `login_flow_logic` / `token_management_issue` → oauth_code_interception / noauth_attribute_hijack
 
-## Phase B: Exploitation
+## Phase B: Verification and Session 10 Candidate Selection
 
-For each vulnerability found in Phase A, attempt active exploitation:
+For each weakness found in Phase A, gather bounded evidence and decide whether
+it should become a Session 10 candidate. Do not run destructive account attacks
+or broad credential attacks from Session 03.
 
-### Stage 1: Active Attack
-Execute the suggested attack pattern — not just confirmation, but actual exploitation:
-- **No rate limiting** → attempt brute force/enumeration with many requests
-- **Weak password policy** → create weak accounts AND try accessing other accounts
-- **User enumeration** → build list of valid users for subsequent attacks
-- **Missing HttpOnly** → attempt cookie theft via XSS vector
-- **Session fixation** → set session before auth, verify it persists after login
+### Stage 1: Bounded Verification
+Execute safe, scoped checks that preserve evidence:
+- **No rate limiting** -> measure controlled request bursts within configured limits
+- **Weak password policy** -> create only authorized test accounts
+- **User enumeration** -> compare response text, status, timing, and hashes without building real user lists
+- **Missing HttpOnly** -> record cookie flags and mark XSS chaining as a Session 10 candidate
+- **Session fixation** -> test only with owned test accounts
 
-### Stage 2: Impact Demonstration
-Prove you have become another user or bypassed authentication:
-- Visit protected page (`/profile`, `/dashboard`) as the victim user
-- Evidence: content of page proving assumed identity
-- Chain exploits: use enumerated users in password attacks
+### Stage 2: Candidate Selection
+Recommend Session 10 only when deeper proof is valuable and explicitly safe:
+- Account takeover proof using test accounts
+- Session hijacking proof using owned sessions
+- Password reset manipulation proof in a staging mailbox
+- OAuth or JWT forgery proof with reversible state
 
-### Attack Techniques
+### Session 10 Candidate Techniques
 - **Session hijacking**: inject stolen cookie via Playwright `addCookies()` or `curl -b`
-- **Credential stuffing**: POST to login with known weak/common passwords
+- **Credential attack simulation**: POST to login only with authorized test credentials and configured request limits
 - **JWT `alg:none`**: decode JWT, change `alg` to `none`, modify payload, re-encode without signature
 - **Password reset manipulation**: request reset for victim, intercept and redirect token
+
+These techniques are Session 10 material unless they can be reduced to
+non-mutating measurements with owned test accounts.
 
 ## Report Format
 
 Write to `ensphere-pentest/03-auth/report.md`:
-- Successfully Exploited (with full reproduction steps)
+- Evidence-backed auth findings and measurements
+- Session 10 candidates with required approvals and cleanup notes
 - Secure by Design: Validated Components (table of safe checks)

@@ -8,7 +8,7 @@ Covers: SQL injection, command injection, LFI/RFI, SSTI, path traversal, deseria
 |------|------|------|
 | SQL injection verification | Tier 1 | `ensphere verify sqli` — ALWAYS use first |
 | Payload lookup | Tier 1 | `ensphere payloads sqli/cmdi/lfi/ssti/xxe` |
-| Exploit templates | Tier 1 | `ensphere template sqli-time-postgres` |
+| Exploit templates | Tier 1 | `ensphere template sqli-time-postgres` for Session 10 candidate planning only |
 | Sink pattern discovery | Tier 1 | `ensphere sinks sqli/cmdi/lfi/ssti/deserialization/xxe` |
 | Non-SQLi injection (CMDi, LFI, SSTI, XXE) | Tier 2 | `curl` via Bash |
 | Browser-based testing | Tier 3 | **NEVER** — no benefit for server-side injection |
@@ -24,7 +24,7 @@ Covers: SQL injection, command injection, LFI/RFI, SSTI, path traversal, deseria
 
 ## Black-Box Path
 
-When assessment mode is BLACK_BOX, replace Phase A (code review) with the following. Phase B (Exploitation) still applies after this.
+When assessment mode is BLACK_BOX, replace Phase A (code review) with the following. Do not run exploitation by default; record candidate findings for Session 09 and optional Session 10.
 
 ### Phase A-BB: Behavioral Injection Detection (replaces code review)
 
@@ -46,15 +46,15 @@ Read the Technology Profile from `ensphere-pentest/progress.md` for DB engine an
 | `../../etc/passwd` | File path traversal | LFI |
 | `<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>` | XML entity | XXE (only on XML-accepting endpoints) |
 
-**Step 2 — Response Classification**: Map observed behaviors to injection types:
+**Step 2 — Response Interpretation**: Map observed behaviors to injection evidence types. These are analyst interpretations for the session report, not CLI result fields.
 
-| Observed Behavior | Classification | Next Step |
+| Observed Behavior | Interpretation | Next Step |
 |-------------------|---------------|-----------|
-| SQL error message (syntax error, unterminated string, relation does not exist, ORA-, MySQL error) | **SQLi confirmed** | Proceed to exploitation |
+| SQL error message (syntax error, unterminated string, relation does not exist, ORA-, MySQL error) | Strong SQLi evidence | Verify with `ensphere verify sqli` and record evidence |
 | Different response for `' AND 1=1--` vs `' AND 1=2--` | **SQLi likely (boolean-based blind)** | Verify with `ensphere verify sqli --technique blind_boolean` |
 | Same response regardless of input | **Input sanitized or ignored** | Try encoding variants |
-| `49` appears for `{{7*7}}` | **SSTI confirmed** | Proceed to exploitation |
-| File contents in response for `../../etc/passwd` | **LFI confirmed** | Proceed to exploitation |
+| `49` appears for `{{7*7}}` | Strong SSTI evidence | Record evidence and mark as Session 10 candidate if deeper proof is needed |
+| File contents in response for `../../etc/passwd` | Strong LFI evidence | Record evidence and mark as Session 10 candidate if deeper proof is needed |
 | Generic 403/block page | **WAF detected** | See Step 5 |
 | HTTP 500 with framework stack trace | **Error-based info disclosure** | Extract framework/DB info, retry with context-aware payloads |
 
@@ -96,7 +96,7 @@ Read the Technology Profile from `ensphere-pentest/progress.md` for DB engine an
 
 Run `ensphere verify --help` for the full list of 33 probes — use any that match the target's attack surface.
 
-After Phase A-BB, proceed to **Phase B: Exploitation** (same as white-box path — the exploitation steps are identical regardless of how injection points were discovered).
+After Phase A-BB, write evidence-backed findings and optional Session 10 candidates. Do not run prove-by-exploitation from Session 02 unless the user explicitly forces Session 10 later.
 
 ## Phase A: Vulnerability Analysis (Code Review)
 
@@ -139,7 +139,7 @@ For each source from the recon report:
 - Regex/generic escaping is insufficient where binds are required
 - Blacklists are insufficient for command injection
 
-## Phase B: Exploitation
+## Phase B: Verification and Session 10 Candidate Selection
 
 **Before crafting payloads manually, query the payload database:**
 ```bash
@@ -148,11 +148,11 @@ ensphere payloads sqli --db postgres --technique error_based --boundary single_q
 ```
 Use the returned payloads as starting points. Substitute placeholders (SLEEP_SECONDS, TABLE_NAME, etc.) with target-specific values. Only craft custom payloads if the database doesn't cover your exact context.
 
-**For structured exploitation, materialize a template:**
+**For structured Session 10 planning, materialize a template only when exploitation is explicitly enabled:**
 ```bash
 ensphere template sqli-time-postgres --out ./poc/sqli
-# Edit ./poc/sqli/exploit.py with target-specific values, then run:
-python3 ./poc/sqli/exploit.py
+# Edit ./poc/sqli/exploit.py with target-specific values for the Session 10 plan.
+# Do not run the template from Session 02.
 ```
 
 **For multi-round verification with evidence logging:**
@@ -161,20 +161,30 @@ ensphere verify sqli --url http://localhost:3000/api?id=1 --param id --in-scope 
 ensphere verify sqli --url http://localhost:3000/api?id=1 --param id --in-scope *.localhost --technique error_based
 ```
 
-For each vulnerable path found in Phase A, follow OWASP stages:
+For each vulnerable path found in Phase A, gather bounded evidence and decide
+whether deeper proof belongs in Session 10.
 
-### Stage 1: Confirmation
+### Stage 1: Bounded Verification
 Inject error-inducing characters, boolean conditions, and time delays.
 - **SQLi**: `'`, `"`, `)`, `;`, `\` | `' AND 1=1--` vs `' AND 1=2--` | `'; WAITFOR DELAY '00:00:05'--`
-- **CMDi**: `; ls -la` | `| whoami` | `` `id` `` | `$(cat /etc/passwd)`
-- **LFI**: `../../../../etc/passwd` | `....//....//etc/passwd`
+- **CMDi**: prefer timing or benign commands such as `id` only when explicitly in scope
+- **LFI**: use known low-sensitivity file signatures where authorized
 - **SSTI**: `{{7*7}}` | `${7*7}` | `<%= 7*7 %>`
 
 ### Stage 2: Fingerprinting
-Extract DB version, current user, table names. Identify most sensitive table and its columns.
+Record low-risk fingerprinting evidence such as DB error family, DB version
+banner only when exposed by the application, or stable timing/boolean behavior.
 
-### Stage 3: Exfiltration
-Extract first 5 rows from the most sensitive table as proof of impact.
+### Stage 3: Candidate Selection
+Mark as Session 10 candidates when stronger proof would require:
+- Extracting table names or rows
+- Reading sensitive files
+- Command execution beyond benign timing checks
+- Chaining LFI to code execution
+- Deserialization or SSTI impact proof
+
+Session 10 must define approvals, stop conditions, cleanup, and evidence paths
+before these actions run.
 
 ### Tool Strategy
 - Use `curl` for manual probing and crafting specific bypasses
@@ -185,8 +195,8 @@ Extract first 5 rows from the most sensitive table as proof of impact.
 
 Write to `ensphere-pentest/02-injection/report.md`:
 
-### Successfully Exploited
-For each: vulnerability ID, type, endpoint, slot type, payload chain, proof of data extraction.
+### Evidence-Backed Findings
+For each: vulnerability ID, type, endpoint, slot type, payload chain, evidence IDs, transcripts, and optional Session 10 candidate reason.
 
 ### False Positive Rules
 - Early sanitization followed by concat = still tainted

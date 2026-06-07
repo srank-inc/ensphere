@@ -14,7 +14,7 @@ seeds:
 checklists:
 	rm -rf cli/internal/checklist/data
 	@mkdir -p cli/internal/checklist/data
-	cp skills/checklists/*.md cli/internal/checklist/data/
+	find skills/checklists -maxdepth 1 -type f -name '*.md' ! -name 'index.md' -exec cp {} cli/internal/checklist/data/ \;
 
 verify-generated: seeds checklists
 	@git ls-files --error-unmatch cli/internal/payloads/payloads.sqlite >/dev/null 2>&1 || (echo "generated asset is not tracked: cli/internal/payloads/payloads.sqlite"; exit 1)

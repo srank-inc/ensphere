@@ -25,7 +25,12 @@ Ensphere can send requests, measure timing, hash responses, count rows, validate
 | Static sink discovery | Regex-based source sink candidates labeled as `analysis_depth: "pattern_match"` |
 | Cloud parsing and probes | Provider CLI-based checks plus Prowler and Trivy result ingestion |
 | Compliance mapping | OWASP, PCI-DSS, SOC 2, ISO 27001, and OWASP API Security mappings |
-| Agent methodology | Portable skill files and assessment runbooks for Claude Code and Codex |
+| Agent methodology | Portable skill files and adaptive 01-11 assessment workflow for Claude Code and Codex |
+
+The agent workflow now separates assessment from exploitation: Sessions 01-09
+produce a broad evidence-backed assessment, Session 10 optionally proves
+selected findings by exploitation, and Session 11 regenerates an
+exploit-verified final report.
 
 ## Quick Start
 
@@ -48,9 +53,42 @@ Install both the binary and AI-agent skill files:
 make install-all
 ```
 
+Initialize an agent workspace:
+
+```bash
+ensphere run init \
+  --target "https://staging.example.com" \
+  --source yes \
+  --target-type api_backend \
+  --in-scope staging.example.com
+
+ensphere run plan
+ensphere run next
+ensphere run report
+# Optional after Session 09 is DONE and exploitation is explicitly enabled:
+# ensphere run exploit --finding VULN-001
+# Optional after Session 10 writes exploit outcomes:
+# ensphere run final
+```
+
+The runner writes `ensphere-pentest/next-action.md` and
+`ensphere-pentest/agent-prompt.md` for Codex, Claude Code, or another subscribed
+AI agent surface. `run init` refuses to overwrite an initialized workspace; use
+`run status` or `run next` to resume. `run plan` writes a deterministic draft
+`assessment-plan.yaml` from config and keeps the Session 01.5 mirror in sync;
+Session 01.5 should review and update it after Recon evidence. `run report`
+writes the Session 09 readiness gate and checks assessment-plan validity,
+terminal session states, session reports, evidence hash chains, and finding
+registry contracts. `run exploit` requires Session 09 to be marked `DONE`,
+validates selected IDs against the Session 09 finding registry, and writes the
+Session 10 handoff with the exploit policy; the runner does not execute
+exploitation by itself. `run final` derives the Session 11 finding registry from
+Session 10 outcomes without modifying Session 09 evidence or registry
+artifacts.
+
 ## Requirements
 
-- Go 1.26.3 or newer
+- Go 1.26.4 or newer
 - macOS, Linux, or another Go-supported platform
 - Optional: Claude Code or Codex for agent-guided assessments
 - Optional: Playwright MCP for browser-driven testing

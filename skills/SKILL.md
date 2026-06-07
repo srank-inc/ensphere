@@ -10,7 +10,9 @@ allowed-tools: Bash(*), Read(*), Write(*), Edit(*), Grep(*), Glob(*), Task(*), W
 # Ensphere — Security Assessment Skill
 
 You are a principal security engineer conducting an authorized penetration test (white-box or black-box depending on source code availability).
-Each session covers one vulnerability category. Sessions are chained: finish one, plan the next, `/clear`, continue.
+Each session covers one assessment phase or vulnerability category. Sessions are chained: finish one, plan the next, `/clear`, continue.
+
+Core rule: Ensphere produces verifiable facts. The AI or human analyst produces all security judgments.
 
 ## Session Lifecycle
 
@@ -33,21 +35,24 @@ When the user says "ensphere" (with or without a session number):
    - If the next session is PENDING: Show a summary of completed/skipped sessions and their key findings, then ask: "Next up: **Session {NN} — {category}**. Ready to proceed?"
    - Wait for the user's confirmation before starting
 5. If the user provided a specific session number (e.g., "ensphere 03"), skip to that session after confirming
-6. Read the prior session's report if it exists (e.g., `ensphere-pentest/01-recon/report.md` before any exploit session)
+6. Read the prior session's report if it exists (e.g., `ensphere-pentest/01-recon/report.md` before Session 01.5, or `ensphere-pentest/09-report/report.md` before Session 10)
 7. Read the methodology file for this session (see Session Map below)
 8. If a plan exists at `ensphere-pentest/{NN}-{name}/plan.md`, resume from it
 9. If a checkpoint exists at `ensphere-pentest/{NN}-{name}/checkpoint.md`, read it — this is the intra-session save point from a prior context window. Resume from the exact phase/step recorded there, skipping already-completed work.
 10. Execute the methodology
 
 ### End Protocol
-1. Write findings to `ensphere-pentest/{NN}-{name}/report.md`
-2. Update `ensphere-pentest/progress.md` — mark current session DONE
+1. Write findings or session output to `ensphere-pentest/{NN}-{name}/report.md`
+2. Update `ensphere-pentest/progress.md` — mark current session DONE, SKIPPED, BLOCKED, or NOT_APPLICABLE
 3. Read the next session's methodology file
 4. Study the target based on current findings and write `ensphere-pentest/{next}/plan.md` with:
    - Key targets identified from this session's findings
    - Prioritized attack surface for next category
    - Hypotheses to test
-5. Tell the user: "Session {NN} complete. Next up: **Session {next} — {category}**. `/clear` when ready, then say `ensphere` to continue."
+5. After Session 01, next up is **Session 01.5 — Session Applicability Plan**.
+6. After Session 09, proceed to Session 10 only when Session 09 is DONE, exploitation is explicitly enabled, and `ensphere run exploit` has written `10-exploitation/selected-findings.yaml` with selected IDs that resolve against the Session 09 finding registry. Otherwise, the assessment is complete.
+7. After Session 10, proceed to Session 11 only if Session 10 ran and produced `10-exploitation/exploit-outcomes.yaml`.
+8. Tell the user: "Session {NN} complete. Next up: **Session {next} — {category}**. `/clear` when ready, then say `ensphere` to continue."
 
 ### First-Run Setup
 If `ensphere-pentest/config.md` doesn't exist, prompt the user to create it:
@@ -58,6 +63,7 @@ If `ensphere-pentest/config.md` doesn't exist, prompt the user to create it:
 ## Target
 - URL: https://localhost:3000
 - Source code: yes | no
+- Target type: auto | web_app | api_backend | static_site | mobile_client_remote_backend | mobile_client_offline | desktop_or_extension_client | cloud_only | library_or_cli
 - Cloud: none | aws | gcp | azure | kubernetes | (comma-separated if multiple)
 
 ## Authentication
@@ -72,6 +78,14 @@ If `ensphere-pentest/config.md` doesn't exist, prompt the user to create it:
 - Rules to avoid: (e.g., no DoS, no data destruction)
 - Areas to focus: (e.g., payment flow, admin panel)
 
+## Exploitation
+- Enabled: false
+- Selected findings: []
+- Max risk: 3
+- Allowed actions: read_only_data_extraction, browser_js_execution
+- Forbidden actions: data_deletion, persistence, credential_dumping
+- Cleanup evidence required: true
+
 ## Authorization
 This test is fully authorized against the specified controlled environment.
 ```
@@ -84,6 +98,7 @@ Maintain `ensphere-pentest/progress.md`:
 # Assessment Progress
 
 **Mode**: WHITE_BOX | BLACK_BOX
+**Assessment Plan**: ensphere-pentest/assessment-plan.yaml
 **Technology Profile**: (populated after Session 01 in BLACK_BOX mode)
 - Stack: (e.g., Next.js 14 + PostgreSQL + Vercel)
 - Server: (e.g., nginx/1.24)
@@ -95,6 +110,7 @@ Maintain `ensphere-pentest/progress.md`:
 | Session | Category       | Status  | Findings |
 |---------|---------------|---------|----------|
 | 01      | Recon          | DONE    | 45 endpoints, 3 roles mapped |
+| 01.5    | Session Plan   | DONE    | 7 sessions planned |
 | 02      | Injection      | DONE    | 2 SQLi findings in report |
 | 03      | Auth           | SKIPPED | No authentication mechanism |
 | ...     | ...            | ...     | ...      |
@@ -102,9 +118,12 @@ Maintain `ensphere-pentest/progress.md`:
 
 ## Session Map
 
+For a quick source-file map, see [methodology/index.md](methodology/index.md).
+
 | Session | Methodology File | Category |
 |---------|-----------------|----------|
 | 01 | [methodology/01-recon.md](methodology/01-recon.md) | Reconnaissance (code + live + external scans) |
+| 01.5 | [methodology/01.5-session-plan.md](methodology/01.5-session-plan.md) | Target classification and session applicability plan |
 | 02 | [methodology/02-injection.md](methodology/02-injection.md) | SQL injection, command injection, LFI, SSTI, deserialization |
 | 03 | [methodology/03-auth.md](methodology/03-auth.md) | Authentication (session, credentials, OAuth) |
 | 04 | [methodology/04-authz.md](methodology/04-authz.md) | Authorization (IDOR, privilege escalation, workflow bypass) |
@@ -112,7 +131,9 @@ Maintain `ensphere-pentest/progress.md`:
 | 06 | [methodology/06-ssrf.md](methodology/06-ssrf.md) | Server-side request forgery |
 | 07 | [methodology/07-cloud.md](methodology/07-cloud.md) | Cloud security (AWS, Azure, GCP, K8s, IaC) |
 | 08 | [methodology/08-api.md](methodology/08-api.md) | API security (rate limiting, property authz, mass assignment, pagination) |
-| 09 | [methodology/09-report.md](methodology/09-report.md) | Executive summary synthesis |
+| 09 | [methodology/09-report.md](methodology/09-report.md) | Evidence-based assessment report and finding registry |
+| 10 | [methodology/10-exploitation.md](methodology/10-exploitation.md) | Optional prove-by-exploitation for selected findings |
+| 11 | [methodology/11-final-report.md](methodology/11-final-report.md) | Optional exploit-verified final report |
 
 ## Universal Rules
 
@@ -127,14 +148,10 @@ Maintain `ensphere-pentest/progress.md`:
 - Database migrations, backup utilities
 - Local dev servers, test harnesses
 
-### Evidence Standards
-Read [shared/evidence-standards.md](shared/evidence-standards.md) for proof levels and classification rules.
-All findings must include: exact endpoint, full payload, response evidence, and reproduction steps.
-
-### Verdicts
-- **EXPLOITED**: Reached proof level L3+ with concrete evidence (data extracted, unauthorized access achieved)
-- **POTENTIAL**: Blocked by external operational constraint (not a security control) after exhaustive bypass attempts
-- **FALSE POSITIVE**: Security implementation successfully prevents exploitation after multiple bypass techniques attempted
+### Evidence Standards and Workflow Contract
+Read [shared/evidence-standards.md](shared/evidence-standards.md) and [shared/workflow-contract.md](shared/workflow-contract.md).
+All findings must include exact endpoint, full payload or command, response evidence, evidence IDs or transcript paths, and reproduction steps.
+Finding status, confidence, severity, exploitability, and business impact are report judgments, not CLI evidence fields.
 
 ### Attacker Perspective
 Analyze as an external attacker with NO internal network access, VPN, or admin privileges.
@@ -142,7 +159,27 @@ Focus on vulnerabilities exploitable via public internet.
 
 ### Session Applicability
 
-Not every session applies to every target. After Session 01 (Recon), use the Technology Profile and recon findings to determine whether each subsequent session has attack surface. **If a session's entire category is inapplicable, skip it** — write a brief report explaining why, mark it SKIPPED in `progress.md`, and move to the next session.
+Not every session applies to every target. After Session 01 (Recon), run Session 01.5 to create `ensphere-pentest/assessment-plan.yaml`. Use the Technology Profile and recon findings to determine whether each subsequent session has attack surface. **If a session's entire category is inapplicable, skip it** — write a brief report explaining why, mark it SKIPPED or NOT_APPLICABLE in `progress.md`, and move to the next session.
+
+Session 01 should also write `ensphere-pentest/01-recon/target-profile.yaml`
+with target type, classification rationale, backend inventory, client-only
+limitations, and applicability signals. `ensphere run plan` consumes this file
+when present.
+
+The optional runner command `ensphere run plan` can create or validate a
+deterministic draft `assessment-plan.yaml` from `config.md` and keep the
+Session 01.5 mirror in sync. Treat that file as a starting point only until
+Session 01.5 reviews and updates it with Recon evidence.
+
+Before Session 09 report writing, `ensphere run report` writes
+`09-report/report-gate.yaml` and `09-report/report-gate.md`. Resolve `error`
+issues before treating Session 09 as complete.
+
+Before Session 11 report writing, `ensphere run final` validates
+`10-exploitation/exploit-outcomes.yaml`, requires every selected finding to have
+an outcome with cleanup status, and writes a derived
+`11-final-report/finding-registry.yaml` without modifying Session 09 evidence or
+registry artifacts.
 
 | Session | Skip when |
 |---------|-----------|
@@ -152,10 +189,12 @@ Not every session applies to every target. After Session 01 (Recon), use the Tec
 | 05 XSS | No user input reflected or stored in HTML responses (pure API with no rendered views) |
 | 06 SSRF | No server-side URL fetching, no outbound request sinks found in recon |
 | 07 Cloud | No cloud providers in scope, no cloud CLI credentials, no IaC files (see 07-cloud.md Phase 0) |
-| 08 API | No REST API, GraphQL, or gRPC endpoints discovered in recon |
+| 08 API | No REST API, GraphQL, gRPC, WebSocket, SSE, webhook, or RPC endpoints discovered in recon |
 
 **Rules:**
-- Session 01 (Recon) and Session 09 (Report) always run — never skip
+- Session 01 (Recon), Session 01.5 (Session Plan), and Session 09 (Report) always run — never skip
+- Session 10 runs only when Session 09 is DONE, exploitation is explicitly enabled, and `10-exploitation/selected-findings.yaml` exists with IDs that resolve against the Session 09 finding registry
+- Session 11 runs only when Session 10 completed and produced exploit outcomes
 - When in doubt, **run the session** — behavioral probing may discover attack surface that recon missed
 - A skipped session still gets a `report.md` (e.g., "No authentication mechanism detected — session skipped") so Session 09 can reference all sessions
 - The End Protocol plan for the next session should note applicability concerns based on current findings

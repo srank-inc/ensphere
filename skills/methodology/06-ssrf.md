@@ -19,7 +19,7 @@ Covers: Classic, blind, semi-blind, and stored SSRF.
 
 ## Black-Box Path
 
-When assessment mode is BLACK_BOX, replace Phase A (code analysis) with the following. Phase B (Exploitation) still applies after this.
+When assessment mode is BLACK_BOX, replace Phase A (code analysis) with the following. Do not run exploitation by default; record candidate findings for Session 09 and optional Session 10.
 
 **Key constraint**: Without a callback server (Burp Collaborator, interactsh), blind SSRF detection relies entirely on response-differential analysis. Document this limitation in the report.
 
@@ -64,14 +64,14 @@ http://017700000001        (octal IP for 127.0.0.1)
 http://127.0.0.1:PORT      (for ports: 80, 443, 3000, 8080, 8443)
 ```
 
-**Step 4 — Response Differential Analysis**: Compare each probe response to baseline:
+**Step 4 — Response Differential Analysis**: Compare each probe response to baseline. These confidence labels guide the agent's session report; they are not CLI result fields.
 
 | Signal | Confidence | Meaning |
 |--------|-----------|---------|
 | Different status code (e.g., 500 vs 200) | MEDIUM | Server attempted to fetch internal URL |
 | Different response body length | MEDIUM | Different content returned |
-| Response contains internal service content (HTML admin page, API health check) | **HIGH — SSRF confirmed** | Server fetched and returned internal content |
-| Response contains cloud metadata (instance-id, iam credentials) | **HIGH — Critical SSRF** | Cloud metadata accessible |
+| Response contains internal service content (HTML admin page, API health check) | HIGH | Server fetched and returned internal content |
+| Response contains cloud metadata (instance-id, iam credentials) | HIGH | Cloud metadata accessible |
 | "Connection refused" error for closed port vs "Connection timeout" for open port | MEDIUM | Port is reachable but refused |
 | Significantly different response time (>2s difference) | LOW | Possible but inconclusive |
 | Same response as baseline | — | Input likely sanitized or URL not fetched |
@@ -97,7 +97,7 @@ Use `ensphere verify ssrf --url URL --param PARAM --in-scope SCOPE` for structur
 - `dict://127.0.0.1:6379/INFO` — Redis info via dict protocol
 - Use `ensphere payloads ssrf --technique protocol_smuggling` for curated payloads
 
-**Step 8 — Port Scanning via SSRF** (only if SSRF is confirmed or strongly suspected):
+**Step 8 — Port Scanning via SSRF** (only when SSRF evidence is strong and the action is in scope):
 Probe common internal service ports via response timing:
 ```
 127.0.0.1:22    (SSH)
@@ -114,7 +114,7 @@ Probe common internal service ports via response timing:
 ```
 Open ports respond faster (connection established then refused/responded). Closed ports timeout. Compare response times.
 
-After Phase A-BB, proceed to **Phase B: Exploitation** (same as white-box path).
+After Phase A-BB, write evidence-backed findings and optional Session 10 candidates. Do not run prove-by-exploitation from Session 06 unless the user explicitly forces Session 10 later.
 
 ## Phase A: Analysis
 
@@ -170,7 +170,7 @@ For each sink:
 6. **Header stripping**: sensitive headers (Authorization, Cookie) stripped from proxied requests
 7. **Response handling**: errors don't leak internal network info, response size limited
 
-## Phase B: Exploitation
+## Phase B: Verification and Session 10 Candidate Selection
 
 **Before crafting payloads manually, query the payload database:**
 ```bash
@@ -180,11 +180,11 @@ ensphere payloads ssrf --technique internal_service     # localhost bypass varia
 ```
 Use the returned payloads as starting points. Only craft custom payloads if the database doesn't cover your exact scenario.
 
-**For structured exploitation, materialize a template:**
+**For structured Session 10 planning, materialize a template only when exploitation is explicitly enabled:**
 ```bash
 ensphere template ssrf-probe --out ./poc/ssrf
-# Edit ./poc/ssrf/exploit.py with target-specific values, then run:
-python3 ./poc/ssrf/exploit.py
+# Edit ./poc/ssrf/exploit.py with target-specific values for the Session 10 plan.
+# Do not run the template from Session 06.
 ```
 
 ### SSRF Types and Validation
@@ -218,13 +218,18 @@ http://127.0.0.1:5432   # PostgreSQL
 http://127.0.0.1:6379   # Redis
 ```
 
-### Impact Evidence Checklist
+### Evidence Checklist
 - [ ] Internal service access: response from internal API/admin interface
 - [ ] Cloud metadata retrieval: instance info or credentials from metadata endpoint
 - [ ] Network reconnaissance: port scan results distinguishing open vs closed ports
 
+If the next step would retrieve credentials, enumerate internal networks, or
+interact with internal services beyond minimal proof, stop and mark the finding
+as a Session 10 candidate.
+
 ## Report Format
 
 Write to `ensphere-pentest/06-ssrf/report.md`:
-- Successfully Exploited (with SSRF type, endpoint, payload, internal access evidence)
+- Evidence-backed SSRF findings (with SSRF type, endpoint, payload, internal access evidence)
+- Optional Session 10 candidates for impact proof
 - Secure by Design (table: Component | Endpoint | Defense Mechanism | Verdict)
