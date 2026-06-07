@@ -102,6 +102,9 @@ Valid enum values are defined in `cli/internal/enums/enums.go`.
 ## Documentation Rules
 
 - Keep README human-facing and concise.
+- Keep [../index.md](../index.md), [index.md](index.md), and folder-local
+  indexes current when adding or retiring major docs, plans, runbooks, seeds,
+  checklists, or sample reports.
 - Put CLI details in [cli-reference.md](cli-reference.md).
 - Put agent methodology in [agent-workflow.md](agent-workflow.md) and `skills/`.
 - Update [testing.md](testing.md) when test inventory, gates, or drift checks change.

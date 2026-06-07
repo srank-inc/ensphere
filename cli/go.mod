@@ -1,12 +1,12 @@
 module github.com/srank/ensphere
 
-go 1.26.3
+go 1.26.4
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/spf13/cobra v1.10.2
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.51.0
+	modernc.org/sqlite v1.52.0
 )
 
 require (

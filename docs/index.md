@@ -1,15 +1,49 @@
-# Ensphere Documentation Map
+# Ensphere Documentation Index
 
-This directory is the system of record. CLAUDE.md and AGENTS.md are maps that point here.
+Last updated: 2026-06-07
+
+This directory is the system of record for project documentation. `CLAUDE.md`,
+`AGENTS.md`, and the root [../index.md](../index.md) point here for durable
+docs.
+
+## Active Direction
+
+Ensphere is a local, evidence-first autonomous assessment workflow. It is not
+currently designed around a commercial model. If that changes later, write a new
+model from scratch instead of restoring old specs.
+
+## Core Docs
 
 | Doc | Purpose | When to Read |
 |-----|---------|--------------|
-| cli-reference.md | Full CLI command reference and output contracts | Running or integrating Ensphere CLI commands |
-| agent-workflow.md | Claude Code and Codex assessment workflow | Running agent-guided assessments |
-| development.md | Architecture, build, testing, contribution, and generated-file rules | Changing code or generated assets |
-| testing.md | Test file inventory, conventions, drift guard details | Writing/debugging tests |
-| production-grade-hardening-plan.html | Production hardening plan and acceptance criteria | Auditing the hardening implementation |
-| dogfood/README.md | Local dogfood runbooks for Juice Shop, crAPI, and Capital API | Regenerating sample reports from real evidence |
-| monetization/monetization.md | Business model, pricing strategy | Monetization work |
-| monetization/billing-api-spec.md | Billing API specification | Billing integration |
-| monetization/credit-pricing.md | Credit pricing model | Pricing work |
+| [../index.md](../index.md) | Project-wide index and dependency surface | First orientation pass |
+| [cli-reference.md](cli-reference.md) | Full CLI command reference and output contracts | Running or integrating Ensphere CLI commands |
+| [agent-workflow.md](agent-workflow.md) | Claude Code and Codex assessment workflow | Running agent-guided assessments |
+| [development.md](development.md) | Architecture, build, testing, contribution, and generated-file rules | Changing code or generated assets |
+| [testing.md](testing.md) | Test file inventory, conventions, drift guard details | Writing/debugging tests |
+| [../skills/shared/workflow-contract.md](../skills/shared/workflow-contract.md) | Session decisions, coverage labels, evidence categories, agent contract, report honesty rules | Implementing or auditing autonomous workflow behavior |
+| [../skills/shared/evidence-standards.md](../skills/shared/evidence-standards.md) | Evidence logging, proof levels, and report honesty rules | Writing session reports or evidence artifacts |
+
+## Plans
+
+| Plan | Status | Use |
+|------|--------|-----|
+| [ensphere-autonomous-pentest-expansion-plan.html](ensphere-autonomous-pentest-expansion-plan.html) | Active roadmap | Evidence-first autonomy, optional exploitation, runner gates, benchmark plan |
+| [production-grade-hardening-plan.html](production-grade-hardening-plan.html) | Reference plan | Production hardening acceptance criteria and historical implementation context |
+
+## Folder Indexes
+
+| Folder | Index | Purpose |
+|--------|-------|---------|
+| [dogfood/](dogfood/) | [dogfood/index.md](dogfood/index.md) | Local vulnerable targets and sample report regeneration rules |
+| [../skills/methodology/](../skills/methodology/) | [../skills/methodology/index.md](../skills/methodology/index.md) | Session 01-11 methodology map |
+| [../skills/shared/](../skills/shared/) | [../skills/shared/index.md](../skills/shared/index.md) | Evidence categories, coverage labels, and agent/Ensphere contract |
+| [../skills/checklists/](../skills/checklists/) | [../skills/checklists/index.md](../skills/checklists/index.md) | Framework-specific checklist inventory |
+| [../assets/seeds/](../assets/seeds/) | [../assets/seeds/index.md](../assets/seeds/index.md) | Payload seed inventory |
+| [../templates/](../templates/) | [../templates/index.md](../templates/index.md) | Workspace config template inventory |
+| [../sample-reports/](../sample-reports/) | [../sample-reports/index.md](../sample-reports/index.md) | Evidence-backed sample reports |
+
+## Removed Docs
+
+The old commercial-model Markdown files were removed intentionally. Do not treat
+commercial planning as an active roadmap unless a new plan is written.

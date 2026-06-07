@@ -23,6 +23,54 @@ Before any testing, classify the target project and determine Ensphere's applica
    - **API-only backend** (no UI, serves mobile/desktop/other clients) → skip Playwright, use `curl` for endpoint probing
    - **No network surface** → exit early after informing the user
 
+Write a machine-readable target profile to
+`ensphere-pentest/01-recon/target-profile.yaml`. Session 01.5 and
+`ensphere run plan` use this file to refine the config-derived plan:
+
+```yaml
+schema_version: 1
+target:
+  type: mobile_client_remote_backend
+  source_mode: white_box
+  coverage_label: client_only
+  classification_confidence: high
+  rationale:
+    - "Mobile source references https://api.example.com and no local server."
+  evidence_refs:
+    - "01-recon/report.md#backend-inventory"
+backend_inventory:
+  - name: primary-api
+    base_url: https://api.example.com
+    kind: rest
+    source: mobile source constants
+    evidence_refs:
+      - "01-recon/report.md#backend-inventory"
+signals:
+  browser_ui: false
+  api_surface: true
+  server_side_surface: true
+  authentication: true
+  authorization_boundaries: true
+  outbound_fetch_surface: false
+  cloud_surface: false
+  client_only: false
+  monorepo_ambiguous: false
+client_exposure_review:
+  - "Review hardcoded endpoints, embedded keys, local storage, and WebView bridges."
+```
+
+For mobile/static client-only targets with no server-side backend in scope, set
+`target.type` to `mobile_client_offline` or `static_site`, set
+`signals.client_only: true`, set `signals.api_surface: false`, and record the
+client exposure review limitations. Do not continue normal web/API category
+testing unless a backend or API target is added to scope.
+
+For mobile/static clients that call a remote backend, each backend inventory
+entry must include `name`, `base_url`, `kind`, `source`, and at least one
+workspace-relative `evidence_refs` entry. If no backend inventory can be
+extracted, mark backend-dependent sessions as blocked until the target API is
+identified.
+
 ## Tool Selection
 
 | Need | Tier | Tool |

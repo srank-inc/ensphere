@@ -196,7 +196,7 @@ cli/
 assets/seeds/                     # 30 YAML seed files (includes authz.yaml, mass-assignment.yaml)
 skills/                           # Claude Code skill files
   SKILL.md                        # /ensphere entry point
-  methodology/                    # 01-recon through 09-report, with 07a-d cloud sub-files
+  methodology/                    # 01-recon through 11-final-report, with 01.5 planning and 07a-d cloud sub-files
   checklists/                     # 13 security checklists (4 web framework + 6 web framework + 3 cloud)
 ```
 
@@ -337,7 +337,7 @@ JSONL format. Each entry:
   "response_hash": "sha256:...",
   "status_code": 200,
   "duration": "5.2s",
-  "result": "confirmed",
+  "result": "probe",
   "notes": "...",
   "prev_hash": "a1b2c3...",
   "hash": "d4e5f6..."

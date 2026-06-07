@@ -83,7 +83,11 @@ Search for webhook endpoints:
 - SSRF protections on webhook URLs
 - Retry logic and timeout handling
 
-## Phase B: Exploitation
+## Phase B: Verification and Session 10 Candidate Selection
+
+Gather API security measurements and identify optional Session 10 candidates.
+Do not run destructive API exploitation, broad enumeration, or state-changing
+proof beyond authorized test data from Session 08.
 
 ### Step 1: API Documentation & Version Discovery
 
@@ -170,8 +174,8 @@ Check for:
 Test pagination parameters for abuse:
 
 ```bash
-# Large page size — attempt to dump entire dataset
-curl -s "TARGET/api/items?page=1&per_page=999999" -H "Authorization: Bearer TOKEN"
+# Bounded overlarge page-size probe; do not attempt a full dataset dump
+curl -s "TARGET/api/items?page=1&per_page=101" -H "Authorization: Bearer TOKEN"
 
 # Negative offset — potential for data leak or error
 curl -s "TARGET/api/items?offset=-1&limit=10" -H "Authorization: Bearer TOKEN"
@@ -269,7 +273,7 @@ ensphere evidence log \
 Write to `ensphere-pentest/08-api/report.md`:
 
 ```markdown
-# Session 08: API Security Report
+# Session 08: API Security
 
 ## Summary
 [Brief overview of API security posture]

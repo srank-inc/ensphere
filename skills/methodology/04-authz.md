@@ -1,6 +1,6 @@
 # Session 04: Authorization
 
-Analyze and exploit authorization mechanisms — access control, privilege escalation, IDOR.
+Analyze authorization mechanisms — access control, privilege escalation, IDOR.
 
 ## Tool Selection
 
@@ -19,7 +19,7 @@ Analyze and exploit authorization mechanisms — access control, privilege escal
 
 ## Black-Box Path
 
-When assessment mode is BLACK_BOX, replace Phase A (code review) with the following. Phase B (Exploitation) still applies after this.
+When assessment mode is BLACK_BOX, replace Phase A (code review) with the following. Phase B bounded verification still applies after this.
 
 ### Phase A-BB: Access Control Matrix (replaces code review)
 
@@ -68,7 +68,7 @@ For multi-step workflows discovered in recon:
 - Test state manipulation: modify status parameters (e.g., `{"status":"approved"}` on a pending item)
 - Test forced state transitions: directly set final state without processing
 
-After Phase A-BB, proceed to **Phase B: Exploitation** (same as white-box path).
+After Phase A-BB, write evidence-backed findings and optional Session 10 candidates. Do not run prove-by-exploitation from Session 04 unless the user explicitly forces Session 10 later.
 
 ## Phase A: Analysis
 
@@ -110,9 +110,11 @@ For each item in recon section 8.3:
 - Authentication ≠ authorization (being logged in ≠ ownership check exists)
 - Don't trust framework defaults without explicit configuration evidence
 
-## Phase B: Exploitation
+## Phase B: Verification and Session 10 Candidate Selection
 
-For each vulnerable endpoint from Phase A:
+For each vulnerable endpoint candidate from Phase A, gather bounded access-control
+evidence using authorized test accounts. Do not modify unauthorized production
+data or broaden into destructive proof from Session 04.
 
 ### Horizontal Attacks
 - **Identifier manipulation**: change `user_id`, `order_id`, `file_id` in requests to access other users' resources
@@ -132,15 +134,28 @@ For each vulnerable endpoint from Phase A:
 - **Out-of-order execution**: execute workflow steps in wrong sequence
 - **Forced state transitions**: directly set final states without processing
 
-### Stage 1: Confirmation
-Execute the `minimal_witness` from the analysis — prove access control bypass is real.
+### Stage 1: Bounded Verification
+Execute the `minimal_witness` from the analysis with test accounts and record:
+- Auth context
+- Object owner
+- Requested object or action
+- Expected access
+- Actual response
+- Evidence ID or transcript path
 
-### Stage 2: Impact Demonstration
-Access protected resources, modify unauthorized data, or demonstrate elevated privileges.
-Evidence: the unauthorized data or functionality accessed.
+### Stage 2: Candidate Selection
+Recommend Session 10 when stronger proof requires:
+- Accessing protected resources beyond minimal metadata
+- Modifying unauthorized data
+- Demonstrating elevated privileges
+- Chaining multiple authorization weaknesses
+
+Session 10 must define rollback and cleanup evidence before any state-changing
+authorization proof.
 
 ## Report Format
 
 Write to `ensphere-pentest/04-authz/report.md`:
-- Successfully Exploited (with type: Horizontal/Vertical/Context, full reproduction steps)
+- Evidence-backed authorization findings with type, affected endpoint, auth context, evidence IDs, and reproduction steps
+- Optional Session 10 candidates for state-changing or chained impact proof
 - Vectors Confirmed Secure (table: Endpoint | Guard Location | Defense | Verdict)
