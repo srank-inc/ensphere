@@ -77,7 +77,7 @@ func verifyNoSQLOperator(cfg NoSQLConfig, throttle *Throttle, timer *Timer, ew *
 	// True probe
 	throttle.Wait()
 	probeCount++
-	trueResp := HTTPProbe(cfg.Method, cfg.URL, string(trueBody), headers, cfg.TimeoutSec)
+	trueResp := HTTPProbe(cfg.Method, cfg.URL, string(trueBody), headers, cfg.TimeoutSec, cfg.InScope)
 	if trueResp.Error != nil {
 		return nil, fmt.Errorf("true probe: %w", trueResp.Error)
 	}
@@ -88,7 +88,7 @@ func verifyNoSQLOperator(cfg NoSQLConfig, throttle *Throttle, timer *Timer, ew *
 	// False probe
 	throttle.Wait()
 	probeCount++
-	falseResp := HTTPProbe(cfg.Method, cfg.URL, string(falseBody), headers, cfg.TimeoutSec)
+	falseResp := HTTPProbe(cfg.Method, cfg.URL, string(falseBody), headers, cfg.TimeoutSec, cfg.InScope)
 	if falseResp.Error != nil {
 		return nil, fmt.Errorf("false probe: %w", falseResp.Error)
 	}
@@ -157,7 +157,7 @@ func verifyNoSQLWhereTime(cfg NoSQLConfig, throttle *Throttle, timer *Timer, ew 
 	for i := 0; i < defaultRounds; i++ {
 		throttle.Wait()
 		probeCount++
-		resp := HTTPProbe(cfg.Method, cfg.URL, string(baselineJSON), headers, cfg.TimeoutSec)
+		resp := HTTPProbe(cfg.Method, cfg.URL, string(baselineJSON), headers, cfg.TimeoutSec, cfg.InScope)
 		if resp.Error != nil {
 			return nil, fmt.Errorf("baseline probe %d: %w", i+1, resp.Error)
 		}
@@ -180,7 +180,7 @@ func verifyNoSQLWhereTime(cfg NoSQLConfig, throttle *Throttle, timer *Timer, ew 
 	for i := 0; i < defaultRounds; i++ {
 		throttle.Wait()
 		probeCount++
-		resp := HTTPProbe(cfg.Method, cfg.URL, string(payloadJSON), headers, cfg.TimeoutSec)
+		resp := HTTPProbe(cfg.Method, cfg.URL, string(payloadJSON), headers, cfg.TimeoutSec, cfg.InScope)
 		if resp.Error != nil {
 			fmt.Fprintf(os.Stderr, "[PAYLOAD %d] error: %v\n", i+1, resp.Error)
 			continue

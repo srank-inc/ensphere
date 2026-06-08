@@ -83,7 +83,7 @@ func VerifyXXE(cfg XXEConfig) (*ProbeResult, error) {
 
 	throttle.Wait()
 	probeCount++
-	resp := HTTPProbe(cfg.Method, cfg.URL, payload, headers, cfg.TimeoutSec)
+	resp := HTTPProbe(cfg.Method, cfg.URL, payload, headers, cfg.TimeoutSec, cfg.InScope)
 	if resp.Error != nil {
 		return nil, fmt.Errorf("xxe probe: %w", resp.Error)
 	}

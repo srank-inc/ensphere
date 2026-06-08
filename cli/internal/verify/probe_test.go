@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 )
@@ -17,6 +18,13 @@ func TestCheckScope_GlobMatch(t *testing.T) {
 
 func TestCheckScope_ExactMatch(t *testing.T) {
 	err := CheckScope("http://localhost/path", []string{"localhost"})
+	if err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+}
+
+func TestCheckScope_DNSNamesAreCaseInsensitive(t *testing.T) {
+	err := CheckScope("http://API.EXAMPLE.COM./path", []string{"api.example.com"})
 	if err != nil {
 		t.Fatalf("expected nil, got %v", err)
 	}
@@ -144,6 +152,98 @@ func TestHTTPProbe_PostBody(t *testing.T) {
 	}
 	if gotBody != "test-body-data" {
 		t.Fatalf("expected body 'test-body-data', got %q", gotBody)
+	}
+}
+
+func TestHTTPProbe_RelativeRedirectInScope(t *testing.T) {
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/start" {
+			http.Redirect(w, r, "/final", http.StatusFound)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("final"))
+	}))
+
+	resp := HTTPProbe("GET", ts.URL+"/start", "", nil, 5, []string{"127.0.0.1"})
+	if resp.Error != nil {
+		t.Fatalf("unexpected error: %v", resp.Error)
+	}
+	if resp.StatusCode != http.StatusOK || resp.Body != "final" {
+		t.Fatalf("expected followed redirect to final response, got status=%d body=%q", resp.StatusCode, resp.Body)
+	}
+}
+
+func TestHTTPProbe_AbsoluteRedirectInScope(t *testing.T) {
+	var ts *httptest.Server
+	ts = newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/start" {
+			http.Redirect(w, r, ts.URL+"/final", http.StatusFound)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("absolute-final"))
+	}))
+
+	resp := HTTPProbe("GET", ts.URL+"/start", "", nil, 5, []string{"127.0.0.1"})
+	if resp.Error != nil {
+		t.Fatalf("unexpected error: %v", resp.Error)
+	}
+	if resp.StatusCode != http.StatusOK || resp.Body != "absolute-final" {
+		t.Fatalf("expected followed redirect to final response, got status=%d body=%q", resp.StatusCode, resp.Body)
+	}
+}
+
+func TestHTTPProbe_SchemeRelativeRedirectOutOfScope(t *testing.T) {
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "//evil.example/final", http.StatusFound)
+	}))
+
+	resp := HTTPProbe("GET", ts.URL, "", nil, 5, []string{"127.0.0.1"})
+	var scopeErr *ScopeError
+	if !errors.As(resp.Error, &scopeErr) {
+		t.Fatalf("expected redirect scope error, got %T: %v", resp.Error, resp.Error)
+	}
+	if resp.StatusCode != 0 {
+		t.Fatalf("expected no response status for blocked redirect, got %d", resp.StatusCode)
+	}
+}
+
+func TestHTTPProbe_RedirectWithoutScopeFailsClosed(t *testing.T) {
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/final", http.StatusFound)
+	}))
+
+	resp := HTTPProbe("GET", ts.URL, "", nil, 5)
+	var scopeErr *ScopeError
+	if !errors.As(resp.Error, &scopeErr) {
+		t.Fatalf("expected redirect scope error, got %T: %v", resp.Error, resp.Error)
+	}
+}
+
+func TestHTTPProbeNoRedirect_DoesNotFollowRedirect(t *testing.T) {
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "http://evil.example/final", http.StatusFound)
+	}))
+
+	resp := HTTPProbeNoRedirect("GET", ts.URL, "", nil, 5, []string{"127.0.0.1"})
+	if resp.Error != nil {
+		t.Fatalf("unexpected error: %v", resp.Error)
+	}
+	if resp.StatusCode != http.StatusFound {
+		t.Fatalf("expected first-hop redirect status %d, got %d", http.StatusFound, resp.StatusCode)
+	}
+}
+
+func TestMultipartHTTPProbe_RedirectOutOfScope(t *testing.T) {
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "http://evil.example/uploaded", http.StatusFound)
+	}))
+
+	resp := MultipartHTTPProbe("POST", ts.URL, "file", "test.txt", "content", "text/plain", nil, 5, []string{"127.0.0.1"})
+	var scopeErr *ScopeError
+	if !errors.As(resp.Error, &scopeErr) {
+		t.Fatalf("expected multipart redirect scope error, got %T: %v", resp.Error, resp.Error)
 	}
 }
 

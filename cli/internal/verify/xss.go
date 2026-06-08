@@ -57,7 +57,7 @@ func VerifyXSS(cfg XSSConfig) (*ProbeResult, error) {
 			headers[k] = v
 		}
 		headers["Content-Type"] = "application/x-www-form-urlencoded"
-		resp = HTTPProbe("POST", cfg.URL, body, headers, cfg.TimeoutSec)
+		resp = HTTPProbe("POST", cfg.URL, body, headers, cfg.TimeoutSec, cfg.InScope)
 	} else {
 		parsed, err := url.Parse(cfg.URL)
 		if err != nil {
@@ -66,7 +66,7 @@ func VerifyXSS(cfg XSSConfig) (*ProbeResult, error) {
 		params := parsed.Query()
 		params.Set(cfg.Param, cfg.Payload)
 		parsed.RawQuery = params.Encode()
-		resp = HTTPProbe("GET", parsed.String(), "", cfg.Headers, cfg.TimeoutSec)
+		resp = HTTPProbe("GET", parsed.String(), "", cfg.Headers, cfg.TimeoutSec, cfg.InScope)
 	}
 
 	if resp.Error != nil {

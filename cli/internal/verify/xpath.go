@@ -19,9 +19,9 @@ type XPathConfig struct {
 }
 
 var validXPathTechniques = map[string]bool{
-	"xpath_injection":    true,
+	"xpath_injection":     true,
 	"xpath_blind_boolean": true,
-	"xpath_blind_error":  true,
+	"xpath_blind_error":   true,
 }
 
 // XPath error patterns that indicate XPath processing errors in the response.
@@ -292,7 +292,7 @@ func probeWithXPathParam(cfg XPathConfig, value string) ProbeResponse {
 			headers[k] = v
 		}
 		headers["Content-Type"] = "application/x-www-form-urlencoded"
-		return HTTPProbe("POST", cfg.URL, body, headers, cfg.TimeoutSec)
+		return HTTPProbe("POST", cfg.URL, body, headers, cfg.TimeoutSec, cfg.InScope)
 	}
 
 	parsed, err := url.Parse(cfg.URL)
@@ -302,5 +302,5 @@ func probeWithXPathParam(cfg XPathConfig, value string) ProbeResponse {
 	params := parsed.Query()
 	params.Set(cfg.Param, value)
 	parsed.RawQuery = params.Encode()
-	return HTTPProbe(cfg.Method, parsed.String(), "", cfg.Headers, cfg.TimeoutSec)
+	return HTTPProbe(cfg.Method, parsed.String(), "", cfg.Headers, cfg.TimeoutSec, cfg.InScope)
 }

@@ -73,7 +73,7 @@ func VerifyRLS(cfg RLSConfig) (*ProbeResult, error) {
 	ownResp := HTTPProbe("GET", ownURL, "", map[string]string{
 		"apikey":        cfg.AnonKey,
 		"Authorization": "Bearer " + tokenA,
-	}, cfg.TimeoutSec)
+	}, cfg.TimeoutSec, cfg.InScope)
 	if ownResp.Error != nil {
 		return nil, fmt.Errorf("tenant A own query: %w", ownResp.Error)
 	}
@@ -89,7 +89,7 @@ func VerifyRLS(cfg RLSConfig) (*ProbeResult, error) {
 	bOwnResp := HTTPProbe("GET", bOwnURL, "", map[string]string{
 		"apikey":        cfg.AnonKey,
 		"Authorization": "Bearer " + tokenB,
-	}, cfg.TimeoutSec)
+	}, cfg.TimeoutSec, cfg.InScope)
 	if bOwnResp.Error != nil {
 		return nil, fmt.Errorf("tenant B own query: %w", bOwnResp.Error)
 	}
@@ -105,7 +105,7 @@ func VerifyRLS(cfg RLSConfig) (*ProbeResult, error) {
 	crossResp := HTTPProbe("GET", crossURL, "", map[string]string{
 		"apikey":        cfg.AnonKey,
 		"Authorization": "Bearer " + tokenA,
-	}, cfg.TimeoutSec)
+	}, cfg.TimeoutSec, cfg.InScope)
 	if crossResp.Error != nil {
 		return nil, fmt.Errorf("cross-tenant query: %w", crossResp.Error)
 	}

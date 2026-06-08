@@ -60,7 +60,7 @@ func VerifyCSVInjection(cfg CSVInjectionConfig) (*ProbeResult, error) {
 
 	throttle.Wait()
 	probeCount++
-	submitResp := HTTPProbe(cfg.Method, cfg.SubmitURL, submitBody, headers, cfg.TimeoutSec)
+	submitResp := HTTPProbe(cfg.Method, cfg.SubmitURL, submitBody, headers, cfg.TimeoutSec, cfg.InScope)
 	if submitResp.Error != nil {
 		return nil, fmt.Errorf("submit probe: %w", submitResp.Error)
 	}
@@ -71,7 +71,7 @@ func VerifyCSVInjection(cfg CSVInjectionConfig) (*ProbeResult, error) {
 	// Download export
 	throttle.Wait()
 	probeCount++
-	exportResp := HTTPProbe("GET", cfg.ExportURL, "", cfg.Headers, cfg.TimeoutSec)
+	exportResp := HTTPProbe("GET", cfg.ExportURL, "", cfg.Headers, cfg.TimeoutSec, cfg.InScope)
 	if exportResp.Error != nil {
 		return nil, fmt.Errorf("export probe: %w", exportResp.Error)
 	}

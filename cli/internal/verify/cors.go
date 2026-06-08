@@ -75,7 +75,7 @@ func VerifyCORS(cfg CORSConfig) (*ProbeResult, error) {
 			headers["Origin"] = test.origin
 		}
 
-		resp := HTTPProbe(cfg.Method, cfg.URL, "", headers, cfg.TimeoutSec)
+		resp := HTTPProbe(cfg.Method, cfg.URL, "", headers, cfg.TimeoutSec, cfg.InScope)
 		if resp.Error != nil {
 			return nil, fmt.Errorf("%s probe: %w", test.label, resp.Error)
 		}

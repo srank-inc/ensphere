@@ -39,7 +39,14 @@ var fileUploadTechniqueRisk = map[string]int{
 
 // MultipartHTTPProbe sends a multipart file upload request and captures timing + response hash.
 func MultipartHTTPProbe(method, url, fieldName, filename, content, mimeType string,
-	headers map[string]string, timeoutSec int) ProbeResponse {
+	headers map[string]string, timeoutSec int, inScope ...[]string) ProbeResponse {
+	scopePatterns, enforceScope := optionalScope(inScope)
+	if enforceScope {
+		if err := CheckScope(url, scopePatterns); err != nil {
+			return ProbeResponse{Error: err}
+		}
+	}
+
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
 
@@ -53,7 +60,7 @@ func MultipartHTTPProbe(method, url, fieldName, filename, content, mimeType stri
 	part.Write([]byte(content))
 	writer.Close()
 
-	client := &http.Client{Timeout: time.Duration(timeoutSec) * time.Second}
+	client := scopedHTTPClient(timeoutSec, scopePatterns, enforceScope, true)
 	req, err := http.NewRequest(method, url, &buf)
 	if err != nil {
 		return ProbeResponse{Error: fmt.Errorf("build request: %w", err)}
@@ -132,7 +139,7 @@ func verifyFileUploadProbe(cfg FileUploadConfig, throttle *Throttle, timer *Time
 	// Upload probe
 	throttle.Wait()
 	probeCount++
-	uploadResp := MultipartHTTPProbe(cfg.Method, cfg.URL, cfg.FieldName, cfg.Filename, cfg.Content, cfg.MIMEType, cfg.Headers, cfg.TimeoutSec)
+	uploadResp := MultipartHTTPProbe(cfg.Method, cfg.URL, cfg.FieldName, cfg.Filename, cfg.Content, cfg.MIMEType, cfg.Headers, cfg.TimeoutSec, cfg.InScope)
 	if uploadResp.Error != nil {
 		return nil, fmt.Errorf("upload probe: %w", uploadResp.Error)
 	}
@@ -165,7 +172,7 @@ func verifyFileUploadProbe(cfg FileUploadConfig, throttle *Throttle, timer *Time
 		}
 		throttle.Wait()
 		probeCount++
-		verifyResp := HTTPProbeNoRedirect("GET", cfg.VerifyURL, "", cfg.Headers, cfg.TimeoutSec)
+		verifyResp := HTTPProbeNoRedirect("GET", cfg.VerifyURL, "", cfg.Headers, cfg.TimeoutSec, cfg.InScope)
 		if verifyResp.Error != nil {
 			fmt.Fprintf(os.Stderr, "[VERIFY] error: %v\n", verifyResp.Error)
 		} else {

@@ -27,7 +27,7 @@ func CheckScope(rawURL string, inScopePatterns []string) error {
 		return &ScopeError{Msg: fmt.Sprintf("invalid URL %q: %v", rawURL, err)}
 	}
 
-	hostname := parsed.Hostname()
+	hostname := normalizeScopeHost(parsed.Hostname())
 	if hostname == "" {
 		return &ScopeError{Msg: fmt.Sprintf("URL %q has no hostname", rawURL)}
 	}
@@ -43,8 +43,8 @@ func CheckScope(rawURL string, inScopePatterns []string) error {
 			continue
 		}
 
-		// Fall back to glob match (e.g., "*.example.com")
-		matched, err := filepath.Match(pattern, hostname)
+		// Fall back to glob match (e.g., "*.example.com").
+		matched, err := filepath.Match(normalizeScopeHost(pattern), hostname)
 		if err != nil {
 			continue
 		}
@@ -54,6 +54,10 @@ func CheckScope(rawURL string, inScopePatterns []string) error {
 	}
 
 	return &ScopeError{Msg: fmt.Sprintf("URL hostname %q is not in scope (patterns: %s)", hostname, strings.Join(inScopePatterns, ", "))}
+}
+
+func normalizeScopeHost(host string) string {
+	return strings.TrimSuffix(strings.ToLower(strings.TrimSpace(host)), ".")
 }
 
 // CheckCloudScope validates cloud resource identifiers against in-scope patterns.

@@ -54,7 +54,7 @@ func VerifyPropertyAuthZ(cfg PropertyAuthZConfig) (*ProbeResult, error) {
 
 	throttle.Wait()
 	probeCount++
-	highResp := HTTPProbeNoRedirect(cfg.Method, cfg.URL, "", highHeaders, cfg.TimeoutSec)
+	highResp := HTTPProbeNoRedirect(cfg.Method, cfg.URL, "", highHeaders, cfg.TimeoutSec, cfg.InScope)
 	if highResp.Error != nil {
 		return nil, fmt.Errorf("high-priv probe: %w", highResp.Error)
 	}
@@ -71,7 +71,7 @@ func VerifyPropertyAuthZ(cfg PropertyAuthZConfig) (*ProbeResult, error) {
 
 	throttle.Wait()
 	probeCount++
-	lowResp := HTTPProbeNoRedirect(cfg.Method, cfg.URL, "", lowHeaders, cfg.TimeoutSec)
+	lowResp := HTTPProbeNoRedirect(cfg.Method, cfg.URL, "", lowHeaders, cfg.TimeoutSec, cfg.InScope)
 	if lowResp.Error != nil {
 		return nil, fmt.Errorf("low-priv probe: %w", lowResp.Error)
 	}
