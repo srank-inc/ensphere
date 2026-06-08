@@ -20,7 +20,7 @@ assessment plan. Session 10 and Session 11 are optional and gated.
 | 07 | [07-cloud.md](07-cloud.md) | Cloud | Cloud/IaC/scanner-ingestion evidence |
 | 08 | [08-api.md](08-api.md) | API | Rate limit, property authz, mass assignment, OpenAPI evidence |
 | 09 | [09-report.md](09-report.md) | Assessment Report | Evidence-backed report and finding registry |
-| 10 | [10-exploitation.md](10-exploitation.md) | Optional Exploitation | Selected finding exploit attempts and outcomes |
+| 10 | [10-exploitation.md](10-exploitation.md) | Optional Exploitation | Selected finding playbooks, exploit attempts, and outcomes |
 | 11 | [11-final-report.md](11-final-report.md) | Optional Final Report | Exploit-verified final registry and report |
 
 ## Cloud Subfiles

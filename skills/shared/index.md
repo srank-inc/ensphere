@@ -1,9 +1,9 @@
 # Shared Workflow Index
 
-Last updated: 2026-06-07
+Last updated: 2026-06-08
 
 These files define the cross-session contracts used by the CLI runner, skill
-methodology, reports, and future autonomous workflows.
+methodology, reports, runner gates, and autonomous workflows.
 
 | File | Purpose | Read When |
 |------|---------|-----------|

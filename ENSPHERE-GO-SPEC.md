@@ -1,6 +1,12 @@
-# Ensphere Go Binary — Technical Specification
+# Ensphere Go CLI — Technical Specification
 
-## Architecture: 4 Layers
+The Go CLI is the deterministic measurement and workspace layer under
+Ensphere's evidence-first autonomous assessment workflow. It executes scoped
+measurements, writes factual evidence, prepares agent handoffs, validates report
+contracts, and never assigns vulnerability status, confidence, exploitability,
+or business impact.
+
+## Architecture: 6 Layers
 
 ### Layer 1 — Payload Database
 
@@ -12,9 +18,11 @@ Payloads indexed by **context**, not framework:
 - **SSRF**: runtime (node/jvm/python/ruby/go), target (metadata/internal_service)
 - Other types: cmdi, lfi, ssti, deserialization, xxe, idor, authz, csrf, nosql, auth_bypass, jwt, graphql, cors, redirect, csv_injection, prototype_pollution, race_condition, request_smuggling, cache_poisoning
 
-### Layer 2 — Verification Probes
+### Layer 2 — Native Measurement Probes
 
-Custom Go HTTP probes (not wrappers around external tools). Agent calls `ensphere verify sqli --url ... --param ...` for deterministic confirmation.
+Custom Go HTTP and protocol probes (not wrappers around external tools). An
+agent calls `ensphere verify sqli --url ... --param ...` to capture
+deterministic measurements that can later support a human or AI judgment.
 
 - Pure Go implementations at protocol level
 - Returns structured JSON (schema v2): `{schema_version, vuln_type, technique, started_at, probe_count, duration, measurements}` — measurement-only output, no status/confidence classification
@@ -32,6 +40,28 @@ Templates: idor-uuid, sqli-time-postgres, ssrf-probe, auth-header-replay, upload
 
 13 security checklists (markdown): nextjs-app-router (17 items), supabase-rls (10), trpc (8), cloudflare-r2 (6), django (10), rails (12), spring-boot (12), express-js (12), laravel (10), fastapi (10), aws-s3 (12), aws-iam (12), k8s-pod-security (10).
 
+### Layer 5 — Runner and Workspace Gates
+
+`ensphere run` creates and inspects the `ensphere-pentest/` workspace used by
+the skill workflow. It writes deterministic files and handoff prompts; it does
+not run the AI and does not execute exploit attempts.
+
+- `run init`: create `config.md` and initial progress files
+- `run plan`: draft or validate `assessment-plan.yaml` and mirror Session 01.5
+- `run status`: summarize workspace state and next work
+- `run next`: write `next-action.md` and `agent-prompt.md`
+- `run report`: validate Session 09 readiness and finding-registry contracts
+- `run exploit`: validate selected Session 09 finding IDs and write the Session 10 handoff
+- `run final`: validate Session 10 outcomes and derive the Session 11 registry
+
+### Layer 6 — Imported Leads and Report Contracts
+
+The CLI currently parses Prowler and Trivy outputs through cloud commands.
+Roadmap importers such as Nmap, Nuclei, SARIF, ZAP/Burp, and SQLMap must record
+source tool, source file, rule/template ID, source severity, and raw matched
+evidence as source-provided leads. Imported leads are not Ensphere-confirmed
+findings; finding status and severity belong in reports and registries.
+
 ---
 
 ## Go Module Structure
@@ -39,7 +69,7 @@ Templates: idor-uuid, sqli-time-postgres, ssrf-probe, auth-header-replay, upload
 ```
 cli/
   main.go                         # entry point → cmd.Execute()
-  go.mod                          # github.com/srank/ensphere, go 1.26.3
+  go.mod                          # github.com/srank/ensphere, go 1.26.4
   cmd/
     root.go                       # Cobra root command
     payloads.go                   # ensphere payloads <vuln_type>
@@ -92,6 +122,8 @@ cli/
     evidence.go                   # parent: ensphere evidence
     evidence_log.go               # ensphere evidence log
     evidence_query.go             # ensphere evidence query
+    evidence_verify.go            # ensphere evidence verify
+    run.go                        # ensphere run init/status/plan/next/report/exploit/final
     checklist.go                  # ensphere checklist [name]
     compliance.go                 # ensphere compliance [vuln_type]
     cvss.go                       # ensphere cvss
@@ -128,8 +160,8 @@ cli/
       authz.go                    # Authorization bypass (privilege level comparison)
       clickjacking.go             # Clickjacking protection (X-Frame-Options, CSP)
       headerinjection.go          # CRLF header injection
-      websocket.go                # WebSocket security verification
-      grpc.go                     # gRPC security verification
+      websocket.go                # WebSocket security measurements
+      grpc.go                     # gRPC security measurements
       ratelimit.go                # Rate limit burst measurement
       propertyauthz.go            # Field-level authorization comparison
       ldap.go                     # LDAP injection (filter, blind boolean, blind error)
@@ -145,6 +177,13 @@ cli/
       reader.go                   # JSONL reader with filtering
       model.go                    # Entry struct (ID, hashes, timing, result)
       redaction.go                # Secret stripping from URLs/logs
+    runner/
+      workspace.go                # Init/status/next-action and Session 10 selected-finding handoff
+      plan.go                     # Deterministic assessment-plan drafting and validation
+      report.go                   # Session 09 readiness, evidence, and finding-registry gates
+      final.go                    # Session 11 outcome validation and derived registry
+      model.go                    # Workspace, plan, progress, registry, and handoff models
+      workspace_test.go           # Runner workspace/gate tests
     callback/
       server.go                   # OOB callback HTTP listener with token routing
     cloud/
@@ -194,7 +233,7 @@ cli/
   tools/
     seedgen/main.go               # YAML seeds → SQLite compiler (validates enums at build)
 assets/seeds/                     # 30 YAML seed files (includes authz.yaml, mass-assignment.yaml)
-skills/                           # Claude Code skill files
+skills/                           # Portable AI-agent skill files
   SKILL.md                        # /ensphere entry point
   methodology/                    # 01-recon through 11-final-report, with 01.5 planning and 07a-d cloud sub-files
   checklists/                     # 13 security checklists (4 web framework + 6 web framework + 3 cloud)

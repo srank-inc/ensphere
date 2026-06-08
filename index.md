@@ -1,6 +1,6 @@
 # Ensphere Project Index
 
-Last updated: 2026-06-07
+Last updated: 2026-06-08
 
 Use this file as the fast orientation layer for AI agents and contributors. It
 points to the durable project rules, active plans, generated assets, and
@@ -19,14 +19,17 @@ folder-local indexes.
 
 ## Current Direction
 
-Ensphere is a deterministic security measurement engine for authorized
-assessments. Ensphere produces verifiable facts; the AI or human analyst
+Ensphere is an evidence-first autonomous application security assessment system
+for AI agents and human analysts. The Go CLI remains a deterministic
+measurement engine: Ensphere produces verifiable facts; the AI or human analyst
 produces security judgments.
 
-The active expansion direction is evidence-first autonomous pentesting:
-Sessions 01-09 produce the assessment, Session 10 optionally proves selected
-findings by exploitation, and Session 11 optionally regenerates the final
-exploit-verified report.
+The active direction is broad, adaptive assessment before exploitation. Sessions
+01-09 produce the evidence-backed assessment, Session 10 optionally proves
+selected findings by exploitation, and Session 11 optionally regenerates the
+exploit-verified report. External tools are treated as source-provided leads
+that must preserve provenance and stay separate from Ensphere-owned
+measurements.
 
 Commercial-model specifications are intentionally absent from the current
 project docs. If that ever changes, write a new model from scratch.
