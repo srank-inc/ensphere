@@ -16,9 +16,9 @@ type ProtoPollutionConfig struct {
 }
 
 var protoPollutionPayloads = map[string]string{
-	"proto_assignment":       `{"__proto__":{"polluted":"ensphere_pp_test"}}`,
-	"constructor_pollution":  `{"constructor":{"prototype":{"polluted":"ensphere_pp_test"}}}`,
-	"json_merge":             `{"__proto__":{"polluted":"ensphere_pp_test"},"constructor":{"prototype":{"polluted":"ensphere_pp_test"}}}`,
+	"proto_assignment":      `{"__proto__":{"polluted":"ensphere_pp_test"}}`,
+	"constructor_pollution": `{"constructor":{"prototype":{"polluted":"ensphere_pp_test"}}}`,
+	"json_merge":            `{"__proto__":{"polluted":"ensphere_pp_test"},"constructor":{"prototype":{"polluted":"ensphere_pp_test"}}}`,
 }
 
 var validProtoPollutionTechniques = map[string]bool{
@@ -64,7 +64,7 @@ func VerifyProtoPollution(cfg ProtoPollutionConfig) (*ProbeResult, error) {
 	// Baseline: clean GET request
 	throttle.Wait()
 	probeCount++
-	baselineResp := HTTPProbe("GET", cfg.URL, "", cfg.Headers, cfg.TimeoutSec)
+	baselineResp := HTTPProbe("GET", cfg.URL, "", cfg.Headers, cfg.TimeoutSec, cfg.InScope)
 	if baselineResp.Error != nil {
 		return nil, fmt.Errorf("baseline probe: %w", baselineResp.Error)
 	}
@@ -76,7 +76,7 @@ func VerifyProtoPollution(cfg ProtoPollutionConfig) (*ProbeResult, error) {
 	payload := protoPollutionPayloads[cfg.Technique]
 	throttle.Wait()
 	probeCount++
-	injectionResp := HTTPProbe(cfg.Method, cfg.URL, payload, headers, cfg.TimeoutSec)
+	injectionResp := HTTPProbe(cfg.Method, cfg.URL, payload, headers, cfg.TimeoutSec, cfg.InScope)
 	if injectionResp.Error != nil {
 		return nil, fmt.Errorf("injection probe: %w", injectionResp.Error)
 	}
@@ -87,7 +87,7 @@ func VerifyProtoPollution(cfg ProtoPollutionConfig) (*ProbeResult, error) {
 	// Verify: clean GET again to check if pollution persisted
 	throttle.Wait()
 	probeCount++
-	verifyResp := HTTPProbe("GET", cfg.URL, "", cfg.Headers, cfg.TimeoutSec)
+	verifyResp := HTTPProbe("GET", cfg.URL, "", cfg.Headers, cfg.TimeoutSec, cfg.InScope)
 	if verifyResp.Error != nil {
 		return nil, fmt.Errorf("verify probe: %w", verifyResp.Error)
 	}

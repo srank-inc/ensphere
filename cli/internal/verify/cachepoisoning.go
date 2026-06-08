@@ -73,7 +73,7 @@ func VerifyCachePoisoning(cfg CachePoisoningConfig) (*ProbeResult, error) {
 	// Baseline: clean request
 	throttle.Wait()
 	probeCount++
-	baselineResp := HTTPProbe("GET", testURL, "", cfg.Headers, cfg.TimeoutSec)
+	baselineResp := HTTPProbe("GET", testURL, "", cfg.Headers, cfg.TimeoutSec, cfg.InScope)
 	if baselineResp.Error != nil {
 		return nil, fmt.Errorf("baseline probe: %w", baselineResp.Error)
 	}
@@ -91,7 +91,7 @@ func VerifyCachePoisoning(cfg CachePoisoningConfig) (*ProbeResult, error) {
 
 	throttle.Wait()
 	probeCount++
-	injectionResp := HTTPProbe("GET", testURL, "", injectionHeaders, cfg.TimeoutSec)
+	injectionResp := HTTPProbe("GET", testURL, "", injectionHeaders, cfg.TimeoutSec, cfg.InScope)
 	if injectionResp.Error != nil {
 		return nil, fmt.Errorf("injection probe: %w", injectionResp.Error)
 	}
@@ -103,7 +103,7 @@ func VerifyCachePoisoning(cfg CachePoisoningConfig) (*ProbeResult, error) {
 	// Verify: clean request again to check cache
 	throttle.Wait()
 	probeCount++
-	verifyResp := HTTPProbe("GET", testURL, "", cfg.Headers, cfg.TimeoutSec)
+	verifyResp := HTTPProbe("GET", testURL, "", cfg.Headers, cfg.TimeoutSec, cfg.InScope)
 	if verifyResp.Error != nil {
 		return nil, fmt.Errorf("verify probe: %w", verifyResp.Error)
 	}
@@ -147,17 +147,17 @@ func VerifyCachePoisoning(cfg CachePoisoningConfig) (*ProbeResult, error) {
 		ProbeCount:    probeCount,
 		Duration:      timer.Elapsed(),
 		Measurements: CachePoisoningMeasurements{
-			Technique:       cfg.Technique,
-			Baseline:        baseline,
-			Injection:       injection,
-			Verify:          verify,
-			BaselineHash:    baselineResp.BodyHash,
-			VerifyHash:      verifyResp.BodyHash,
+			Technique:              cfg.Technique,
+			Baseline:               baseline,
+			Injection:              injection,
+			Verify:                 verify,
+			BaselineHash:           baselineResp.BodyHash,
+			VerifyHash:             verifyResp.BodyHash,
 			VerifyMatchesInjection: verifyMatchesInjection,
 			VerifyMatchesBaseline:  verifyMatchesBaseline,
-			HeaderUsed:      fmt.Sprintf("%s: %s", headerCfg.header, headerCfg.value),
-			PayloadUsed:     headerCfg.value,
-			ResponseSnippet: snippet,
+			HeaderUsed:             fmt.Sprintf("%s: %s", headerCfg.header, headerCfg.value),
+			PayloadUsed:            headerCfg.value,
+			ResponseSnippet:        snippet,
 		},
 	}, nil
 }

@@ -124,7 +124,7 @@ func headerInjProbeWithParam(cfg HeaderInjectionConfig, value string) ProbeRespo
 			headers[k] = v
 		}
 		headers["Content-Type"] = "application/x-www-form-urlencoded"
-		return HTTPProbe("POST", cfg.URL, body, headers, cfg.TimeoutSec)
+		return HTTPProbe("POST", cfg.URL, body, headers, cfg.TimeoutSec, cfg.InScope)
 	}
 	parsed, err := url.Parse(cfg.URL)
 	if err != nil {
@@ -133,7 +133,7 @@ func headerInjProbeWithParam(cfg HeaderInjectionConfig, value string) ProbeRespo
 	params := parsed.Query()
 	params.Set(cfg.Param, value)
 	parsed.RawQuery = params.Encode()
-	return HTTPProbe("GET", parsed.String(), "", cfg.Headers, cfg.TimeoutSec)
+	return HTTPProbe("GET", parsed.String(), "", cfg.Headers, cfg.TimeoutSec, cfg.InScope)
 }
 
 // headerInjProbeWithRawParam sends a request with cfg.Param set to rawValue
@@ -146,7 +146,7 @@ func headerInjProbeWithRawParam(cfg HeaderInjectionConfig, rawValue string) Prob
 			headers[k] = v
 		}
 		headers["Content-Type"] = "application/x-www-form-urlencoded"
-		return HTTPProbe("POST", cfg.URL, body, headers, cfg.TimeoutSec)
+		return HTTPProbe("POST", cfg.URL, body, headers, cfg.TimeoutSec, cfg.InScope)
 	}
 	parsed, err := url.Parse(cfg.URL)
 	if err != nil {
@@ -158,5 +158,5 @@ func headerInjProbeWithRawParam(cfg HeaderInjectionConfig, rawValue string) Prob
 	} else {
 		parsed.RawQuery = injParam
 	}
-	return HTTPProbe("GET", parsed.String(), "", cfg.Headers, cfg.TimeoutSec)
+	return HTTPProbe("GET", parsed.String(), "", cfg.Headers, cfg.TimeoutSec, cfg.InScope)
 }

@@ -45,7 +45,7 @@ func VerifyClickjacking(cfg ClickjackingConfig) (*ProbeResult, error) {
 	throttle.Wait()
 	probeCount++
 
-	resp := HTTPProbe(cfg.Method, cfg.URL, "", cfg.Headers, cfg.TimeoutSec)
+	resp := HTTPProbe(cfg.Method, cfg.URL, "", cfg.Headers, cfg.TimeoutSec, cfg.InScope)
 	if resp.Error != nil {
 		return nil, fmt.Errorf("clickjacking probe: %w", resp.Error)
 	}

@@ -66,7 +66,7 @@ func VerifyRace(cfg RaceConfig) (*ProbeResult, error) {
 		go func(idx int) {
 			defer wg.Done()
 			<-start // wait for all goroutines to be ready
-			results[idx] = HTTPProbe(cfg.Method, cfg.URL, cfg.Body, headers, cfg.TimeoutSec)
+			results[idx] = HTTPProbe(cfg.Method, cfg.URL, cfg.Body, headers, cfg.TimeoutSec, cfg.InScope)
 		}(i)
 	}
 	close(start) // release all goroutines at once

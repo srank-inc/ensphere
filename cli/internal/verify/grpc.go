@@ -3,6 +3,7 @@ package verify
 import (
 	"bytes"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -91,6 +92,9 @@ func grpcReflection(cfg GRPCConfig, timer *Timer, throttle *Throttle, ew *eviden
 		*probeCount++
 
 		reqURL := strings.TrimRight(cfg.URL, "/") + endpoint
+		if err := CheckScope(reqURL, cfg.InScope); err != nil {
+			return nil, err
+		}
 		start := time.Now()
 
 		transport := &http.Transport{
@@ -99,10 +103,7 @@ func grpcReflection(cfg GRPCConfig, timer *Timer, throttle *Throttle, ew *eviden
 				InsecureSkipVerify: true,
 			},
 		}
-		client := &http.Client{
-			Transport: transport,
-			Timeout:   time.Duration(cfg.TimeoutSec) * time.Second,
-		}
+		client := scopedHTTPClientWithTransport(cfg.TimeoutSec, transport, cfg.InScope, true, true)
 
 		req, err := http.NewRequest("POST", reqURL, bytes.NewReader(grpcReflectionBody))
 		if err != nil {
@@ -118,6 +119,10 @@ func grpcReflection(cfg GRPCConfig, timer *Timer, throttle *Throttle, ew *eviden
 		resp, err := client.Do(req)
 		lastElapsed = time.Since(start).Milliseconds()
 		if err != nil {
+			var scopeErr *ScopeError
+			if errors.As(err, &scopeErr) {
+				return nil, err
+			}
 			fmt.Fprintf(os.Stderr, "[REFLECTION %s] error: %v\n", endpoint, err)
 			writeEvidence(ew, "grpc", cfg.Technique, cfg.URL, "", 0,
 				fmt.Sprintf("%dms", lastElapsed), "probe", fmt.Sprintf("reflection probe %s: error", endpoint))

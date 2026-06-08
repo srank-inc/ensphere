@@ -81,7 +81,7 @@ func wsInjection(cfg WebSocketConfig, timer *Timer, throttle *Throttle, ew *evid
 	// Convert ws:// to http:// for baseline
 	httpURL := strings.Replace(cfg.URL, "ws://", "http://", 1)
 	httpURL = strings.Replace(httpURL, "wss://", "https://", 1)
-	baselineResp := HTTPProbe("GET", httpURL, "", cfg.Headers, cfg.TimeoutSec)
+	baselineResp := HTTPProbe("GET", httpURL, "", cfg.Headers, cfg.TimeoutSec, cfg.InScope)
 	baseline := RoundResult{
 		StatusCode: baselineResp.StatusCode,
 		ElapsedMs:  baselineResp.ElapsedMs,

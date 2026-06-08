@@ -58,7 +58,7 @@ func VerifySmuggling(cfg SmugglingConfig) (*ProbeResult, error) {
 	// Baseline: normal POST request via HTTPProbe
 	throttle.Wait()
 	probeCount++
-	baselineResp := HTTPProbe("POST", cfg.URL, "x=1", cfg.Headers, cfg.TimeoutSec)
+	baselineResp := HTTPProbe("POST", cfg.URL, "x=1", cfg.Headers, cfg.TimeoutSec, cfg.InScope)
 	if baselineResp.Error != nil {
 		return nil, fmt.Errorf("baseline probe: %w", baselineResp.Error)
 	}

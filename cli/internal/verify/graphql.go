@@ -78,7 +78,7 @@ func verifyGraphQLIntrospection(cfg GraphQLConfig, headers map[string]string, th
 
 	throttle.Wait()
 	probeCount++
-	resp := HTTPProbe(cfg.Method, cfg.URL, query, headers, cfg.TimeoutSec)
+	resp := HTTPProbe(cfg.Method, cfg.URL, query, headers, cfg.TimeoutSec, cfg.InScope)
 	if resp.Error != nil {
 		return nil, fmt.Errorf("introspection probe: %w", resp.Error)
 	}
@@ -140,7 +140,7 @@ func verifyGraphQLBatch(cfg GraphQLConfig, headers map[string]string, throttle *
 
 	throttle.Wait()
 	probeCount++
-	resp := HTTPProbe(cfg.Method, cfg.URL, query, headers, cfg.TimeoutSec)
+	resp := HTTPProbe(cfg.Method, cfg.URL, query, headers, cfg.TimeoutSec, cfg.InScope)
 	if resp.Error != nil {
 		return nil, fmt.Errorf("batch query probe: %w", resp.Error)
 	}
@@ -196,7 +196,7 @@ func verifyGraphQLNestedDOS(cfg GraphQLConfig, headers map[string]string, thrott
 	baselineQuery := `{"query":"{ __typename }"}`
 	throttle.Wait()
 	probeCount++
-	baselineResp := HTTPProbe(cfg.Method, cfg.URL, baselineQuery, headers, cfg.TimeoutSec)
+	baselineResp := HTTPProbe(cfg.Method, cfg.URL, baselineQuery, headers, cfg.TimeoutSec, cfg.InScope)
 	if baselineResp.Error != nil {
 		return nil, fmt.Errorf("baseline probe: %w", baselineResp.Error)
 	}
@@ -206,7 +206,7 @@ func verifyGraphQLNestedDOS(cfg GraphQLConfig, headers map[string]string, thrott
 	nestedQuery := `{"query":"{ __schema { types { fields { type { fields { type { fields { type { name } } } } } } } } }"}`
 	throttle.Wait()
 	probeCount++
-	probeResp := HTTPProbe(cfg.Method, cfg.URL, nestedQuery, headers, cfg.TimeoutSec)
+	probeResp := HTTPProbe(cfg.Method, cfg.URL, nestedQuery, headers, cfg.TimeoutSec, cfg.InScope)
 	if probeResp.Error != nil {
 		return nil, fmt.Errorf("nested DOS probe: %w", probeResp.Error)
 	}

@@ -62,7 +62,7 @@ func VerifyJWT(cfg JWTConfig) (*ProbeResult, error) {
 
 	throttle.Wait()
 	probeCount++
-	baselineResp := HTTPProbe(cfg.Method, cfg.URL, "", baselineHeaders, cfg.TimeoutSec)
+	baselineResp := HTTPProbe(cfg.Method, cfg.URL, "", baselineHeaders, cfg.TimeoutSec, cfg.InScope)
 	if baselineResp.Error != nil {
 		return nil, fmt.Errorf("baseline probe: %w", baselineResp.Error)
 	}
@@ -100,7 +100,7 @@ func VerifyJWT(cfg JWTConfig) (*ProbeResult, error) {
 
 	throttle.Wait()
 	probeCount++
-	probeResp := HTTPProbe(cfg.Method, cfg.URL, "", probeHeaders, cfg.TimeoutSec)
+	probeResp := HTTPProbe(cfg.Method, cfg.URL, "", probeHeaders, cfg.TimeoutSec, cfg.InScope)
 	if probeResp.Error != nil {
 		return nil, fmt.Errorf("jwt probe: %w", probeResp.Error)
 	}

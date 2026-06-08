@@ -67,7 +67,7 @@ func VerifyCSRF(cfg CSRFConfig) (*ProbeResult, error) {
 		baselineHeaders[k] = v
 	}
 	baselineHeaders["Origin"] = "https://legitimate-origin.com"
-	baselineResp := HTTPProbe(cfg.Method, cfg.URL, "", baselineHeaders, cfg.TimeoutSec)
+	baselineResp := HTTPProbe(cfg.Method, cfg.URL, "", baselineHeaders, cfg.TimeoutSec, cfg.InScope)
 	if baselineResp.Error != nil {
 		return nil, fmt.Errorf("baseline probe: %w", baselineResp.Error)
 	}
@@ -82,7 +82,7 @@ func VerifyCSRF(cfg CSRFConfig) (*ProbeResult, error) {
 	for k, v := range baseHeaders {
 		noOriginHeaders[k] = v
 	}
-	noOriginResp := HTTPProbe(cfg.Method, cfg.URL, "", noOriginHeaders, cfg.TimeoutSec)
+	noOriginResp := HTTPProbe(cfg.Method, cfg.URL, "", noOriginHeaders, cfg.TimeoutSec, cfg.InScope)
 	if noOriginResp.Error != nil {
 		return nil, fmt.Errorf("no-origin probe: %w", noOriginResp.Error)
 	}
@@ -98,7 +98,7 @@ func VerifyCSRF(cfg CSRFConfig) (*ProbeResult, error) {
 		mismatchHeaders[k] = v
 	}
 	mismatchHeaders["Origin"] = "https://evil.com"
-	mismatchResp := HTTPProbe(cfg.Method, cfg.URL, "", mismatchHeaders, cfg.TimeoutSec)
+	mismatchResp := HTTPProbe(cfg.Method, cfg.URL, "", mismatchHeaders, cfg.TimeoutSec, cfg.InScope)
 	if mismatchResp.Error != nil {
 		return nil, fmt.Errorf("mismatch-origin probe: %w", mismatchResp.Error)
 	}

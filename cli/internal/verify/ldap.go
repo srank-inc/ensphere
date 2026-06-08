@@ -281,7 +281,7 @@ func probeWithLDAPParam(cfg LDAPConfig, value string) ProbeResponse {
 		params := parsed.Query()
 		params.Set(cfg.Param, value)
 		parsed.RawQuery = params.Encode()
-		return HTTPProbe(cfg.Method, parsed.String(), "", cfg.Headers, cfg.TimeoutSec)
+		return HTTPProbe(cfg.Method, parsed.String(), "", cfg.Headers, cfg.TimeoutSec, cfg.InScope)
 	}
 	// POST: URL-encode body
 	body := url.Values{}
@@ -291,5 +291,5 @@ func probeWithLDAPParam(cfg LDAPConfig, value string) ProbeResponse {
 		headers[k] = v
 	}
 	headers["Content-Type"] = "application/x-www-form-urlencoded"
-	return HTTPProbe(cfg.Method, cfg.URL, body.Encode(), headers, cfg.TimeoutSec)
+	return HTTPProbe(cfg.Method, cfg.URL, body.Encode(), headers, cfg.TimeoutSec, cfg.InScope)
 }

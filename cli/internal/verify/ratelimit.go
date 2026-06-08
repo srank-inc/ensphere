@@ -74,7 +74,7 @@ func VerifyRateLimit(cfg RateLimitConfig) (*ProbeResult, error) {
 			break
 		}
 
-		resp := HTTPProbe(cfg.Method, cfg.URL, cfg.Body, headers, cfg.TimeoutSec)
+		resp := HTTPProbe(cfg.Method, cfg.URL, cfg.Body, headers, cfg.TimeoutSec, cfg.InScope)
 		if resp.Error != nil {
 			fmt.Fprintf(os.Stderr, "[RATELIMIT %d/%d] error: %v\n", i+1, cfg.BurstCount, resp.Error)
 			continue

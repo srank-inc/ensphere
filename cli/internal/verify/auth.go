@@ -63,7 +63,7 @@ func VerifyAuth(cfg AuthConfig) (*ProbeResult, error) {
 
 	throttle.Wait()
 	probeCount++
-	baselineResp := HTTPProbeNoRedirect(cfg.Method, cfg.URL, "", baselineHeaders, cfg.TimeoutSec)
+	baselineResp := HTTPProbeNoRedirect(cfg.Method, cfg.URL, "", baselineHeaders, cfg.TimeoutSec, cfg.InScope)
 	if baselineResp.Error != nil {
 		return nil, fmt.Errorf("baseline probe: %w", baselineResp.Error)
 	}
@@ -107,7 +107,7 @@ func VerifyAuth(cfg AuthConfig) (*ProbeResult, error) {
 
 	throttle.Wait()
 	probeCount++
-	probeResp := HTTPProbeNoRedirect(probeMethod, cfg.URL, "", probeHeaders, cfg.TimeoutSec)
+	probeResp := HTTPProbeNoRedirect(probeMethod, cfg.URL, "", probeHeaders, cfg.TimeoutSec, cfg.InScope)
 	if probeResp.Error != nil {
 		return nil, fmt.Errorf("auth probe: %w", probeResp.Error)
 	}

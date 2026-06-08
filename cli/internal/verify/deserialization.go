@@ -104,7 +104,7 @@ func VerifyDeserialization(cfg DeserializationConfig) (*ProbeResult, error) {
 	for i := 0; i < defaultRounds; i++ {
 		throttle.Wait()
 		probeCount++
-		resp := HTTPProbe(cfg.Method, cfg.URL, runtimeCfg.baseline, headers, cfg.TimeoutSec)
+		resp := HTTPProbe(cfg.Method, cfg.URL, runtimeCfg.baseline, headers, cfg.TimeoutSec, cfg.InScope)
 		if resp.Error != nil {
 			return nil, fmt.Errorf("baseline probe %d: %w", i+1, resp.Error)
 		}
@@ -125,7 +125,7 @@ func VerifyDeserialization(cfg DeserializationConfig) (*ProbeResult, error) {
 	for i := 0; i < defaultRounds; i++ {
 		throttle.Wait()
 		probeCount++
-		resp := HTTPProbe(cfg.Method, cfg.URL, payload, headers, cfg.TimeoutSec)
+		resp := HTTPProbe(cfg.Method, cfg.URL, payload, headers, cfg.TimeoutSec, cfg.InScope)
 		if resp.Error != nil {
 			fmt.Fprintf(os.Stderr, "[PAYLOAD %d] error: %v\n", i+1, resp.Error)
 			continue
