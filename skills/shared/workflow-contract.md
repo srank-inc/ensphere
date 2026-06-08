@@ -11,7 +11,7 @@ the skill workflow aligned with the product boundary:
 Ensphere must not be reduced to only a skill plus external tool ingestion.
 External tools create leads and coverage, but Ensphere's native probes, payload
 corpus, scope validation, evidence writer, callback capture, redaction, and
-replayable measurements are the verification layer.
+replayable measurements are the native measurement layer.
 
 The agent can reason with tool output, but reports become defensible only when
 claims cite Ensphere evidence, transcripts, imported leads, or explicitly
@@ -55,7 +55,7 @@ labels.
 | `full` | Required inputs were available and the planned session surface was tested. | State covered categories and cite evidence. |
 | `partial` | Some relevant surface was tested, but scope, credentials, data, or stability limited coverage. | Name the missing coverage and avoid broad assurance language. |
 | `blocked` | Relevant surface exists, but testing could not execute safely or meaningfully. | Record the blocker and required input. |
-| `source_only` | Source review occurred without a live executable target. | Call it source review, not dynamic pentest proof. |
+| `source_only` | Source review occurred without a live executable target. | Call it source review, not dynamic assessment proof. |
 | `black_box_only` | Live behavioral testing occurred without source code. | Reference endpoints and transcripts, not file paths. |
 | `client_only` | Primary artifact is a mobile, desktop, browser extension, or static client without a supplied backend. | Report client exposure facts and backend testing limitations. |
 | `cloud_only` | Target is cloud, Kubernetes, or IaC without an app HTTP surface. | Run cloud checks and state app sessions were not applicable. |

@@ -6,7 +6,7 @@
 
 # Ensphere
 
-Ensphere is a deterministic security automation toolkit for authorized application and cloud assessments. It combines a Go CLI, curated payload data, verification probes, evidence logging, exploit templates, source sink discovery, compliance mapping, and AI-agent methodology files.
+Ensphere is an evidence-first autonomous application security assessment system for AI agents and human analysts. It combines a deterministic Go CLI, an agent workspace runner, curated payload data, scoped measurement probes, hash-chained evidence, optional exploit planning, source sink discovery, cloud checks, compliance mapping, and portable methodology files.
 
 The project is built around a strict product boundary:
 
@@ -19,15 +19,17 @@ Ensphere can send requests, measure timing, hash responses, count rows, validate
 | Capability | Purpose |
 |------------|---------|
 | Curated payload database | 1206 payloads across 27 vulnerability types, generated from YAML seeds into embedded SQLite |
-| Verification probes | 33 scoped measurement probes for SQLi, XSS, SSRF, auth, authz, cloud, API, and protocol issues |
+| Native measurement probes | 33 scoped probes for SQLi, XSS, SSRF, auth, authz, cloud, API, and protocol issues |
 | Evidence logging | JSONL evidence with write-time `EVID-XXX` IDs, hash-chain integrity, redaction, and cross-process locking |
 | Exploit templates | Python 3 stdlib-only templates for reproducible proof-of-concept work |
 | Static sink discovery | Regex-based source sink candidates labeled as `analysis_depth: "pattern_match"` |
 | Cloud parsing and probes | Provider CLI-based checks plus Prowler and Trivy result ingestion |
 | Compliance mapping | OWASP, PCI-DSS, SOC 2, ISO 27001, and OWASP API Security mappings |
-| Agent methodology | Portable skill files and adaptive 01-11 assessment workflow for Claude Code and Codex |
+| Runner and report gates | Workspace initialization, deterministic session planning, next-action prompts, report readiness gates, Session 10 handoff, and Session 11 final-registry derivation |
+| Agent methodology | Portable skill files and adaptive 01-11 assessment workflow for Codex, Claude Code, and other agent surfaces |
+| External ingestion roadmap | Nmap, Nuclei, SARIF, ZAP/Burp, SQLMap, and similar tools are planned as source-provided leads, not Ensphere-owned judgments |
 
-The agent workflow now separates assessment from exploitation: Sessions 01-09
+The canonical workflow separates assessment from exploitation: Sessions 01-09
 produce a broad evidence-backed assessment, Session 10 optionally proves
 selected findings by exploitation, and Session 11 regenerates an
 exploit-verified final report.
@@ -90,7 +92,7 @@ artifacts.
 
 - Go 1.26.4 or newer
 - macOS, Linux, or another Go-supported platform
-- Optional: Claude Code or Codex for agent-guided assessments
+- Optional: Codex, Claude Code, or another subscribed AI agent surface for agent-guided assessments
 - Optional: Playwright MCP for browser-driven testing
 - Optional: cloud provider CLIs for cloud probes (`aws`, `gcloud`, `az`)
 
@@ -178,10 +180,11 @@ cd cli && go test -race -short ./internal/verify/
 | Document | Purpose |
 |----------|---------|
 | [docs/cli-reference.md](docs/cli-reference.md) | Full CLI command reference and output contracts |
-| [docs/agent-workflow.md](docs/agent-workflow.md) | Claude Code and Codex assessment workflow |
+| [docs/agent-workflow.md](docs/agent-workflow.md) | AI-agent assessment workflow |
 | [docs/development.md](docs/development.md) | Architecture, build, testing, and contribution rules |
 | [docs/testing.md](docs/testing.md) | Test inventory, CI gates, and generated drift checks |
 | [docs/dogfood/README.md](docs/dogfood/README.md) | Local dogfood runbooks |
+| [docs/ensphere-autonomous-pentest-expansion-plan.html](docs/ensphere-autonomous-pentest-expansion-plan.html) | Active evidence-first autonomy roadmap |
 
 ## Distribution
 

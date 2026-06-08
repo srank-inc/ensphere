@@ -1,6 +1,6 @@
 # Security Policy
 
-Ensphere is a security automation toolkit and may contain offensive payloads, proof-of-concept templates, and verification probes. Use it only for systems where you have explicit authorization.
+Ensphere is an evidence-first autonomous application security assessment toolkit and may contain offensive payloads, proof-of-concept templates, and measurement probes. Use it only for systems where you have explicit authorization.
 
 ## Reporting Security Issues
 

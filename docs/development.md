@@ -2,7 +2,9 @@
 
 ## Core Principle
 
-Ensphere is a measurement and execution engine. It produces deterministic facts. The AI or human analyst produces security judgments.
+Ensphere is an evidence-first autonomous assessment system built around a
+measurement and execution engine. The CLI and generated assets produce
+deterministic facts. The AI or human analyst produces security judgments.
 
 Allowed in code:
 
@@ -33,6 +35,7 @@ Not allowed in code:
 | `cli/internal/verify/` | Verification probe logic |
 | `cli/internal/evidence/` | JSONL evidence writer and reader |
 | `cli/internal/payloads/` | Embedded SQLite payload database and query logic |
+| `cli/internal/runner/` | Workspace runner, assessment-plan drafting, report/final gates, Session 10 handoff |
 | `cli/internal/templates/` | Embedded Python 3 exploit templates |
 | `cli/internal/checklist/` | Embedded checklist loader |
 | `cli/internal/compliance/` | Compliance mappings |
@@ -42,6 +45,7 @@ Not allowed in code:
 | `cli/internal/callback/` | OOB callback HTTP listener |
 | `cli/internal/cloud/` | Cloud probes and parser logic |
 | `cli/internal/openapi/` | OpenAPI parser |
+| `cli/internal/enums/` | Shared enum validation maps |
 | `cli/tools/seedgen/` | YAML to SQLite payload compiler |
 | `assets/seeds/` | Payload YAML sources |
 | `skills/` | Agent methodology and checklists |
@@ -106,5 +110,5 @@ Valid enum values are defined in `cli/internal/enums/enums.go`.
   indexes current when adding or retiring major docs, plans, runbooks, seeds,
   checklists, or sample reports.
 - Put CLI details in [cli-reference.md](cli-reference.md).
-- Put agent methodology in [agent-workflow.md](agent-workflow.md) and `skills/`.
+- Put agent workflow and runner semantics in [agent-workflow.md](agent-workflow.md), [../skills/shared/workflow-contract.md](../skills/shared/workflow-contract.md), and `skills/`.
 - Update [testing.md](testing.md) when test inventory, gates, or drift checks change.

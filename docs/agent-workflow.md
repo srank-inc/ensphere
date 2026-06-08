@@ -1,6 +1,6 @@
 # Agent Workflow
 
-Ensphere includes AI-agent methodology files for authorized assessments. The CLI owns deterministic execution and measurement. The agent or human analyst owns interpretation, classification, confidence, exploitability, chaining, and report writing.
+Ensphere provides an evidence-first autonomous assessment workflow for authorized targets. The CLI owns deterministic execution, measurement, workspace gates, and evidence integrity. The AI agent or human analyst owns interpretation, classification, confidence, exploitability, chaining, and report writing.
 
 ## Install Skill Files
 
@@ -8,7 +8,7 @@ Ensphere includes AI-agent methodology files for authorized assessments. The CLI
 ./install-skills.sh
 ```
 
-From a target project, invoke the installed skill:
+From a target project, invoke the installed skill or agent entry point:
 
 ```text
 Claude Code: /ensphere
@@ -57,7 +57,7 @@ Run one session at a time and clear context between sessions. Progress persists 
 | 04 | Authz | IDOR, privilege escalation, role confusion, workflow bypass |
 | 05 | XSS | Reflected, stored, DOM-based execution paths |
 | 06 | SSRF | Classic, blind, semi-blind, stored SSRF, redirect chains |
-| 07 | Cloud | AWS, Azure, GCP, Kubernetes, IaC, scanner ingestion |
+| 07 | Cloud | AWS, Azure, GCP, Kubernetes, IaC, Prowler/Trivy ingestion |
 | 08 | API | Rate limiting, property authz, mass assignment, pagination, webhooks |
 | 09 | Assessment Report | Evidence-backed assessment report and finding registry |
 | 10 | Optional Exploitation | Opt-in prove-by-exploitation for selected findings |
@@ -86,7 +86,7 @@ Do not put conclusions such as confirmed, potential, safe, high confidence, expl
 
 See [../skills/shared/evidence-standards.md](../skills/shared/evidence-standards.md).
 
-Finding status, confidence, severity, exploitability, and business impact belong in the finding registry and reports, not CLI evidence rows. Imported scanner severity is source-provided until corroborated by Ensphere measurements or manual proof.
+Finding status, confidence, severity, exploitability, and business impact belong in the finding registry and reports, not CLI evidence rows. Imported scanner severity is source-provided until corroborated by Ensphere measurements or manual proof. Planned external importers such as Nmap, Nuclei, SARIF, ZAP/Burp, and SQLMap should follow the same source-provided lead model.
 
 ## Browser Testing
 

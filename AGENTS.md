@@ -10,13 +10,13 @@ Everything that ships as part of Ensphere — Go code, Python templates, YAML se
 
 **Ensphere must NOT:** assign status (confirmed/potential/safe), assign confidence (high/medium/low), apply thresholds ("delta > 500ms = SQLi"), decide exploitability, or make any statement that requires interpretation or context. Those are heuristics, not facts — they belong to the AI.
 
-**The AI (Claude / agent)** consumes Ensphere's raw measurements and applies context, reasoning, multi-step correlation, framework knowledge, and security expertise to classify findings, assign confidence, chain attack paths, and write reports.
+**The AI agent or human analyst** consumes Ensphere's raw measurements and applies context, reasoning, multi-step correlation, framework knowledge, and security expertise to classify findings, assign confidence, chain attack paths, and write reports.
 
 This separation means: no hallucinated probes (Ensphere owns execution), no fake determinism (Ensphere never pretends to be certain about judgments), and maximum intelligence where it matters (the AI reasons with full context instead of crude thresholds).
 
 ## Architecture
 
-Go CLI binary (`ensphere`) + Claude Code skill files (`skills/`). CLI commands and business logic live in `cli/`. Skill methodology and checklists live in `skills/`.
+Go CLI binary (`ensphere`) + portable AI-agent skill files (`skills/`). CLI commands and business logic live in `cli/`. Skill methodology and checklists live in `skills/`.
 
 | Path | Purpose |
 |------|---------|
@@ -25,6 +25,7 @@ Go CLI binary (`ensphere`) + Claude Code skill files (`skills/`). CLI commands a
 | `cli/internal/verify/` | Verification probe logic |
 | `cli/internal/evidence/` | JSONL evidence writer/reader |
 | `cli/internal/payloads/` | SQLite DB + query logic |
+| `cli/internal/runner/` | Workspace runner, report/final gates, Session 10 handoff |
 | `cli/internal/templates/` | Pre-built Python 3 exploit scripts |
 | `cli/internal/checklist/` | Framework-specific security checklists |
 | `cli/internal/compliance/` | Compliance framework mappings |
@@ -37,7 +38,7 @@ Go CLI binary (`ensphere`) + Claude Code skill files (`skills/`). CLI commands a
 | `cli/internal/enums/` | Enum validation maps |
 | `cli/tools/seedgen/` | YAML → SQLite compiler |
 | `assets/seeds/` | YAML payload seed files |
-| `skills/` | Claude Code skill files |
+| `skills/` | Portable AI-agent skill files |
 | `skills/methodology/` | Session methodology (01-11, plus 01.5 planner and 07a-d cloud sub-files) |
 | `skills/checklists/` | Security checklists |
 | `skills/shared/` | Evidence standards and proof-level definitions |

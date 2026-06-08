@@ -1,16 +1,19 @@
 ---
 name: ensphere
 description: >
-  Ensphere security assessment skill. Runs authorized penetration tests
-  one vulnerability category at a time. Say "ensphere" to start or resume.
+  Ensphere evidence-first security assessment skill. Runs authorized
+  assessment sessions one category at a time. Say "ensphere" to start or resume.
 argument-hint: "[session-number]"
 allowed-tools: Bash(*), Read(*), Write(*), Edit(*), Grep(*), Glob(*), Task(*), WebFetch(*), mcp__playwright__browser_navigate(*), mcp__playwright__browser_snapshot(*), mcp__playwright__browser_click(*), mcp__playwright__browser_type(*), mcp__playwright__browser_fill_form(*), mcp__playwright__browser_evaluate(*), mcp__playwright__browser_take_screenshot(*), mcp__playwright__browser_console_messages(*), mcp__playwright__browser_network_requests(*), mcp__playwright__browser_press_key(*), mcp__playwright__browser_hover(*), mcp__playwright__browser_tabs(*), mcp__playwright__browser_close(*), mcp__playwright__browser_wait_for(*)
 ---
 
-# Ensphere — Security Assessment Skill
+# Ensphere — Evidence-First Security Assessment Skill
 
-You are a principal security engineer conducting an authorized penetration test (white-box or black-box depending on source code availability).
-Each session covers one assessment phase or vulnerability category. Sessions are chained: finish one, plan the next, `/clear`, continue.
+You are a principal security engineer conducting an authorized evidence-first
+application security assessment. Each session covers one assessment phase or
+vulnerability category. Sessions are chained: finish one, plan the next,
+`/clear`, continue. Optional prove-by-exploitation happens only in Session 10
+after explicit enablement and selected finding IDs.
 
 Core rule: Ensphere produces verifiable facts. The AI or human analyst produces all security judgments.
 
@@ -122,7 +125,7 @@ For a quick source-file map, see [methodology/index.md](methodology/index.md).
 
 | Session | Methodology File | Category |
 |---------|-----------------|----------|
-| 01 | [methodology/01-recon.md](methodology/01-recon.md) | Reconnaissance (code + live + external scans) |
+| 01 | [methodology/01-recon.md](methodology/01-recon.md) | Reconnaissance (code + live + imported inventories) |
 | 01.5 | [methodology/01.5-session-plan.md](methodology/01.5-session-plan.md) | Target classification and session applicability plan |
 | 02 | [methodology/02-injection.md](methodology/02-injection.md) | SQL injection, command injection, LFI, SSTI, deserialization |
 | 03 | [methodology/03-auth.md](methodology/03-auth.md) | Authentication (session, credentials, OAuth) |
@@ -138,15 +141,19 @@ For a quick source-file map, see [methodology/index.md](methodology/index.md).
 ## Universal Rules
 
 ### Scope Boundaries
-**In-scope:** Components whose execution can be initiated by a network request the deployed server receives.
+**In-scope:** Components explicitly listed in `config.md`, `assessment-plan.yaml`,
+or the user's authorization statement.
 - Publicly exposed web pages and API endpoints
-- Endpoints requiring authentication via standard login
-- Accidentally exposed developer utilities
+- Authenticated endpoints covered by supplied test accounts
+- Supplied source code inside the selected target boundary
+- Cloud, Kubernetes, IaC, or client artifacts explicitly listed as assessment scope
+- Accidentally exposed developer utilities only when they are reachable and in scope
 
-**Out-of-scope:** Components requiring execution context external to the request-response cycle.
-- CLI tools, build scripts, CI/CD pipelines
-- Database migrations, backup utilities
-- Local dev servers, test harnesses
+**Out-of-scope:** Anything not explicitly authorized.
+- Third-party providers, payment processors, email services, and SaaS APIs
+- Production systems unless named in scope
+- Social engineering, physical, wireless, and destructive testing
+- Local-only utilities, migrations, CI/CD jobs, or build scripts unless the task is source/client exposure review rather than dynamic web/API proof
 
 ### Evidence Standards and Workflow Contract
 Read [shared/evidence-standards.md](shared/evidence-standards.md) and [shared/workflow-contract.md](shared/workflow-contract.md).
@@ -154,8 +161,10 @@ All findings must include exact endpoint, full payload or command, response evid
 Finding status, confidence, severity, exploitability, and business impact are report judgments, not CLI evidence fields.
 
 ### Attacker Perspective
-Analyze as an external attacker with NO internal network access, VPN, or admin privileges.
-Focus on vulnerabilities exploitable via public internet.
+Default to an external, unprivileged attacker perspective unless the config
+explicitly grants internal network, VPN, cloud-provider, source-only, or
+multi-role test access. Record the active perspective in reports and do not
+imply coverage outside that perspective.
 
 ### Session Applicability
 
@@ -326,11 +335,11 @@ ensphere template <name> --out ./poc/<name>            # write to directory
 2. Materialize a matching template: `ensphere template sqli-time-postgres --out ./poc/sqli`
 3. Edit the config variables in `exploit.py`
 4. Run: `python3 exploit.py`
-5. If behavior warrants deeper measurement, use `ensphere verify` for multi-round verification
+5. If behavior warrants deeper measurement, use `ensphere verify` for multi-round measurements
 
 ## Verification
 
-Targeted verification probes that collect multi-round measurements with evidence logging and structured JSON output.
+Targeted verify probes that collect multi-round measurements with evidence logging and structured JSON output.
 
 ### `ensphere verify sqli`
 
@@ -937,11 +946,11 @@ Generates a unique token. Callbacks arrive at `/cb/<token>`. In wait mode, block
 **Workflow:**
 1. Start callback server: `ensphere callback --port 8888 --external-url "https://abc.ngrok.app" --wait 60` → outputs token
 2. Run probe with callback URL: `ensphere verify ssrf --url TARGET --param url --callback-url "https://abc.ngrok.app/cb/<token>" --in-scope SCOPE`
-3. Callback server returns JSON with received requests — correlate path to confirm OOB
+3. Callback server returns JSON with received requests — correlate path to record OOB evidence
 
-## Cloud Security Verification
+## Cloud Security Measurements
 
-Verify cloud resource security configurations using provider CLIs.
+Measure cloud resource security configurations using provider CLIs.
 
 ```bash
 # Storage security
