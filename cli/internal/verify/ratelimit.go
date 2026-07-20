@@ -14,7 +14,7 @@ type RateLimitConfig struct {
 	Method     string
 	Body       string
 	Token      string
-	BurstCount int // number of sequential requests (default 50)
+	BurstCount int // explicitly approved number of sequential requests
 	WindowSec  int // time window in seconds (default 10)
 	ProbeConfig
 }
@@ -30,7 +30,7 @@ func VerifyRateLimit(cfg RateLimitConfig) (*ProbeResult, error) {
 	}
 
 	if cfg.BurstCount < 1 {
-		cfg.BurstCount = 50
+		return nil, fmt.Errorf("burst count must be explicitly set to a positive approved value")
 	}
 	if cfg.WindowSec < 1 {
 		cfg.WindowSec = 10
@@ -122,12 +122,11 @@ func VerifyRateLimit(cfg RateLimitConfig) (*ProbeResult, error) {
 	avgMs := totalMs / int64(len(rounds))
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "rate_limit",
-		Technique:     "rate_limit_bypass",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    len(rounds),
-		Duration:      timer.Elapsed(),
+		VulnType:   "rate_limit",
+		Technique:  "rate_limit_bypass",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: len(rounds),
+		Duration:   timer.Elapsed(),
 		Measurements: RateLimitMeasurements{
 			BurstCount:      cfg.BurstCount,
 			WindowSec:       cfg.WindowSec,

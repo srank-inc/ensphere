@@ -105,12 +105,11 @@ func VerifyCSVInjection(cfg CSVInjectionConfig) (*ProbeResult, error) {
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "csv_injection",
-		Technique:     "formula_injection",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "csv_injection",
+		Technique:  "formula_injection",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: CSVInjectionMeasurements{
 			SubmitProbe:     submitRound,
 			ExportProbe:     exportRound,

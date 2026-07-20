@@ -38,7 +38,6 @@ type CallbackEntry struct {
 
 // CallbackResult is the JSON output of a callback server run.
 type CallbackResult struct {
-	SchemaVersion int             `json:"schema_version"`
 	ListenAddr    string          `json:"listen_addr"`
 	ExternalURL   string          `json:"external_url,omitempty"`
 	Token         string          `json:"token"`
@@ -134,7 +133,6 @@ func (s *Server) Start(ctx context.Context) (*CallbackResult, error) {
 	defer s.mu.Unlock()
 
 	return &CallbackResult{
-		SchemaVersion: 2,
 		ListenAddr:    ln.Addr().String(),
 		ExternalURL:   s.cfg.ExternalURL,
 		Token:         s.token,

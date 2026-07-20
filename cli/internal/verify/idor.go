@@ -79,12 +79,11 @@ func VerifyIDOR(cfg IDORConfig) (*ProbeResult, error) {
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "idor",
-		Technique:     "idor_uuid",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "idor",
+		Technique:  "idor_uuid",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: IDORMeasurements{
 			ProbeRound:      probeRound,
 			ExpectedStatus:  cfg.ExpectedStatus,

@@ -153,12 +153,11 @@ func VerifyCSRF(cfg CSRFConfig) (*ProbeResult, error) {
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "csrf",
-		Technique:     "origin_validation",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "csrf",
+		Technique:  "origin_validation",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: CSRFMeasurements{
 			NoOrigin:        noOrigin,
 			MismatchOrigin:  mismatchOrigin,

@@ -131,12 +131,11 @@ func VerifyCloudLogging(cfg LoggingConfig) (*verify.ProbeResult, error) {
 	elapsed := time.Since(start).Milliseconds()
 
 	return &verify.ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "cloud_logging",
-		Technique:     "cloud_audit",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    len(cliOutputs),
-		Duration:      timer.Elapsed(),
+		VulnType:   "cloud_logging",
+		Technique:  "cloud_audit",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: len(cliOutputs),
+		Duration:   timer.Elapsed(),
 		Measurements: LoggingMeasurements{
 			Provider:      cfg.Provider,
 			Trails:        trails,
@@ -153,9 +152,9 @@ func VerifyCloudLogging(cfg LoggingConfig) (*verify.ProbeResult, error) {
 func parseAWSCloudTrails(stdout string) []TrailInfo {
 	var result struct {
 		TrailList []struct {
-			Name                       string `json:"Name"`
-			IsMultiRegionTrail         bool   `json:"IsMultiRegionTrail"`
-			LogFileValidationEnabled   bool   `json:"LogFileValidationEnabled"`
+			Name                     string `json:"Name"`
+			IsMultiRegionTrail       bool   `json:"IsMultiRegionTrail"`
+			LogFileValidationEnabled bool   `json:"LogFileValidationEnabled"`
 		} `json:"TrailList"`
 	}
 	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
@@ -165,10 +164,8 @@ func parseAWSCloudTrails(stdout string) []TrailInfo {
 	for _, t := range result.TrailList {
 		mr := t.IsMultiRegionTrail
 		lv := t.LogFileValidationEnabled
-		active := true // assume active until status check
 		trails = append(trails, TrailInfo{
 			Name:          t.Name,
-			IsActive:      &active,
 			IsMultiRegion: &mr,
 			LogValidation: &lv,
 		})

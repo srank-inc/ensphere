@@ -34,9 +34,6 @@ func TestIntegration_SQLi_BlindTime(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected non-nil result")
 	}
-	if result.SchemaVersion != 2 {
-		t.Fatalf("expected SchemaVersion 2, got %d", result.SchemaVersion)
-	}
 	if result.VulnType != "sqli" {
 		t.Fatalf("expected VulnType sqli, got %s", result.VulnType)
 	}
@@ -646,13 +643,13 @@ func TestIntegration_FileUpload(t *testing.T) {
 	}))
 
 	cfg := FileUploadConfig{
-		URL:       ts.URL + "/upload",
-		FieldName: "file",
-		Filename:  "shell.php.jpg",
-		Content:   "ensphere_upload_test",
-		MIMEType:  "image/jpeg",
-		Technique: "extension_bypass",
-		Method:    "POST",
+		URL:         ts.URL + "/upload",
+		FieldName:   "file",
+		Filename:    "shell.php.jpg",
+		Content:     "ensphere_upload_test",
+		MIMEType:    "image/jpeg",
+		Technique:   "extension_bypass",
+		Method:      "POST",
 		ProbeConfig: baseProbeConfig(),
 	}
 

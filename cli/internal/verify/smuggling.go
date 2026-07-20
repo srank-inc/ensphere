@@ -103,12 +103,11 @@ func VerifySmuggling(cfg SmugglingConfig) (*ProbeResult, error) {
 	delta := probeAvg - baselineResp.ElapsedMs
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "request_smuggling",
-		Technique:     cfg.Technique,
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "request_smuggling",
+		Technique:  cfg.Technique,
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: SmugglingMeasurements{
 			Technique:   cfg.Technique,
 			Baseline:    baseline,

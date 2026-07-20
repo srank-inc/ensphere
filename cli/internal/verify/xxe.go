@@ -112,12 +112,11 @@ func VerifyXXE(cfg XXEConfig) (*ProbeResult, error) {
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "xxe",
-		Technique:     cfg.Technique,
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "xxe",
+		Technique:  cfg.Technique,
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: XXEMeasurements{
 			Probe:             probe,
 			MatchedSignatures: matchedSignatures,

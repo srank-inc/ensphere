@@ -149,12 +149,11 @@ func VerifyDeserialization(cfg DeserializationConfig) (*ProbeResult, error) {
 	payloadAvg := avgFromRounds(payloadRounds)
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "deserialization",
-		Technique:     cfg.Technique,
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "deserialization",
+		Technique:  cfg.Technique,
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: DeserializationMeasurements{
 			Runtime:        cfg.Runtime,
 			BaselineRounds: baselineRounds,

@@ -116,12 +116,11 @@ func verifyGraphQLIntrospection(cfg GraphQLConfig, headers map[string]string, th
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "graphql",
-		Technique:     "introspection",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "graphql",
+		Technique:  "introspection",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: GraphQLMeasurements{
 			Technique:            "introspection",
 			Probe:                probe,
@@ -173,12 +172,11 @@ func verifyGraphQLBatch(cfg GraphQLConfig, headers map[string]string, throttle *
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "graphql",
-		Technique:     "batch_query",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "graphql",
+		Technique:  "batch_query",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: GraphQLMeasurements{
 			Technique:       "batch_query",
 			Probe:           probe,
@@ -236,12 +234,11 @@ func verifyGraphQLNestedDOS(cfg GraphQLConfig, headers map[string]string, thrott
 	delta := probeResp.ElapsedMs - baselineResp.ElapsedMs
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "graphql",
-		Technique:     "nested_query_dos",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "graphql",
+		Technique:  "nested_query_dos",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: GraphQLMeasurements{
 			Technique:       "nested_query_dos",
 			Probe:           probe,

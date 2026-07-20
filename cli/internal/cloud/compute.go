@@ -19,20 +19,23 @@ type ComputeConfig struct {
 
 // ComputeMeasurements holds cloud compute probe results.
 type ComputeMeasurements struct {
-	Provider       string         `json:"provider"`
-	Functions      []FunctionInfo `json:"functions"`
-	TotalFunctions int            `json:"total_functions"`
-	PublicCount    int            `json:"public_count"`
-	EnvVarPatterns []string       `json:"env_var_patterns"`
-	CLIOutputs     []CLIResult    `json:"cli_outputs"`
-	ElapsedMs      int64          `json:"elapsed_ms"`
+	Provider                string         `json:"provider"`
+	Functions               []FunctionInfo `json:"functions"`
+	TotalFunctions          int            `json:"total_functions"`
+	EndpointConfiguredCount int            `json:"endpoint_configured_count"`
+	EnvVarPatterns          []string       `json:"env_var_patterns"`
+	CLIOutputs              []CLIResult    `json:"cli_outputs"`
+	ElapsedMs               int64          `json:"elapsed_ms"`
 }
 
 // FunctionInfo holds metadata about a single serverless function.
 type FunctionInfo struct {
 	Name                 string   `json:"name"`
 	Runtime              string   `json:"runtime"`
-	HasPublicURL         *bool    `json:"has_public_url"`
+	EndpointConfigured   *bool    `json:"endpoint_configured"`
+	EndpointURL          string   `json:"endpoint_url,omitempty"`
+	EndpointAuthMode     string   `json:"endpoint_auth_mode,omitempty"`
+	IngressSetting       string   `json:"ingress_setting,omitempty"`
 	VPCAttached          *bool    `json:"vpc_attached"`
 	EnvVarSecretPatterns []string `json:"env_var_secret_patterns,omitempty"`
 }
@@ -59,7 +62,7 @@ func VerifyCloudCompute(cfg ComputeConfig) (*verify.ProbeResult, error) {
 	var cliOutputs []CLIResult
 	var functions []FunctionInfo
 	var envVarPatterns []string
-	publicCount := 0
+	endpointConfiguredCount := 0
 
 	timeout := cfg.TimeoutSec
 	if timeout < 1 {
@@ -79,7 +82,7 @@ func VerifyCloudCompute(cfg ComputeConfig) (*verify.ProbeResult, error) {
 		result := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, result)
 		if result.ExitCode == 0 {
-			functions, envVarPatterns, publicCount = parseAWSLambdaFunctions(result.Stdout)
+			functions, envVarPatterns, endpointConfiguredCount = parseAWSLambdaFunctions(result.Stdout)
 		}
 
 	case "gcp":
@@ -95,7 +98,7 @@ func VerifyCloudCompute(cfg ComputeConfig) (*verify.ProbeResult, error) {
 			fns, patterns, pub := parseGCPFunctions(result.Stdout)
 			functions = append(functions, fns...)
 			envVarPatterns = append(envVarPatterns, patterns...)
-			publicCount += pub
+			endpointConfiguredCount += pub
 		}
 		// Cloud Run
 		args = []string{"run", "services", "list", "--format=json"}
@@ -104,7 +107,7 @@ func VerifyCloudCompute(cfg ComputeConfig) (*verify.ProbeResult, error) {
 		if runResult.ExitCode == 0 {
 			fns, pub := parseGCPCloudRunServices(runResult.Stdout)
 			functions = append(functions, fns...)
-			publicCount += pub
+			endpointConfiguredCount += pub
 		}
 
 	case "azure":
@@ -126,20 +129,19 @@ func VerifyCloudCompute(cfg ComputeConfig) (*verify.ProbeResult, error) {
 	elapsed := time.Since(start).Milliseconds()
 
 	return &verify.ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "cloud_compute",
-		Technique:     "cloud_audit",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    len(cliOutputs),
-		Duration:      timer.Elapsed(),
+		VulnType:   "cloud_compute",
+		Technique:  "cloud_audit",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: len(cliOutputs),
+		Duration:   timer.Elapsed(),
 		Measurements: ComputeMeasurements{
-			Provider:       cfg.Provider,
-			Functions:      functions,
-			TotalFunctions: len(functions),
-			PublicCount:    publicCount,
-			EnvVarPatterns: envVarPatterns,
-			CLIOutputs:     cliOutputs,
-			ElapsedMs:      elapsed,
+			Provider:                cfg.Provider,
+			Functions:               functions,
+			TotalFunctions:          len(functions),
+			EndpointConfiguredCount: endpointConfiguredCount,
+			EnvVarPatterns:          envVarPatterns,
+			CLIOutputs:              cliOutputs,
+			ElapsedMs:               elapsed,
 		},
 	}, nil
 }
@@ -167,7 +169,7 @@ func parseAWSLambdaFunctions(stdout string) ([]FunctionInfo, []string, int) {
 	var functions []FunctionInfo
 	var allPatterns []string
 	patternSet := make(map[string]bool)
-	publicCount := 0
+	endpointConfiguredCount := 0
 
 	for _, f := range result.Functions {
 		fi := FunctionInfo{
@@ -179,13 +181,12 @@ func parseAWSLambdaFunctions(stdout string) ([]FunctionInfo, []string, int) {
 			attached := len(f.VpcConfig.SubnetIds) > 0
 			fi.VPCAttached = &attached
 		}
-		// Public URL
+		// Endpoint configuration
 		if f.FunctionUrlConfig != nil {
-			pub := f.FunctionUrlConfig.AuthType == "NONE"
-			fi.HasPublicURL = &pub
-			if pub {
-				publicCount++
-			}
+			configured := true
+			fi.EndpointConfigured = &configured
+			fi.EndpointAuthMode = f.FunctionUrlConfig.AuthType
+			endpointConfiguredCount++
 		}
 		// Secret pattern matching on env var names
 		if f.Environment != nil {
@@ -204,17 +205,17 @@ func parseAWSLambdaFunctions(stdout string) ([]FunctionInfo, []string, int) {
 		}
 		functions = append(functions, fi)
 	}
-	return functions, allPatterns, publicCount
+	return functions, allPatterns, endpointConfiguredCount
 }
 
 func parseGCPFunctions(stdout string) ([]FunctionInfo, []string, int) {
 	var fns []struct {
-		Name             string `json:"name"`
-		Runtime          string `json:"runtime"`
-		HttpsTrigger     *struct {
+		Name         string `json:"name"`
+		Runtime      string `json:"runtime"`
+		HttpsTrigger *struct {
 			URL string `json:"url"`
 		} `json:"httpsTrigger"`
-		IngressSettings  string `json:"ingressSettings"`
+		IngressSettings      string            `json:"ingressSettings"`
 		EnvironmentVariables map[string]string `json:"environmentVariables"`
 	}
 	if err := json.Unmarshal([]byte(stdout), &fns); err != nil {
@@ -224,7 +225,7 @@ func parseGCPFunctions(stdout string) ([]FunctionInfo, []string, int) {
 	var functions []FunctionInfo
 	var allPatterns []string
 	patternSet := make(map[string]bool)
-	publicCount := 0
+	endpointConfiguredCount := 0
 
 	for _, f := range fns {
 		fi := FunctionInfo{
@@ -232,11 +233,11 @@ func parseGCPFunctions(stdout string) ([]FunctionInfo, []string, int) {
 			Runtime: f.Runtime,
 		}
 		if f.HttpsTrigger != nil {
-			pub := f.IngressSettings == "ALLOW_ALL"
-			fi.HasPublicURL = &pub
-			if pub {
-				publicCount++
-			}
+			configured := true
+			fi.EndpointConfigured = &configured
+			fi.EndpointURL = f.HttpsTrigger.URL
+			fi.IngressSetting = f.IngressSettings
+			endpointConfiguredCount++
 		}
 		for key := range f.EnvironmentVariables {
 			for _, re := range secretPatterns {
@@ -252,7 +253,7 @@ func parseGCPFunctions(stdout string) ([]FunctionInfo, []string, int) {
 		}
 		functions = append(functions, fi)
 	}
-	return functions, allPatterns, publicCount
+	return functions, allPatterns, endpointConfiguredCount
 }
 
 func parseGCPCloudRunServices(stdout string) ([]FunctionInfo, int) {
@@ -268,39 +269,41 @@ func parseGCPCloudRunServices(stdout string) ([]FunctionInfo, int) {
 		return nil, 0
 	}
 	var functions []FunctionInfo
-	publicCount := 0
+	endpointConfiguredCount := 0
 	for _, s := range services {
-		pub := s.Status.URL != ""
+		configured := s.Status.URL != ""
 		fi := FunctionInfo{
-			Name:         s.Metadata.Name,
-			Runtime:      "cloud-run",
-			HasPublicURL: &pub,
+			Name:               s.Metadata.Name,
+			Runtime:            "cloud-run",
+			EndpointConfigured: &configured,
+			EndpointURL:        s.Status.URL,
 		}
-		if pub {
-			publicCount++
+		if configured {
+			endpointConfiguredCount++
 		}
 		functions = append(functions, fi)
 	}
-	return functions, publicCount
+	return functions, endpointConfiguredCount
 }
 
 func parseAzureFunctionApps(stdout string) []FunctionInfo {
 	var apps []struct {
-		Name              string `json:"name"`
-		DefaultHostName   string `json:"defaultHostName"`
-		HttpsOnly         bool   `json:"httpsOnly"`
-		State             string `json:"state"`
+		Name            string `json:"name"`
+		DefaultHostName string `json:"defaultHostName"`
+		HttpsOnly       bool   `json:"httpsOnly"`
+		State           string `json:"state"`
 	}
 	if err := json.Unmarshal([]byte(stdout), &apps); err != nil {
 		return nil
 	}
 	var functions []FunctionInfo
 	for _, a := range apps {
-		pub := a.DefaultHostName != ""
+		configured := a.DefaultHostName != ""
 		functions = append(functions, FunctionInfo{
-			Name:         a.Name,
-			Runtime:      "azure-functions",
-			HasPublicURL: &pub,
+			Name:               a.Name,
+			Runtime:            "azure-functions",
+			EndpointConfigured: &configured,
+			EndpointURL:        a.DefaultHostName,
 		})
 	}
 	return functions

@@ -86,12 +86,11 @@ func VerifyHeaderInjection(cfg HeaderInjectionConfig) (*ProbeResult, error) {
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "header_injection",
-		Technique:     "crlf_injection",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "header_injection",
+		Technique:  "crlf_injection",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: HeaderInjectionMeasurements{
 			Baseline: RoundResult{
 				StatusCode: baselineResp.StatusCode,

@@ -140,12 +140,11 @@ func VerifyCachePoisoning(cfg CachePoisoningConfig) (*ProbeResult, error) {
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "cache_poisoning",
-		Technique:     cfg.Technique,
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "cache_poisoning",
+		Technique:  cfg.Technique,
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: CachePoisoningMeasurements{
 			Technique:              cfg.Technique,
 			Baseline:               baseline,

@@ -129,12 +129,11 @@ func VerifyAuth(cfg AuthConfig) (*ProbeResult, error) {
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "auth_bypass",
-		Technique:     cfg.Technique,
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "auth_bypass",
+		Technique:  cfg.Technique,
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: AuthMeasurements{
 			Technique:       cfg.Technique,
 			Baseline:        baselineRound,

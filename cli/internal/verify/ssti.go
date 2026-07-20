@@ -113,13 +113,12 @@ func VerifySSTI(cfg SSTIConfig) (*ProbeResult, error) {
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "ssti",
-		Technique:     "expression_eval",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
-		Measurements:  SSTIMeasurements{Probes: probes},
+		VulnType:     "ssti",
+		Technique:    "expression_eval",
+		StartedAt:    timer.StartedAt(),
+		ProbeCount:   probeCount,
+		Duration:     timer.Elapsed(),
+		Measurements: SSTIMeasurements{Probes: probes},
 	}, nil
 }
 

@@ -55,7 +55,6 @@ type MappedFinding struct {
 
 // ParseResult is the JSON output of a parser run.
 type ParseResult struct {
-	SchemaVersion int             `json:"schema_version"`
 	Source        string          `json:"source"`
 	TotalFindings int             `json:"total_findings"`
 	FailFindings  int             `json:"fail_findings"`
@@ -77,7 +76,6 @@ func ParseProwler(filePath string) (*ParseResult, error) {
 	}
 
 	result := &ParseResult{
-		SchemaVersion: 2,
 		Source:        "prowler",
 		TotalFindings: len(findings),
 		BySeverity:    make(map[string]int),
@@ -121,10 +119,9 @@ func ParseTrivy(filePath string) (*ParseResult, error) {
 	}
 
 	result := &ParseResult{
-		SchemaVersion: 2,
-		Source:        "trivy",
-		BySeverity:    make(map[string]int),
-		ByVulnType:    make(map[string]int),
+		Source:     "trivy",
+		BySeverity: make(map[string]int),
+		ByVulnType: make(map[string]int),
 	}
 
 	for _, tr := range report.Results {

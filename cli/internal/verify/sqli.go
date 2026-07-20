@@ -181,12 +181,11 @@ func verifySQLiBlindTime(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *e
 	payloadAvg := avgFromRounds(payloadRounds)
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "sqli",
-		Technique:     "blind_time",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "sqli",
+		Technique:  "blind_time",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: SQLiTimeMeasurements{
 			DBEngine:       cfg.DBEngine,
 			SleepSeconds:   sleepSec,
@@ -263,12 +262,11 @@ func verifySQLiBlindBoolean(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew
 	hashesMatch := trueRounds[0].BodyHash == falseRounds[0].BodyHash
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "sqli",
-		Technique:     "blind_boolean",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "sqli",
+		Technique:  "blind_boolean",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: SQLiBooleanMeasurements{
 			DBEngine:       cfg.DBEngine,
 			BaselineRound:  baselineRound,
@@ -324,12 +322,11 @@ func verifySQLiErrorBased(cfg SQLiConfig, throttle *Throttle, timer *Timer, ew *
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "sqli",
-		Technique:     "error_based",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "sqli",
+		Technique:  "error_based",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: SQLiErrorMeasurements{
 			DBEngine:        cfg.DBEngine,
 			ProbeRound:      probeRound,

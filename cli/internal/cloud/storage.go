@@ -20,15 +20,25 @@ type StorageConfig struct {
 
 // StorageMeasurements holds cloud storage probe results.
 type StorageMeasurements struct {
-	Provider   string      `json:"provider"`
-	Bucket     string      `json:"bucket"`
-	PublicAccess *bool     `json:"public_access"`
-	Encryption string      `json:"encryption"`
-	Versioning string      `json:"versioning"`
-	Logging    string      `json:"logging"`
-	ACLEntries []string    `json:"acl_entries"`
-	CLIOutputs []CLIResult `json:"cli_outputs"`
-	ElapsedMs  int64       `json:"elapsed_ms"`
+	Provider                   string                `json:"provider"`
+	Bucket                     string                `json:"bucket"`
+	AWSPublicAccessBlock       *AWSPublicAccessBlock `json:"aws_public_access_block,omitempty"`
+	GCPPublicAccessPrevention  string                `json:"gcp_public_access_prevention,omitempty"`
+	AzureAllowBlobPublicAccess *bool                 `json:"azure_allow_blob_public_access,omitempty"`
+	Encryption                 string                `json:"encryption"`
+	Versioning                 string                `json:"versioning"`
+	Logging                    string                `json:"logging"`
+	ACLEntries                 []string              `json:"acl_entries"`
+	CLIOutputs                 []CLIResult           `json:"cli_outputs"`
+	ElapsedMs                  int64                 `json:"elapsed_ms"`
+}
+
+// AWSPublicAccessBlock preserves the four provider-supplied S3 settings.
+type AWSPublicAccessBlock struct {
+	BlockPublicACLs       bool `json:"block_public_acls"`
+	IgnorePublicACLs      bool `json:"ignore_public_acls"`
+	BlockPublicPolicy     bool `json:"block_public_policy"`
+	RestrictPublicBuckets bool `json:"restrict_public_buckets"`
 }
 
 // VerifyCloudStorage runs cloud storage security checks.
@@ -48,7 +58,9 @@ func VerifyCloudStorage(cfg StorageConfig) (*verify.ProbeResult, error) {
 	encryption := "unknown"
 	versioning := "unknown"
 	logging := "unknown"
-	var publicAccess *bool
+	var awsPublicAccessBlock *AWSPublicAccessBlock
+	var gcpPublicAccessPrevention string
+	var azureAllowBlobPublicAccess *bool
 
 	timeout := cfg.TimeoutSec
 	if timeout < 1 {
@@ -106,8 +118,7 @@ func VerifyCloudStorage(cfg StorageConfig) (*verify.ProbeResult, error) {
 		pubResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, pubResult)
 		if pubResult.ExitCode == 0 {
-			pa := parseAWSPublicAccess(pubResult.Stdout)
-			publicAccess = &pa
+			awsPublicAccessBlock = parseAWSPublicAccessBlock(pubResult.Stdout)
 		}
 
 	case "gcp":
@@ -120,7 +131,7 @@ func VerifyCloudStorage(cfg StorageConfig) (*verify.ProbeResult, error) {
 		descResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, descResult)
 		if descResult.ExitCode == 0 {
-			enc, ver, log, pa := parseGCPBucketDescribe(descResult.Stdout)
+			enc, ver, log, prevention := parseGCPBucketDescribe(descResult.Stdout)
 			if enc != "" {
 				encryption = enc
 			}
@@ -130,9 +141,7 @@ func VerifyCloudStorage(cfg StorageConfig) (*verify.ProbeResult, error) {
 			if log != "" {
 				logging = log
 			}
-			if pa != nil {
-				publicAccess = pa
-			}
+			gcpPublicAccessPrevention = prevention
 		}
 		// IAM policy
 		args = []string{"storage", "buckets", "get-iam-policy", "gs://" + cfg.Bucket, "--format=json"}
@@ -158,9 +167,9 @@ func VerifyCloudStorage(cfg StorageConfig) (*verify.ProbeResult, error) {
 			acctResult := RunCLI(cliName, args, timeout)
 			cliOutputs = append(cliOutputs, acctResult)
 			if acctResult.ExitCode == 0 {
-				enc, pa := parseAzureStorageAccount(acctResult.Stdout)
+				enc, allowBlobPublicAccess := parseAzureStorageAccount(acctResult.Stdout)
 				encryption = enc
-				publicAccess = pa
+				azureAllowBlobPublicAccess = allowBlobPublicAccess
 			}
 
 			// Blob service properties
@@ -181,22 +190,23 @@ func VerifyCloudStorage(cfg StorageConfig) (*verify.ProbeResult, error) {
 	elapsed := time.Since(start).Milliseconds()
 
 	return &verify.ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "cloud_storage",
-		Technique:     "cloud_audit",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    len(cliOutputs),
-		Duration:      timer.Elapsed(),
+		VulnType:   "cloud_storage",
+		Technique:  "cloud_audit",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: len(cliOutputs),
+		Duration:   timer.Elapsed(),
 		Measurements: StorageMeasurements{
-			Provider:     cfg.Provider,
-			Bucket:       cfg.Bucket,
-			PublicAccess: publicAccess,
-			Encryption:   encryption,
-			Versioning:   versioning,
-			Logging:      logging,
-			ACLEntries:   aclEntries,
-			CLIOutputs:   cliOutputs,
-			ElapsedMs:    elapsed,
+			Provider:                   cfg.Provider,
+			Bucket:                     cfg.Bucket,
+			AWSPublicAccessBlock:       awsPublicAccessBlock,
+			GCPPublicAccessPrevention:  gcpPublicAccessPrevention,
+			AzureAllowBlobPublicAccess: azureAllowBlobPublicAccess,
+			Encryption:                 encryption,
+			Versioning:                 versioning,
+			Logging:                    logging,
+			ACLEntries:                 aclEntries,
+			CLIOutputs:                 cliOutputs,
+			ElapsedMs:                  elapsed,
 		},
 	}, nil
 }
@@ -270,7 +280,7 @@ func parseAWSLogging(stdout string) string {
 	return "disabled"
 }
 
-func parseAWSPublicAccess(stdout string) bool {
+func parseAWSPublicAccessBlock(stdout string) *AWSPublicAccessBlock {
 	var result struct {
 		PublicAccessBlockConfiguration struct {
 			BlockPublicAcls       bool `json:"BlockPublicAcls"`
@@ -280,18 +290,21 @@ func parseAWSPublicAccess(stdout string) bool {
 		} `json:"PublicAccessBlockConfiguration"`
 	}
 	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
-		return false
+		return nil
 	}
 	cfg := result.PublicAccessBlockConfiguration
-	// If all blocks are enabled, public access is blocked (not public)
-	allBlocked := cfg.BlockPublicAcls && cfg.IgnorePublicAcls && cfg.BlockPublicPolicy && cfg.RestrictPublicBuckets
-	return !allBlocked
+	return &AWSPublicAccessBlock{
+		BlockPublicACLs:       cfg.BlockPublicAcls,
+		IgnorePublicACLs:      cfg.IgnorePublicAcls,
+		BlockPublicPolicy:     cfg.BlockPublicPolicy,
+		RestrictPublicBuckets: cfg.RestrictPublicBuckets,
+	}
 }
 
-func parseGCPBucketDescribe(stdout string) (encryption, versioning, logging string, publicAccess *bool) {
+func parseGCPBucketDescribe(stdout string) (encryption, versioning, logging, publicAccessPrevention string) {
 	var result map[string]interface{}
 	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
-		return "unknown", "unknown", "unknown", nil
+		return "unknown", "unknown", "unknown", ""
 	}
 	// encryption: check defaultKmsKeyName or encryption key
 	if enc, ok := result["encryption"]; ok {
@@ -330,13 +343,11 @@ func parseGCPBucketDescribe(stdout string) (encryption, versioning, logging stri
 		logging = "disabled"
 	}
 
-	// publicAccess
+	// Preserve the provider's publicAccessPrevention value without interpreting it.
 	if iam, ok := result["iamConfiguration"]; ok {
 		if m, ok := iam.(map[string]interface{}); ok {
 			if pap, ok := m["publicAccessPrevention"].(string); ok {
-				blocked := pap == "enforced"
-				notBlocked := !blocked
-				publicAccess = &notBlocked
+				publicAccessPrevention = pap
 			}
 		}
 	}

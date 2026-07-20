@@ -20,28 +20,15 @@ type IAMConfig struct {
 
 // IAMMeasurements holds cloud IAM probe results.
 type IAMMeasurements struct {
-	Provider         string      `json:"provider"`
-	Principal        string      `json:"principal"`
-	AttachedPolicies []string    `json:"attached_policies"`
-	InlinePolicies   []string    `json:"inline_policies"`
-	MFAEnabled       *bool       `json:"mfa_enabled"`
-	LastUsed         string      `json:"last_used"`
-	DangerousCombos  []string    `json:"dangerous_combos"`
-	CLIOutputs       []CLIResult `json:"cli_outputs"`
-	ElapsedMs        int64       `json:"elapsed_ms"`
-}
-
-// Known dangerous IAM permission combinations (deterministic facts).
-var dangerousPermPairs = []struct {
-	perms []string
-	desc  string
-}{
-	{[]string{"iam:PassRole", "lambda:CreateFunction"}, "Lambda privilege escalation via PassRole + CreateFunction"},
-	{[]string{"iam:CreatePolicyVersion"}, "Policy version escalation via CreatePolicyVersion"},
-	{[]string{"iam:AttachUserPolicy"}, "Self-policy attachment via AttachUserPolicy"},
-	{[]string{"iam:AttachRolePolicy"}, "Role policy attachment via AttachRolePolicy"},
-	{[]string{"iam:PutUserPolicy"}, "Inline policy injection via PutUserPolicy"},
-	{[]string{"iam:PutRolePolicy"}, "Inline role policy injection via PutRolePolicy"},
+	Provider          string      `json:"provider"`
+	Principal         string      `json:"principal"`
+	AttachedPolicies  []string    `json:"attached_policies"`
+	InlinePolicies    []string    `json:"inline_policies"`
+	MFAEnabled        *bool       `json:"mfa_enabled"`
+	LastUsed          string      `json:"last_used"`
+	PermissionActions []string    `json:"permission_actions"`
+	CLIOutputs        []CLIResult `json:"cli_outputs"`
+	ElapsedMs         int64       `json:"elapsed_ms"`
 }
 
 // VerifyCloudIAM runs cloud IAM security checks.
@@ -114,7 +101,7 @@ func VerifyCloudIAM(cfg IAMConfig) (*verify.ProbeResult, error) {
 			lastUsed = parseAWSLastUsed(userResult.Stdout)
 		}
 
-		// Collect all actions from policy documents for dangerous combo check
+		// Collect all actions from policy documents for preserving the provider-supplied action list
 		for _, policyARN := range attachedPolicies {
 			policyActions, pResult := extractActionsFromPolicy(cliName, policyARN, timeout)
 			cliOutputs = append(cliOutputs, pResult)
@@ -131,9 +118,7 @@ func VerifyCloudIAM(cfg IAMConfig) (*verify.ProbeResult, error) {
 		iamResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, iamResult)
 		if iamResult.ExitCode == 0 {
-			policies, dangerous := parseGCPIAMPolicy(iamResult.Stdout)
-			attachedPolicies = policies
-			allActions = append(allActions, dangerous...)
+			attachedPolicies = parseGCPIAMPolicy(iamResult.Stdout)
 		}
 
 		// Service account keys (if principal looks like a service account email)
@@ -152,9 +137,7 @@ func VerifyCloudIAM(cfg IAMConfig) (*verify.ProbeResult, error) {
 		roleResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, roleResult)
 		if roleResult.ExitCode == 0 {
-			roles, dangerous := parseAzureRoleAssignments(roleResult.Stdout)
-			attachedPolicies = roles
-			allActions = append(allActions, dangerous...)
+			attachedPolicies = parseAzureRoleAssignments(roleResult.Stdout)
 		}
 
 		// Custom roles
@@ -166,28 +149,24 @@ func VerifyCloudIAM(cfg IAMConfig) (*verify.ProbeResult, error) {
 		return nil, &verify.ScopeError{Msg: fmt.Sprintf("unsupported provider %q (aws, gcp, azure)", cfg.Provider)}
 	}
 
-	// Check for dangerous permission combinations
-	dangerousCombos := checkDangerousCombos(allActions)
-
 	elapsed := time.Since(start).Milliseconds()
 
 	return &verify.ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "cloud_iam",
-		Technique:     "cloud_audit",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    len(cliOutputs),
-		Duration:      timer.Elapsed(),
+		VulnType:   "cloud_iam",
+		Technique:  "cloud_audit",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: len(cliOutputs),
+		Duration:   timer.Elapsed(),
 		Measurements: IAMMeasurements{
-			Provider:         cfg.Provider,
-			Principal:        cfg.Principal,
-			AttachedPolicies: attachedPolicies,
-			InlinePolicies:   inlinePolicies,
-			MFAEnabled:       mfaEnabled,
-			LastUsed:         lastUsed,
-			DangerousCombos:  dangerousCombos,
-			CLIOutputs:       cliOutputs,
-			ElapsedMs:        elapsed,
+			Provider:          cfg.Provider,
+			Principal:         cfg.Principal,
+			AttachedPolicies:  attachedPolicies,
+			InlinePolicies:    inlinePolicies,
+			MFAEnabled:        mfaEnabled,
+			LastUsed:          lastUsed,
+			PermissionActions: cleanStrings(allActions),
+			CLIOutputs:        cliOutputs,
+			ElapsedMs:         elapsed,
 		},
 	}, nil
 }
@@ -309,7 +288,7 @@ func parseActionsFromPolicyVersion(stdout string) []string {
 	return actions
 }
 
-func parseGCPIAMPolicy(stdout string) ([]string, []string) {
+func parseGCPIAMPolicy(stdout string) []string {
 	var result struct {
 		Bindings []struct {
 			Role    string   `json:"role"`
@@ -317,65 +296,43 @@ func parseGCPIAMPolicy(stdout string) ([]string, []string) {
 		} `json:"bindings"`
 	}
 	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
-		return nil, nil
+		return nil
 	}
 	var roles []string
-	var dangerous []string
-	dangerousRoles := map[string]bool{
-		"roles/owner": true, "roles/editor": true, "roles/iam.securityAdmin": true,
-		"roles/iam.serviceAccountAdmin": true, "roles/iam.serviceAccountKeyAdmin": true,
-	}
 	for _, b := range result.Bindings {
 		roles = append(roles, b.Role)
-		if dangerousRoles[b.Role] {
-			dangerous = append(dangerous, b.Role)
-		}
 	}
-	return roles, dangerous
+	return roles
 }
 
-func parseAzureRoleAssignments(stdout string) ([]string, []string) {
+func parseAzureRoleAssignments(stdout string) []string {
 	var result []struct {
 		RoleDefinitionName string `json:"roleDefinitionName"`
 		Scope              string `json:"scope"`
 	}
 	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
-		return nil, nil
-	}
-	dangerousRoles := map[string]bool{
-		"Owner": true, "Contributor": true, "User Access Administrator": true,
-	}
-	var roles []string
-	var dangerous []string
-	for _, r := range result {
-		roles = append(roles, r.RoleDefinitionName)
-		if dangerousRoles[r.RoleDefinitionName] {
-			dangerous = append(dangerous, r.RoleDefinitionName)
-		}
-	}
-	return roles, dangerous
-}
-
-func checkDangerousCombos(actions []string) []string {
-	if len(actions) == 0 {
 		return nil
 	}
-	actionSet := make(map[string]bool)
-	for _, a := range actions {
-		actionSet[a] = true
+	var roles []string
+	for _, r := range result {
+		roles = append(roles, r.RoleDefinitionName)
 	}
-	var combos []string
-	for _, pair := range dangerousPermPairs {
-		allPresent := true
-		for _, p := range pair.perms {
-			if !actionSet[p] {
-				allPresent = false
-				break
-			}
+	return roles
+}
+
+func cleanStrings(values []string) []string {
+	seen := make(map[string]struct{}, len(values))
+	cleaned := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
 		}
-		if allPresent {
-			combos = append(combos, pair.desc)
+		if _, ok := seen[value]; ok {
+			continue
 		}
+		seen[value] = struct{}{}
+		cleaned = append(cleaned, value)
 	}
-	return combos
+	return cleaned
 }

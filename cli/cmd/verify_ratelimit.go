@@ -24,13 +24,14 @@ var (
 var verifyRateLimitCmd = &cobra.Command{
 	Use:   "ratelimit",
 	Short: "Verify rate limiting behavior",
-	Long: `Measure rate limiting by sending sequential request bursts.
+	Long: `Measure rate limiting with an explicitly approved sequential request burst.
 
-Sends N requests as fast as possible within a time window and records response distribution.
+The caller must choose --burst-count for the specific endpoint and environment.
+This is bounded behavior measurement, not load testing. Stop on instability.
 
 Examples:
-  ensphere verify ratelimit --url "http://target/api/login" --method POST --burst-count 100 --window-sec 10 --in-scope "*.target.com"
-  ensphere verify ratelimit --url "http://target/api/data" --method GET --burst-count 50 --token "jwt" --in-scope "*.target.com"`,
+  ensphere verify ratelimit --url "http://target/api/login" --method POST --burst-count 10 --window-sec 10 --in-scope "*.target.com"
+  ensphere verify ratelimit --url "http://target/api/data" --method GET --burst-count 5 --token "jwt" --in-scope "*.target.com"`,
 	RunE: runVerifyRateLimit,
 }
 
@@ -39,7 +40,7 @@ func init() {
 	verifyRateLimitCmd.Flags().StringVar(&ratelimitMethod, "method", "POST", "HTTP method")
 	verifyRateLimitCmd.Flags().StringVar(&ratelimitBody, "body", "", "Request body")
 	verifyRateLimitCmd.Flags().StringVar(&ratelimitToken, "token", "", "Auth token")
-	verifyRateLimitCmd.Flags().IntVar(&ratelimitBurstCount, "burst-count", 50, "Number of sequential requests")
+	verifyRateLimitCmd.Flags().IntVar(&ratelimitBurstCount, "burst-count", 0, "Explicitly approved number of sequential requests (required)")
 	verifyRateLimitCmd.Flags().IntVar(&ratelimitWindowSec, "window-sec", 10, "Time window in seconds")
 	verifyRateLimitCmd.Flags().StringSliceVar(&ratelimitHeaders, "header", nil, "Custom headers (key:value, repeatable)")
 	verifyRateLimitCmd.Flags().StringSliceVar(&ratelimitInScope, "in-scope", nil, "In-scope patterns (required)")
@@ -50,6 +51,7 @@ func init() {
 
 	_ = verifyRateLimitCmd.MarkFlagRequired("url")
 	_ = verifyRateLimitCmd.MarkFlagRequired("in-scope")
+	_ = verifyRateLimitCmd.MarkFlagRequired("burst-count")
 
 	verifyCmd.AddCommand(verifyRateLimitCmd)
 }

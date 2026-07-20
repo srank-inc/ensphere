@@ -23,9 +23,9 @@ func TestExtractServiceNames(t *testing.T) {
 		},
 		{
 			name: "mock reflection response with service name",
-			// 5-byte gRPC frame header + protobuf with a string field containing "grpc.reflection.v1alpha.ServerReflection"
+			// 5-byte gRPC frame header + protobuf with a string field containing "grpc.reflection.v1.ServerReflection"
 			body: func() []byte {
-				service := "grpc.reflection.v1alpha.ServerReflection"
+				service := "grpc.reflection.v1.ServerReflection"
 				// gRPC frame header (5 bytes): compressed=0, length = len(protobuf)
 				protoLen := 2 + len(service) // tag + length + string
 				frameLen := protoLen
@@ -36,7 +36,7 @@ func TestExtractServiceNames(t *testing.T) {
 				return append(frame, proto...)
 			}(),
 			wantLen:  1,
-			wantName: "grpc.reflection.v1alpha.ServerReflection",
+			wantName: "grpc.reflection.v1.ServerReflection",
 		},
 		{
 			name: "no dotted names",

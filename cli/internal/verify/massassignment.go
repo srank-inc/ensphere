@@ -164,12 +164,11 @@ func VerifyMassAssignment(cfg MassAssignmentConfig) (*ProbeResult, error) {
 	hashesMatch := baselineResp.BodyHash == followUpResp.BodyHash
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "mass_assignment",
-		Technique:     "mass_assignment",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "mass_assignment",
+		Technique:  "mass_assignment",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: MassAssignmentMeasurements{
 			BaselineGET:    baselineRound,
 			MutationProbe:  mutRound,

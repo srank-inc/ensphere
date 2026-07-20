@@ -113,12 +113,11 @@ func VerifyPropertyAuthZ(cfg PropertyAuthZConfig) (*ProbeResult, error) {
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "property_authz",
-		Technique:     "privilege_escalation",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "property_authz",
+		Technique:  "privilege_escalation",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: PropertyAuthZMeasurements{
 			HighPriv:           highRound,
 			LowPriv:            lowRound,

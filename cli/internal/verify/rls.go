@@ -128,12 +128,11 @@ func VerifyRLS(cfg RLSConfig) (*ProbeResult, error) {
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "authz",
-		Technique:     "rls_bypass",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "authz",
+		Technique:  "rls_bypass",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: RLSMeasurements{
 			Table:           cfg.Table,
 			TenantAOwn:      tenantAOwnRound,

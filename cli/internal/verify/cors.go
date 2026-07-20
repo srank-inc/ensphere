@@ -108,12 +108,11 @@ func VerifyCORS(cfg CORSConfig) (*ProbeResult, error) {
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "cors",
-		Technique:     "origin_reflection",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "cors",
+		Technique:  "origin_reflection",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: CORSMeasurements{
 			Baseline:        results[0],
 			EvilOrigin:      results[1],

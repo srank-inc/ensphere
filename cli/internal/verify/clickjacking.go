@@ -72,12 +72,11 @@ func VerifyClickjacking(cfg ClickjackingConfig) (*ProbeResult, error) {
 		fmt.Sprintf("xfo=%q csp_frame_ancestors=%q", xfo, cspFrameAncestors))
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "clickjacking",
-		Technique:     "frame_header_check",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "clickjacking",
+		Technique:  "frame_header_check",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: ClickjackingMeasurements{
 			Probe: RoundResult{
 				StatusCode: resp.StatusCode,

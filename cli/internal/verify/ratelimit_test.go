@@ -3,10 +3,24 @@ package verify
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 )
+
+func TestVerifyRateLimitRequiresExplicitBurstCount(t *testing.T) {
+	cfg := RateLimitConfig{
+		URL:         "http://localhost/api",
+		Method:      "GET",
+		BurstCount:  0,
+		ProbeConfig: baseProbeConfig(),
+	}
+	_, err := VerifyRateLimit(cfg)
+	if err == nil || !strings.Contains(err.Error(), "burst count must be explicitly set") {
+		t.Fatalf("expected explicit burst-count error, got %v", err)
+	}
+}
 
 func TestVerifyRateLimit_SequentialBurst(t *testing.T) {
 	if testing.Short() {
@@ -26,10 +40,10 @@ func TestVerifyRateLimit_SequentialBurst(t *testing.T) {
 	}))
 
 	cfg := RateLimitConfig{
-		URL:        srv.URL + "/api",
-		Method:     "GET",
-		BurstCount: 10,
-		WindowSec:  10,
+		URL:         srv.URL + "/api",
+		Method:      "GET",
+		BurstCount:  10,
+		WindowSec:   10,
 		ProbeConfig: baseProbeConfig(),
 	}
 
@@ -64,10 +78,10 @@ func TestVerifyRateLimit_NoThrottling(t *testing.T) {
 	}))
 
 	cfg := RateLimitConfig{
-		URL:        srv.URL + "/api",
-		Method:     "GET",
-		BurstCount: 10,
-		WindowSec:  10,
+		URL:         srv.URL + "/api",
+		Method:      "GET",
+		BurstCount:  10,
+		WindowSec:   10,
 		ProbeConfig: baseProbeConfig(),
 	}
 
@@ -103,10 +117,10 @@ func TestVerifyRateLimit_WindowExpiry(t *testing.T) {
 	}))
 
 	cfg := RateLimitConfig{
-		URL:        srv.URL + "/api",
-		Method:     "GET",
-		BurstCount: 100,
-		WindowSec:  1,
+		URL:         srv.URL + "/api",
+		Method:      "GET",
+		BurstCount:  100,
+		WindowSec:   1,
 		ProbeConfig: baseProbeConfig(),
 	}
 

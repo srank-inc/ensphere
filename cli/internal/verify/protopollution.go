@@ -120,12 +120,11 @@ func VerifyProtoPollution(cfg ProtoPollutionConfig) (*ProbeResult, error) {
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "prototype_pollution",
-		Technique:     cfg.Technique,
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "prototype_pollution",
+		Technique:  cfg.Technique,
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: ProtoPollutionMeasurements{
 			Technique:       cfg.Technique,
 			Baseline:        baseline,

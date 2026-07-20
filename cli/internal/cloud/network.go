@@ -160,12 +160,11 @@ func VerifyCloudNetwork(cfg NetworkConfig) (*verify.ProbeResult, error) {
 	elapsed := time.Since(start).Milliseconds()
 
 	return &verify.ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "cloud_network",
-		Technique:     "cloud_audit",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    len(cliOutputs),
-		Duration:      timer.Elapsed(),
+		VulnType:   "cloud_network",
+		Technique:  "cloud_audit",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: len(cliOutputs),
+		Duration:   timer.Elapsed(),
 		Measurements: NetworkMeasurements{
 			Provider:        cfg.Provider,
 			OpenIngress:     openIngress,
@@ -181,9 +180,9 @@ func VerifyCloudNetwork(cfg NetworkConfig) (*verify.ProbeResult, error) {
 func parseAWSSGs(stdout string) ([]SecurityGroupRule, int) {
 	var result struct {
 		SecurityGroups []struct {
-			GroupId         string `json:"GroupId"`
-			GroupName       string `json:"GroupName"`
-			IpPermissions   []struct {
+			GroupId       string `json:"GroupId"`
+			GroupName     string `json:"GroupName"`
+			IpPermissions []struct {
 				FromPort   *int   `json:"FromPort"`
 				ToPort     *int   `json:"ToPort"`
 				IpProtocol string `json:"IpProtocol"`

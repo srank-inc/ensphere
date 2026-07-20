@@ -121,12 +121,11 @@ func verifyLDAPFilterInjection(cfg LDAPConfig, throttle *Throttle, timer *Timer,
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "ldap",
-		Technique:     "ldap_filter_injection",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "ldap",
+		Technique:  "ldap_filter_injection",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: LDAPMeasurements{
 			Technique:       "ldap_filter_injection",
 			Baseline:        &baselineRound,
@@ -182,12 +181,11 @@ func verifyLDAPBlindBoolean(cfg LDAPConfig, throttle *Throttle, timer *Timer, ew
 	hashesMatch := trueResp.BodyHash == falseResp.BodyHash
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "ldap",
-		Technique:     "ldap_blind_boolean",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "ldap",
+		Technique:  "ldap_blind_boolean",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: LDAPMeasurements{
 			Technique:    "ldap_blind_boolean",
 			TrueProbe:    &trueRound,
@@ -254,12 +252,11 @@ func verifyLDAPBlindError(cfg LDAPConfig, throttle *Throttle, timer *Timer, ew *
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "ldap",
-		Technique:     "ldap_blind_error",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "ldap",
+		Technique:  "ldap_blind_error",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: LDAPMeasurements{
 			Technique:       "ldap_blind_error",
 			Baseline:        &baselineRound,

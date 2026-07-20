@@ -116,12 +116,11 @@ func VerifyCMDi(cfg CMDiConfig) (*ProbeResult, error) {
 		payloadAvg := avgFromRounds(payloadRounds)
 
 		return &ProbeResult{
-			SchemaVersion: 2,
-			VulnType:      "cmdi",
-			Technique:     "command_injection",
-			StartedAt:     timer.StartedAt(),
-			ProbeCount:    probeCount,
-			Duration:      timer.Elapsed(),
+			VulnType:   "cmdi",
+			Technique:  "command_injection",
+			StartedAt:  timer.StartedAt(),
+			ProbeCount: probeCount,
+			Duration:   timer.Elapsed(),
 			Measurements: CMDiTimeMeasurements{
 				SleepSeconds:   sleepSec,
 				TargetOS:       cfg.OS,

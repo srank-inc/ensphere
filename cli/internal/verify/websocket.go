@@ -142,12 +142,11 @@ func wsInjection(cfg WebSocketConfig, timer *Timer, throttle *Throttle, ew *evid
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "websocket",
-		Technique:     cfg.Technique,
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    *probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "websocket",
+		Technique:  cfg.Technique,
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: *probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: WebSocketMeasurements{
 			Technique:      cfg.Technique,
 			UpgradeStatus:  statusCode,
@@ -176,12 +175,11 @@ func wsHijack(cfg WebSocketConfig, timer *Timer, throttle *Throttle, ew *evidenc
 		fmt.Sprintf("%dms", elapsed), "probe", "evil origin WebSocket upgrade")
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "websocket",
-		Technique:     cfg.Technique,
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    *probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "websocket",
+		Technique:  cfg.Technique,
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: *probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: WebSocketMeasurements{
 			Technique:      cfg.Technique,
 			UpgradeStatus:  statusCode,
@@ -230,12 +228,11 @@ func wsOriginCheck(cfg WebSocketConfig, timer *Timer, throttle *Throttle, ew *ev
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "websocket",
-		Technique:     cfg.Technique,
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    *probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "websocket",
+		Technique:  cfg.Technique,
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: *probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: WebSocketMeasurements{
 			Technique:     cfg.Technique,
 			OriginResults: results,

@@ -90,12 +90,11 @@ func VerifyAuthZ(cfg AuthZConfig) (*ProbeResult, error) {
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "authz",
-		Technique:     "privilege_escalation",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "authz",
+		Technique:  "privilege_escalation",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: AuthZMeasurements{
 			HighPriv:        highRound,
 			LowPriv:         lowRound,

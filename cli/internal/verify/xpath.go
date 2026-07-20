@@ -131,12 +131,11 @@ func verifyXPathInjection(cfg XPathConfig, throttle *Throttle, timer *Timer, ew 
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "xpath",
-		Technique:     "xpath_injection",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "xpath",
+		Technique:  "xpath_injection",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: XPathMeasurements{
 			Technique:       "xpath_injection",
 			Baseline:        &baselineRound,
@@ -191,12 +190,11 @@ func verifyXPathBlindBoolean(cfg XPathConfig, throttle *Throttle, timer *Timer, 
 	hashesMatch := trueResp.BodyHash == falseResp.BodyHash
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "xpath",
-		Technique:     "xpath_blind_boolean",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "xpath",
+		Technique:  "xpath_blind_boolean",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: XPathMeasurements{
 			Technique:    "xpath_blind_boolean",
 			TrueProbe:    &trueRound,
@@ -264,12 +262,11 @@ func verifyXPathBlindError(cfg XPathConfig, throttle *Throttle, timer *Timer, ew
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "xpath",
-		Technique:     "xpath_blind_error",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "xpath",
+		Technique:  "xpath_blind_error",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: XPathMeasurements{
 			Technique:       "xpath_blind_error",
 			Baseline:        &baselineRound,

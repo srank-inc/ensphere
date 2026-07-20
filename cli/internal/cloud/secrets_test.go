@@ -33,14 +33,14 @@ func TestParseAWSSecrets(t *testing.T) {
 	if secrets[0].RotationEnabled == nil || !*secrets[0].RotationEnabled {
 		t.Error("expected first secret rotation enabled")
 	}
-	if secrets[0].KMSKeyUsed == nil || !*secrets[0].KMSKeyUsed {
-		t.Error("expected first secret to use KMS")
+	if secrets[0].KMSKeyID != "arn:aws:kms:us-east-1:123:key/abc" {
+		t.Errorf("unexpected KMS key ID: %s", secrets[0].KMSKeyID)
 	}
 	if secrets[0].LastRotated != "2024-12-01T00:00:00Z" {
 		t.Errorf("unexpected LastRotated: %s", secrets[0].LastRotated)
 	}
-	if secrets[1].KMSKeyUsed == nil || *secrets[1].KMSKeyUsed {
-		t.Error("expected second secret to NOT use KMS")
+	if secrets[1].KMSKeyID != "" {
+		t.Errorf("expected empty KMS key ID, got %s", secrets[1].KMSKeyID)
 	}
 }
 
@@ -95,14 +95,17 @@ func TestParseAzureKeyVaults(t *testing.T) {
 	if rotEnabled != 0 {
 		t.Errorf("expected 0 rotation enabled (Azure has no vault-level rotation), got %d", rotEnabled)
 	}
-	if rotDisabled != 2 {
-		t.Errorf("expected 2 rotation disabled, got %d", rotDisabled)
+	if rotDisabled != 0 {
+		t.Errorf("expected 0 observed-false rotation values, got %d", rotDisabled)
 	}
-	if secrets[0].KMSKeyUsed == nil || !*secrets[0].KMSKeyUsed {
+	if secrets[0].PurgeProtectionEnabled == nil || !*secrets[0].PurgeProtectionEnabled {
 		t.Error("expected prod-vault to have purge protection")
 	}
-	if secrets[1].KMSKeyUsed == nil || *secrets[1].KMSKeyUsed {
+	if secrets[1].PurgeProtectionEnabled == nil || *secrets[1].PurgeProtectionEnabled {
 		t.Error("expected dev-vault to NOT have purge protection")
+	}
+	if secrets[0].RotationEnabled != nil || secrets[1].RotationEnabled != nil {
+		t.Error("expected Azure vault-level rotation to remain unobserved")
 	}
 }
 

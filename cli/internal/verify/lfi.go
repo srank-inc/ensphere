@@ -108,12 +108,11 @@ func VerifyLFI(cfg LFIConfig) (*ProbeResult, error) {
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "lfi",
-		Technique:     "path_traversal",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "lfi",
+		Technique:  "path_traversal",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: LFIMeasurements{
 			Baseline:          baseline,
 			Probe:             probe,

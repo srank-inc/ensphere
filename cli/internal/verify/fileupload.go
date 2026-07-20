@@ -192,12 +192,11 @@ func verifyFileUploadProbe(cfg FileUploadConfig, throttle *Throttle, timer *Time
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "file_upload",
-		Technique:     cfg.Technique,
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "file_upload",
+		Technique:  cfg.Technique,
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: FileUploadMeasurements{
 			Technique:          cfg.Technique,
 			UploadProbe:        uploadRound,

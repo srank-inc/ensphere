@@ -111,12 +111,11 @@ func verifyNoSQLOperator(cfg NoSQLConfig, throttle *Throttle, timer *Timer, ew *
 	hashesMatch := trueResp.BodyHash == falseResp.BodyHash
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "nosql",
-		Technique:     "operator_injection",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "nosql",
+		Technique:  "operator_injection",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: NoSQLMeasurements{
 			Technique:    "operator_injection",
 			TrueProbe:    &trueRound,
@@ -205,12 +204,11 @@ func verifyNoSQLWhereTime(cfg NoSQLConfig, throttle *Throttle, timer *Timer, ew 
 	delta := payloadAvg - baselineAvg
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "nosql",
-		Technique:     "where_time",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "nosql",
+		Technique:  "where_time",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: NoSQLMeasurements{
 			Technique:      "where_time",
 			SleepSeconds:   &sleepSec,

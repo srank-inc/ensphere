@@ -134,12 +134,11 @@ func VerifyRedirect(cfg RedirectConfig) (*ProbeResult, error) {
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "redirect",
-		Technique:     "open_redirect",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "redirect",
+		Technique:  "open_redirect",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: RedirectMeasurements{
 			Probe:            probe,
 			LocationHeader:   locationHeader,

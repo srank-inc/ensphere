@@ -119,12 +119,11 @@ func VerifyRace(cfg RaceConfig) (*ProbeResult, error) {
 	avgMs := totalMs / int64(len(rounds))
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "race_condition",
-		Technique:     "parallel_request",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    cfg.Concurrency,
-		Duration:      timer.Elapsed(),
+		VulnType:   "race_condition",
+		Technique:  "parallel_request",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: cfg.Concurrency,
+		Duration:   timer.Elapsed(),
 		Measurements: RaceMeasurements{
 			Concurrency:  cfg.Concurrency,
 			Rounds:       rounds,

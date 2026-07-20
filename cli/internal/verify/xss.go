@@ -108,12 +108,11 @@ func VerifyXSS(cfg XSSConfig) (*ProbeResult, error) {
 		fmt.Sprintf("payload=%s reflected=%v encoded=%v", cfg.Payload, reflected, encoded))
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "xss",
-		Technique:     "reflected",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "xss",
+		Technique:  "reflected",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: XSSMeasurements{
 			ProbeRound:  probeRound,
 			Reflected:   reflected,

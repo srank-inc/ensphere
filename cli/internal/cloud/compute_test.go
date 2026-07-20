@@ -14,24 +14,24 @@ func TestParseAWSLambdaFunctions(t *testing.T) {
 				"Environment": {"Variables": {"DB_PASSWORD": "secret", "APP_NAME": "test"}}
 			},
 			{
-				"FunctionName": "public-func",
+				"FunctionName": "no-auth-func",
 				"Runtime": "python3.11",
 				"FunctionUrlConfig": {"AuthType": "NONE"},
 				"Environment": {"Variables": {"API_KEY": "abc123"}}
 			},
 			{
-				"FunctionName": "private-func",
+				"FunctionName": "iam-auth-func",
 				"Runtime": "go1.x",
 				"FunctionUrlConfig": {"AuthType": "AWS_IAM"}
 			}
 		]
 	}`
-	functions, patterns, publicCount := parseAWSLambdaFunctions(input)
+	functions, patterns, endpointConfiguredCount := parseAWSLambdaFunctions(input)
 	if len(functions) != 3 {
 		t.Fatalf("expected 3 functions, got %d", len(functions))
 	}
-	if publicCount != 1 {
-		t.Errorf("expected 1 public function, got %d", publicCount)
+	if endpointConfiguredCount != 2 {
+		t.Errorf("expected 2 functions with endpoint configurations, got %d", endpointConfiguredCount)
 	}
 	if len(patterns) == 0 {
 		t.Error("expected at least 1 env var secret pattern match")
@@ -40,25 +40,25 @@ func TestParseAWSLambdaFunctions(t *testing.T) {
 	if functions[0].VPCAttached == nil || !*functions[0].VPCAttached {
 		t.Error("expected first function to be VPC attached")
 	}
-	// Public URL check
-	if functions[1].HasPublicURL == nil || !*functions[1].HasPublicURL {
-		t.Error("expected second function to have public URL")
+	// Endpoint configuration check
+	if functions[1].EndpointConfigured == nil || !*functions[1].EndpointConfigured {
+		t.Error("expected second function to have endpoint configuration")
 	}
-	if functions[2].HasPublicURL == nil || *functions[2].HasPublicURL {
-		t.Error("expected third function to NOT have public URL (AWS_IAM auth)")
+	if functions[2].EndpointConfigured == nil || !*functions[2].EndpointConfigured || functions[2].EndpointAuthMode != "AWS_IAM" {
+		t.Error("expected third function to record an AWS_IAM endpoint configuration")
 	}
 }
 
 func TestParseAWSLambdaFunctions_Empty(t *testing.T) {
-	functions, patterns, publicCount := parseAWSLambdaFunctions(`{"Functions": []}`)
+	functions, patterns, endpointConfiguredCount := parseAWSLambdaFunctions(`{"Functions": []}`)
 	if len(functions) != 0 {
 		t.Errorf("expected 0 functions, got %d", len(functions))
 	}
 	if len(patterns) != 0 {
 		t.Errorf("expected 0 patterns, got %d", len(patterns))
 	}
-	if publicCount != 0 {
-		t.Errorf("expected 0 public, got %d", publicCount)
+	if endpointConfiguredCount != 0 {
+		t.Errorf("expected 0 configured endpoints, got %d", endpointConfiguredCount)
 	}
 }
 
@@ -78,12 +78,12 @@ func TestParseGCPFunctions(t *testing.T) {
 			"ingressSettings": "ALLOW_INTERNAL_ONLY"
 		}
 	]`
-	functions, patterns, publicCount := parseGCPFunctions(input)
+	functions, patterns, endpointConfiguredCount := parseGCPFunctions(input)
 	if len(functions) != 2 {
 		t.Fatalf("expected 2 functions, got %d", len(functions))
 	}
-	if publicCount != 1 {
-		t.Errorf("expected 1 public (ALLOW_ALL), got %d", publicCount)
+	if endpointConfiguredCount != 2 {
+		t.Errorf("expected 2 configured HTTPS endpoints, got %d", endpointConfiguredCount)
 	}
 	if len(patterns) == 0 {
 		t.Error("expected at least 1 pattern for DATABASE_URL")
@@ -95,12 +95,12 @@ func TestParseGCPCloudRunServices(t *testing.T) {
 		{"metadata": {"name": "web-app"}, "status": {"url": "https://web-app.run.app"}},
 		{"metadata": {"name": "internal"}, "status": {"url": ""}}
 	]`
-	functions, publicCount := parseGCPCloudRunServices(input)
+	functions, endpointConfiguredCount := parseGCPCloudRunServices(input)
 	if len(functions) != 2 {
 		t.Fatalf("expected 2 services, got %d", len(functions))
 	}
-	if publicCount != 1 {
-		t.Errorf("expected 1 public, got %d", publicCount)
+	if endpointConfiguredCount != 1 {
+		t.Errorf("expected 1 configured endpoint, got %d", endpointConfiguredCount)
 	}
 }
 
@@ -113,23 +113,23 @@ func TestParseAzureFunctionApps(t *testing.T) {
 	if len(functions) != 2 {
 		t.Fatalf("expected 2 function apps, got %d", len(functions))
 	}
-	if functions[0].HasPublicURL == nil || !*functions[0].HasPublicURL {
-		t.Error("expected first app to have public URL")
+	if functions[0].EndpointConfigured == nil || !*functions[0].EndpointConfigured {
+		t.Error("expected first app to have endpoint configuration")
 	}
-	if functions[1].HasPublicURL == nil || *functions[1].HasPublicURL {
-		t.Error("expected second app to NOT have public URL")
+	if functions[1].EndpointConfigured == nil || *functions[1].EndpointConfigured {
+		t.Error("expected second app to NOT have endpoint configuration")
 	}
 }
 
 func TestParseAWSLambdaFunctions_InvalidJSON(t *testing.T) {
-	functions, patterns, publicCount := parseAWSLambdaFunctions("not json")
+	functions, patterns, endpointConfiguredCount := parseAWSLambdaFunctions("not json")
 	if functions != nil {
 		t.Error("expected nil functions for invalid JSON")
 	}
 	if patterns != nil {
 		t.Error("expected nil patterns for invalid JSON")
 	}
-	if publicCount != 0 {
-		t.Errorf("expected 0 public for invalid JSON, got %d", publicCount)
+	if endpointConfiguredCount != 0 {
+		t.Errorf("expected 0 configured endpoints for invalid JSON, got %d", endpointConfiguredCount)
 	}
 }

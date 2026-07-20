@@ -69,28 +69,28 @@ func TestParseAWSLogging_Disabled(t *testing.T) {
 	}
 }
 
-func TestParseAWSPublicAccess_AllBlocked(t *testing.T) {
+func TestParseAWSPublicAccessBlock(t *testing.T) {
 	input := `{
 		"PublicAccessBlockConfiguration": {
 			"BlockPublicAcls": true, "IgnorePublicAcls": true,
 			"BlockPublicPolicy": true, "RestrictPublicBuckets": true
 		}
 	}`
-	public := parseAWSPublicAccess(input)
-	if public {
-		t.Error("expected false (all blocked), got true")
+	block := parseAWSPublicAccessBlock(input)
+	if block == nil || !block.BlockPublicACLs || !block.IgnorePublicACLs || !block.BlockPublicPolicy || !block.RestrictPublicBuckets {
+		t.Fatalf("unexpected public access block settings: %+v", block)
 	}
 }
 
-func TestParseAWSPublicAccess_SomeOpen(t *testing.T) {
+func TestParseAWSPublicAccessBlockPreservesMixedSettings(t *testing.T) {
 	input := `{
 		"PublicAccessBlockConfiguration": {
 			"BlockPublicAcls": false, "IgnorePublicAcls": true,
 			"BlockPublicPolicy": true, "RestrictPublicBuckets": true
 		}
 	}`
-	public := parseAWSPublicAccess(input)
-	if !public {
-		t.Error("expected true (some open), got false")
+	block := parseAWSPublicAccessBlock(input)
+	if block == nil || block.BlockPublicACLs || !block.IgnorePublicACLs || !block.BlockPublicPolicy || !block.RestrictPublicBuckets {
+		t.Fatalf("unexpected mixed public access block settings: %+v", block)
 	}
 }

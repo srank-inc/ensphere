@@ -108,12 +108,11 @@ func VerifySSRF(cfg SSRFConfig) (*ProbeResult, error) {
 	}
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "ssrf",
-		Technique:     "metadata_access",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "ssrf",
+		Technique:  "metadata_access",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: SSRFMeasurements{
 			Baseline:          baseline,
 			Probe:             probe,

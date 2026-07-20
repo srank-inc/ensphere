@@ -76,95 +76,78 @@ func VerifyGRPC(cfg GRPCConfig) (*ProbeResult, error) {
 }
 
 func grpcReflection(cfg GRPCConfig, timer *Timer, throttle *Throttle, ew *evidence.Writer, probeCount *int) (*ProbeResult, error) {
-	reflectionEnabled := false
-	var servicesFound []string
+	const endpoint = "/grpc.reflection.v1.ServerReflection/ServerReflectionInfo"
+	throttle.Wait()
+	*probeCount++
 
-	// Try both v1alpha and v1 reflection endpoints
-	endpoints := []string{
-		"/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo",
-		"/grpc.reflection.v1.ServerReflection/ServerReflectionInfo",
+	reqURL := strings.TrimRight(cfg.URL, "/") + endpoint
+	if err := CheckScope(reqURL, cfg.InScope); err != nil {
+		return nil, err
+	}
+	start := time.Now()
+
+	transport := &http.Transport{
+		ForceAttemptHTTP2: true,
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
+	client := scopedHTTPClientWithTransport(cfg.TimeoutSec, transport, cfg.InScope, true, true)
+
+	req, err := http.NewRequest("POST", reqURL, bytes.NewReader(grpcReflectionBody))
+	if err != nil {
+		return nil, fmt.Errorf("build gRPC reflection request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/grpc")
+	req.Header.Set("TE", "trailers")
+	for k, v := range cfg.Headers {
+		req.Header.Set(k, v)
 	}
 
-	var lastElapsed int64
-
-	for _, endpoint := range endpoints {
-		throttle.Wait()
-		*probeCount++
-
-		reqURL := strings.TrimRight(cfg.URL, "/") + endpoint
-		if err := CheckScope(reqURL, cfg.InScope); err != nil {
+	resp, err := client.Do(req)
+	elapsed := time.Since(start).Milliseconds()
+	if err != nil {
+		var scopeErr *ScopeError
+		if errors.As(err, &scopeErr) {
 			return nil, err
 		}
-		start := time.Now()
-
-		transport := &http.Transport{
-			ForceAttemptHTTP2: true,
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
-		client := scopedHTTPClientWithTransport(cfg.TimeoutSec, transport, cfg.InScope, true, true)
-
-		req, err := http.NewRequest("POST", reqURL, bytes.NewReader(grpcReflectionBody))
-		if err != nil {
-			continue
-		}
-		req.Header.Set("Content-Type", "application/grpc")
-		req.Header.Set("TE", "trailers")
-
-		for k, v := range cfg.Headers {
-			req.Header.Set(k, v)
-		}
-
-		resp, err := client.Do(req)
-		lastElapsed = time.Since(start).Milliseconds()
-		if err != nil {
-			var scopeErr *ScopeError
-			if errors.As(err, &scopeErr) {
-				return nil, err
-			}
-			fmt.Fprintf(os.Stderr, "[REFLECTION %s] error: %v\n", endpoint, err)
-			writeEvidence(ew, "grpc", cfg.Technique, cfg.URL, "", 0,
-				fmt.Sprintf("%dms", lastElapsed), "probe", fmt.Sprintf("reflection probe %s: error", endpoint))
-			continue
-		}
-
-		body, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
-
-		ct := resp.Header.Get("Content-Type")
-		grpcStatus := resp.Header.Get("Grpc-Status")
-
-		fmt.Fprintf(os.Stderr, "[REFLECTION %s] status=%d content-type=%s grpc-status=%s %dms\n",
-			endpoint, resp.StatusCode, ct, grpcStatus, lastElapsed)
-		writeEvidence(ew, "grpc", cfg.Technique, cfg.URL, "", resp.StatusCode,
-			fmt.Sprintf("%dms", lastElapsed), "probe", fmt.Sprintf("reflection probe %s", endpoint))
-
-		if resp.StatusCode == 200 && strings.HasPrefix(ct, "application/grpc") {
-			// Check if gRPC status indicates UNIMPLEMENTED (code 12)
-			if grpcStatus == "12" {
-				continue
-			}
-			reflectionEnabled = true
-			servicesFound = extractServiceNames(body)
-			break
-		}
+		fmt.Fprintf(os.Stderr, "[REFLECTION %s] error: %v\n", endpoint, err)
+		writeEvidence(ew, "grpc", cfg.Technique, cfg.URL, "", 0,
+			fmt.Sprintf("%dms", elapsed), "probe", fmt.Sprintf("reflection probe %s: error", endpoint))
+		return grpcReflectionResult(cfg, timer, *probeCount, elapsed, false, nil), nil
 	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	contentType := resp.Header.Get("Content-Type")
+	grpcStatus := resp.Header.Get("Grpc-Status")
 
+	fmt.Fprintf(os.Stderr, "[REFLECTION %s] status=%d content-type=%s grpc-status=%s %dms\n",
+		endpoint, resp.StatusCode, contentType, grpcStatus, elapsed)
+	writeEvidence(ew, "grpc", cfg.Technique, cfg.URL, "", resp.StatusCode,
+		fmt.Sprintf("%dms", elapsed), "probe", fmt.Sprintf("reflection probe %s", endpoint))
+
+	enabled := resp.StatusCode == 200 && strings.HasPrefix(contentType, "application/grpc") && grpcStatus != "12"
+	var services []string
+	if enabled {
+		services = extractServiceNames(body)
+	}
+	return grpcReflectionResult(cfg, timer, *probeCount, elapsed, enabled, services), nil
+}
+
+func grpcReflectionResult(cfg GRPCConfig, timer *Timer, probeCount int, elapsed int64, enabled bool, services []string) *ProbeResult {
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "grpc",
-		Technique:     cfg.Technique,
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    *probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "grpc",
+		Technique:  cfg.Technique,
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: GRPCMeasurements{
 			Technique:         cfg.Technique,
-			ReflectionEnabled: reflectionEnabled,
-			ServicesFound:     servicesFound,
-			ElapsedMs:         lastElapsed,
+			ReflectionEnabled: enabled,
+			ServicesFound:     services,
+			ElapsedMs:         elapsed,
 		},
-	}, nil
+	}
 }
 
 func grpcPlaintext(cfg GRPCConfig, timer *Timer, throttle *Throttle, ew *evidence.Writer, probeCount *int) (*ProbeResult, error) {
@@ -244,12 +227,11 @@ func grpcPlaintext(cfg GRPCConfig, timer *Timer, throttle *Throttle, ew *evidenc
 	tlsRequired := tlsAccepted && !plaintextAccepted
 
 	return &ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "grpc",
-		Technique:     cfg.Technique,
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    *probeCount,
-		Duration:      timer.Elapsed(),
+		VulnType:   "grpc",
+		Technique:  cfg.Technique,
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: *probeCount,
+		Duration:   timer.Elapsed(),
 		Measurements: GRPCMeasurements{
 			Technique:         cfg.Technique,
 			PlaintextAccepted: plaintextAccepted,

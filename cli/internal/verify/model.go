@@ -12,16 +12,14 @@ type ProbeConfig struct {
 	Evidence   string            // Evidence file path
 }
 
-// ProbeResult is the JSON output for all verify commands.
-// Schema version 2: measurement-only output. No status/confidence/evidence.
+// ProbeResult is the measurement-only JSON output for all verify commands.
 type ProbeResult struct {
-	SchemaVersion int         `json:"schema_version"`
-	VulnType      string      `json:"vuln_type"`
-	Technique     string      `json:"technique"`
-	StartedAt     string      `json:"started_at"`
-	ProbeCount    int         `json:"probe_count"`
-	Duration      string      `json:"duration"`
-	Measurements  interface{} `json:"measurements"`
+	VulnType     string      `json:"vuln_type"`
+	Technique    string      `json:"technique"`
+	StartedAt    string      `json:"started_at"`
+	ProbeCount   int         `json:"probe_count"`
+	Duration     string      `json:"duration"`
+	Measurements interface{} `json:"measurements"`
 }
 
 // RoundResult captures raw measurements from a single HTTP round-trip.

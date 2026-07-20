@@ -232,7 +232,7 @@ func TestCLIVerifyOutputHasNoJudgmentFields(t *testing.T) {
 	}
 	var out map[string]any
 	decodeJSON(t, result.stdout, &out)
-	if out["schema_version"].(float64) != 2 || out["vuln_type"] != "sqli" || out["technique"] != "error_based" {
+	if out["vuln_type"] != "sqli" || out["technique"] != "error_based" {
 		t.Fatalf("unexpected verify output: %+v", out)
 	}
 	assertNoForbiddenFields(t, out)

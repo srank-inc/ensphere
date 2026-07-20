@@ -32,6 +32,9 @@ func TestParseAWSCloudTrails(t *testing.T) {
 	if trails[0].LogValidation == nil || !*trails[0].LogValidation {
 		t.Error("expected main-trail to have log validation")
 	}
+	if trails[0].IsActive != nil {
+		t.Error("expected activity to remain unobserved until get-trail-status succeeds")
+	}
 	if trails[1].IsMultiRegion == nil || *trails[1].IsMultiRegion {
 		t.Error("expected regional-trail to NOT be multi-region")
 	}

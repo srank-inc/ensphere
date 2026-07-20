@@ -17,21 +17,24 @@ type SecretsConfig struct {
 
 // SecretsMeasurements holds cloud secrets probe results.
 type SecretsMeasurements struct {
-	Provider         string       `json:"provider"`
-	Secrets          []SecretInfo `json:"secrets"`
-	TotalSecrets     int          `json:"total_secrets"`
-	RotationEnabled  int          `json:"rotation_enabled_count"`
-	RotationDisabled int          `json:"rotation_disabled_count"`
-	CLIOutputs       []CLIResult  `json:"cli_outputs"`
-	ElapsedMs        int64        `json:"elapsed_ms"`
+	Provider              string       `json:"provider"`
+	Secrets               []SecretInfo `json:"secrets"`
+	TotalSecrets          int          `json:"total_secrets"`
+	RotationObservedTrue  int          `json:"rotation_observed_true_count"`
+	RotationObservedFalse int          `json:"rotation_observed_false_count"`
+	RotationUnobserved    int          `json:"rotation_unobserved_count"`
+	CLIOutputs            []CLIResult  `json:"cli_outputs"`
+	ElapsedMs             int64        `json:"elapsed_ms"`
 }
 
 // SecretInfo holds metadata about a single secret.
 type SecretInfo struct {
-	Name            string `json:"name"`
-	RotationEnabled *bool  `json:"rotation_enabled"`
-	LastRotated     string `json:"last_rotated,omitempty"`
-	KMSKeyUsed      *bool  `json:"kms_key_used"`
+	Name                   string `json:"name"`
+	RotationEnabled        *bool  `json:"rotation_enabled,omitempty"`
+	LastRotated            string `json:"last_rotated,omitempty"`
+	KMSKeyID               string `json:"kms_key_id,omitempty"`
+	SoftDeleteEnabled      *bool  `json:"soft_delete_enabled,omitempty"`
+	PurgeProtectionEnabled *bool  `json:"purge_protection_enabled,omitempty"`
 }
 
 // VerifyCloudSecrets runs cloud secrets security checks.
@@ -100,20 +103,20 @@ func VerifyCloudSecrets(cfg SecretsConfig) (*verify.ProbeResult, error) {
 	elapsed := time.Since(start).Milliseconds()
 
 	return &verify.ProbeResult{
-		SchemaVersion: 2,
-		VulnType:      "cloud_secrets",
-		Technique:     "cloud_audit",
-		StartedAt:     timer.StartedAt(),
-		ProbeCount:    len(cliOutputs),
-		Duration:      timer.Elapsed(),
+		VulnType:   "cloud_secrets",
+		Technique:  "cloud_audit",
+		StartedAt:  timer.StartedAt(),
+		ProbeCount: len(cliOutputs),
+		Duration:   timer.Elapsed(),
 		Measurements: SecretsMeasurements{
-			Provider:         cfg.Provider,
-			Secrets:          secrets,
-			TotalSecrets:     len(secrets),
-			RotationEnabled:  rotEnabled,
-			RotationDisabled: rotDisabled,
-			CLIOutputs:       cliOutputs,
-			ElapsedMs:        elapsed,
+			Provider:              cfg.Provider,
+			Secrets:               secrets,
+			TotalSecrets:          len(secrets),
+			RotationObservedTrue:  rotEnabled,
+			RotationObservedFalse: rotDisabled,
+			RotationUnobserved:    len(secrets) - rotEnabled - rotDisabled,
+			CLIOutputs:            cliOutputs,
+			ElapsedMs:             elapsed,
 		},
 	}, nil
 }
@@ -121,10 +124,10 @@ func VerifyCloudSecrets(cfg SecretsConfig) (*verify.ProbeResult, error) {
 func parseAWSSecrets(stdout string) ([]SecretInfo, int, int) {
 	var result struct {
 		SecretList []struct {
-			Name             string `json:"Name"`
-			RotationEnabled  bool   `json:"RotationEnabled"`
-			LastRotatedDate  string `json:"LastRotatedDate"`
-			KmsKeyId         string `json:"KmsKeyId"`
+			Name            string `json:"Name"`
+			RotationEnabled bool   `json:"RotationEnabled"`
+			LastRotatedDate string `json:"LastRotatedDate"`
+			KmsKeyId        string `json:"KmsKeyId"`
 		} `json:"SecretList"`
 	}
 	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
@@ -135,12 +138,11 @@ func parseAWSSecrets(stdout string) ([]SecretInfo, int, int) {
 	rotDisabled := 0
 	for _, s := range result.SecretList {
 		rot := s.RotationEnabled
-		kms := s.KmsKeyId != ""
 		secrets = append(secrets, SecretInfo{
 			Name:            s.Name,
 			RotationEnabled: &rot,
 			LastRotated:     s.LastRotatedDate,
-			KMSKeyUsed:      &kms,
+			KMSKeyID:        s.KmsKeyId,
 		})
 		if rot {
 			rotEnabled++
@@ -192,18 +194,14 @@ func parseAzureKeyVaults(stdout string) ([]SecretInfo, int, int) {
 		return nil, 0, 0
 	}
 	var secrets []SecretInfo
-	rotEnabled := 0
-	rotDisabled := 0
 	for _, v := range vaults {
-		// Azure Key Vault doesn't expose rotation at vault level;
-		// report soft-delete/purge-protection as the key security property.
-		hasPurgeProtection := v.Properties.EnablePurgeProtection
+		softDelete := v.Properties.EnableSoftDelete
+		purgeProtection := v.Properties.EnablePurgeProtection
 		secrets = append(secrets, SecretInfo{
-			Name:      v.Name,
-			KMSKeyUsed: &hasPurgeProtection,
+			Name:                   v.Name,
+			SoftDeleteEnabled:      &softDelete,
+			PurgeProtectionEnabled: &purgeProtection,
 		})
-		// Without per-secret rotation data, count all as rotation-not-measured
-		rotDisabled++
 	}
-	return secrets, rotEnabled, rotDisabled
+	return secrets, 0, 0
 }

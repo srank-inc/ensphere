@@ -18,7 +18,6 @@ func TestVerifyRace_ConcurrentBurst(t *testing.T) {
 		fmt.Fprintf(w, "request %d", n)
 	}))
 
-
 	cfg := RaceConfig{
 		URL:         ts.URL + "/api",
 		Method:      "POST",
@@ -32,9 +31,6 @@ func TestVerifyRace_ConcurrentBurst(t *testing.T) {
 	}
 	if result == nil {
 		t.Fatal("expected non-nil result")
-	}
-	if result.SchemaVersion != 2 {
-		t.Fatalf("expected SchemaVersion 2, got %d", result.SchemaVersion)
 	}
 	if result.VulnType != "race_condition" {
 		t.Fatalf("expected VulnType race_condition, got %s", result.VulnType)
