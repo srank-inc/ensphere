@@ -129,7 +129,6 @@ func TestNextID_UsesMaxNumericID(t *testing.T) {
 	path := tempEvidenceFile(t)
 	appendRawEvidenceLine(t, path, testEntry("a", "baseline").WithID("EVID-001"))
 	appendRawEvidenceLine(t, path, testEntry("b", "probe").WithID("EVID-010"))
-	appendRawEvidenceLine(t, path, testEntry("legacy", "payload"))
 
 	id, err := NextID(path)
 	if err != nil {
@@ -166,35 +165,6 @@ func TestWriterAssignsIDAndReturnsWrittenEntry(t *testing.T) {
 	}
 	if entries[0].ID != written.ID || entries[0].Hash != written.Hash {
 		t.Fatalf("written entry mismatch: file=%+v returned=%+v", entries[0], written)
-	}
-}
-
-func TestWriterContinuesAfterLegacyMissingID(t *testing.T) {
-	path := tempEvidenceFile(t)
-	e1 := testEntry("a", "baseline").WithID("EVID-010")
-	e1.Hash = ComputeHash(e1)
-	appendRawEvidenceLine(t, path, e1)
-	e2 := testEntry("legacy", "probe")
-	e2.PrevHash = e1.Hash
-	e2.Hash = ComputeHash(e2)
-	appendRawEvidenceLine(t, path, e2)
-
-	w, err := NewWriter(path)
-	if err != nil {
-		t.Fatalf("NewWriter: %v", err)
-	}
-	written, err := w.WriteEntry(testEntry("new", "payload"))
-	if err != nil {
-		t.Fatalf("WriteEntry: %v", err)
-	}
-	if err := w.Close(); err != nil {
-		t.Fatalf("Close: %v", err)
-	}
-	if written.ID != "EVID-011" {
-		t.Fatalf("expected EVID-011, got %s", written.ID)
-	}
-	if written.PrevHash != e2.Hash {
-		t.Fatalf("expected prev_hash %s, got %s", e2.Hash, written.PrevHash)
 	}
 }
 

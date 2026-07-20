@@ -53,15 +53,17 @@ func NewWriter(path string) (*Writer, error) {
 		if e.Hash != "" {
 			lastHash = e.Hash
 		}
-		if e.ID == "" {
-			continue
+		n, ok := parseEvidenceID(e.ID)
+		if !ok {
+			_ = releaseLock(lockFile, lockPath)
+			return nil, fmt.Errorf("invalid evidence ID %q in existing file", e.ID)
 		}
 		if ids[e.ID] {
 			_ = releaseLock(lockFile, lockPath)
 			return nil, fmt.Errorf("duplicate evidence ID %q in existing file", e.ID)
 		}
 		ids[e.ID] = true
-		if n, ok := parseEvidenceID(e.ID); ok && n > maxID {
+		if n > maxID {
 			maxID = n
 		}
 	}
@@ -104,8 +106,13 @@ func (w *Writer) WriteEntry(e Entry) (Entry, error) {
 	if e.ID == "" {
 		e.ID = fmt.Sprintf("EVID-%03d", w.nextSeq)
 		autoAssigned = true
-	} else if w.ids[e.ID] {
-		return Entry{}, fmt.Errorf("duplicate evidence ID %q", e.ID)
+	} else {
+		if _, ok := parseEvidenceID(e.ID); !ok {
+			return Entry{}, fmt.Errorf("invalid evidence ID %q", e.ID)
+		}
+		if w.ids[e.ID] {
+			return Entry{}, fmt.Errorf("duplicate evidence ID %q", e.ID)
+		}
 	}
 
 	e.PrevHash = w.lastHash

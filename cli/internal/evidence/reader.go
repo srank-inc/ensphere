@@ -46,6 +46,9 @@ func ReadAll(path string) ([]Entry, int, error) {
 			skipped++
 			continue
 		}
+		if _, ok := parseEvidenceID(e.ID); !ok {
+			return nil, skipped, fmt.Errorf("invalid evidence ID %q on line %d", e.ID, lineNum)
+		}
 		entries = append(entries, e)
 	}
 	if err := scanner.Err(); err != nil {
