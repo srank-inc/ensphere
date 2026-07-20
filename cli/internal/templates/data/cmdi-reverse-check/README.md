@@ -6,13 +6,13 @@ response timing deltas against a baseline.
 ## Setup
 
 1. Identify an endpoint that processes user input in a system command (e.g., ping, DNS lookup)
-2. Edit `exploit.py` and fill in TARGET_URL and PARAM
+2. Edit `probe.py` and fill in TARGET_URL and PARAM
 3. Optionally set METHOD (defaults to POST)
 
 ## Usage
 
 ```bash
-python3 exploit.py
+python3 probe.py
 ```
 
 ## Probes
@@ -25,7 +25,7 @@ Also runs a control probe with `sleep 0` to confirm syntax acceptance without de
 
 ## Output
 
-JSON with `schema_version: 2` and `measurements` containing baseline rounds with average, per-payload results with `delta_ms` (difference from baseline), and control round. No status or confidence -- the AI reads measurements to classify.
+JSON with `measurements` containing baseline rounds with average, per-payload results with `delta_ms` (difference from baseline), and control round. No status or confidence -- the AI reads measurements to classify.
 
 ## Exit Codes
 

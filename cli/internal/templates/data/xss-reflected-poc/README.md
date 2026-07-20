@@ -6,13 +6,13 @@ and checking whether they appear unescaped in the response body.
 ## Setup
 
 1. Identify an endpoint that reflects user input (e.g., search page, error page)
-2. Edit `exploit.py` and fill in TARGET_URL and PARAM
+2. Edit `probe.py` and fill in TARGET_URL and PARAM
 3. Optionally set a custom PAYLOAD (defaults to `<script>alert(1)</script>`)
 
 ## Usage
 
 ```bash
-python3 exploit.py
+python3 probe.py
 ```
 
 ## Probes
@@ -26,7 +26,7 @@ Tests 5 payload variants:
 
 ## Output
 
-JSON with `schema_version: 2` and `measurements` containing baseline round, primary payload result with `reflected` boolean and `context` string, and per-variant results. No status or confidence -- the AI reads measurements to classify.
+JSON with `measurements` containing baseline round, primary payload result with `reflected` boolean and `context` string, and per-variant results. No status or confidence -- the AI reads measurements to classify.
 
 ## Exit Codes
 

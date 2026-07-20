@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PostgreSQL time-based blind SQL injection via pg_sleep.
 
-Output: schema_version 2 (measurements only, no status/confidence).
+Output: measurements only; no status or confidence.
 Exit codes: 0 = probes completed, 2 = config error.
 """
 
@@ -115,7 +115,6 @@ def main():
     print(f"[CONTROL] {control_round['elapsed_ms']}ms", file=sys.stderr)
 
     result = {
-        "schema_version": 2,
         "vuln_type": "sqli",
         "technique": "blind_time",
         "started_at": started_at,

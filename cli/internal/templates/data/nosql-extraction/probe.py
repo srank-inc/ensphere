@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """NoSQL operator injection probe — send $ne/$gt operators to detect query manipulation.
 
-Output: schema_version 2 (measurements only, no status/confidence).
+Output: measurements only; no status or confidence.
 Exit codes: 0 = probes completed.
 """
 
@@ -108,7 +108,6 @@ def main():
     print(f"[ARRAY] status={array_round['status_code']}, len={array_round['body_length']}", file=sys.stderr)
 
     result = {
-        "schema_version": 2,
         "vuln_type": "nosql",
         "technique": "operator_injection",
         "started_at": started_at,

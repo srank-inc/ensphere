@@ -5,13 +5,13 @@
   "technique": "cross_tenant",
   "auth_method": "bearer",
   "risk": 3,
-  "run_command": "python3 exploit.py",
-  "success_signals": ["status_code:200", "body_contains:user_b_data"],
+  "run_command": "python3 probe.py",
+  "observation_fields": ["endpoints[].user_a_round", "endpoints[].user_b_round", "endpoints[].hashes_match", "endpoints[].body_length_delta"],
   "params": [
     {"name": "BASE_URL", "description": "Target base URL", "example": "https://app.example.com", "required": true},
     {"name": "ENDPOINTS", "description": "Comma-separated API endpoints to test", "example": "/api/profile,/api/invoices,/api/settings", "required": true},
     {"name": "TOKEN_A", "description": "Bearer token for user A", "example": "eyJ...", "required": true},
     {"name": "TOKEN_B", "description": "Bearer token for user B", "example": "eyJ...", "required": true}
   ],
-  "files": ["exploit.py", "README.md"]
+  "files": ["probe.py", "README.md"]
 }

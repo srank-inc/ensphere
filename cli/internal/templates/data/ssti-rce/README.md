@@ -7,13 +7,13 @@ appears in the response.
 ## Setup
 
 1. Identify an endpoint that renders user-supplied input through a template engine
-2. Edit `exploit.py` and fill in TARGET_URL and PARAM
+2. Edit `probe.py` and fill in TARGET_URL and PARAM
 3. Optionally set METHOD (defaults to GET)
 
 ## Usage
 
 ```bash
-python3 exploit.py
+python3 probe.py
 ```
 
 ## Probes
@@ -33,7 +33,7 @@ Also sends a unique canary string to verify input reflection.
 
 ## Output
 
-JSON with `schema_version: 2` and `measurements` containing canary reflection check, baseline round, and per-engine results with `found` boolean (computed result present), `raw_payload_present` boolean (template syntax not evaluated), and round data. No status or confidence -- the AI reads measurements to classify.
+JSON with `measurements` containing canary reflection check, baseline round, and per-engine results with `found` boolean (computed result present), `raw_payload_present` boolean (template syntax not evaluated), and round data. No status or confidence -- the AI reads measurements to classify.
 
 ## Exit Codes
 

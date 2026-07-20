@@ -6,14 +6,14 @@ extension, and actual content.
 ## Setup
 
 1. Identify a file upload endpoint
-2. Edit `exploit.py` and fill in UPLOAD_URL
+2. Edit `probe.py` and fill in UPLOAD_URL
 3. Set AUTH_HEADER if authentication is required
 4. Set FIELD_NAME if the upload field is not named "file"
 
 ## Usage
 
 ```bash
-python3 exploit.py
+python3 probe.py
 ```
 
 ## Test Cases
@@ -29,7 +29,10 @@ python3 exploit.py
 
 ## Output
 
-JSON with `schema_version: 2` and `measurements` containing per-test round results (status_code, elapsed_ms, body_hash, body_length) and `accepted` boolean for each test case, plus `accepted_count` total. No status or confidence — the AI reads measurements to classify.
+JSON with `measurements` containing per-test round results (`status_code`,
+`elapsed_ms`, `body_hash`, and `body_length`). It does not infer whether the
+application accepted, stored, rendered, or executed an upload; the analyst
+decides that from the response and any separately captured retrieval evidence.
 
 ## Exit Codes
 

@@ -7,12 +7,12 @@ tenant B's resource using tenant A's credentials.
 
 1. Obtain bearer tokens for two different tenants (A and B)
 2. Identify a resource UUID belonging to tenant B
-3. Edit `exploit.py` and fill in the configuration variables
+3. Edit `probe.py` and fill in the configuration variables
 
 ## Usage
 
 ```bash
-python3 exploit.py
+python3 probe.py
 ```
 
 ## Parameters
@@ -27,7 +27,7 @@ python3 exploit.py
 
 ## Output
 
-JSON with `schema_version: 2` and `measurements` containing per-request `round` results (status_code, elapsed_ms, body_hash, body_length) and a response snippet. No status or confidence — the AI reads measurements to classify.
+JSON with `measurements` containing per-request `round` results (status_code, elapsed_ms, body_hash, body_length) and a response snippet. No status or confidence — the AI reads measurements to classify.
 
 ## Exit Codes
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """SSRF probe — test internal URL access via server-side request.
 
-Output: schema_version 2 (measurements only, no status/confidence).
+Output: measurements only; no status or confidence.
 Exit codes: 0 = probes completed.
 """
 
@@ -117,7 +117,6 @@ def main():
         })
 
     result = {
-        "schema_version": 2,
         "vuln_type": "ssrf",
         "technique": "internal_service",
         "started_at": started_at,

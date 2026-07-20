@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """JWT alg=none attack — strip signature, set algorithm to none, test acceptance.
 
-Output: schema_version 2 (measurements only, no status/confidence).
+Output: measurements only; no status or confidence.
 Exit codes: 0 = probes completed, 2 = config error.
 """
 
@@ -181,7 +181,6 @@ def main():
         })
 
     result = {
-        "schema_version": 2,
         "vuln_type": "jwt",
         "technique": "alg_none",
         "started_at": started_at,

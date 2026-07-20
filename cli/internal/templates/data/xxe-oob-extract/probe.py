@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """XXE out-of-band extraction — send XML payloads with external entity references.
 
-Output: schema_version 2 (measurements only, no status/confidence).
+Output: measurements only; no status or confidence.
 Exit codes: 0 = probes completed.
 """
 
@@ -203,7 +203,6 @@ def main():
         })
 
     result = {
-        "schema_version": 2,
         "vuln_type": "xxe",
         "technique": "xxe_oob",
         "started_at": started_at,

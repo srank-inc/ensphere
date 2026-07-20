@@ -6,13 +6,13 @@ payloads targeting known OS files and checking responses for file content signat
 ## Setup
 
 1. Identify an endpoint that includes files based on a parameter (e.g., template viewer, file download)
-2. Edit `exploit.py` and fill in TARGET_URL and PARAM
+2. Edit `probe.py` and fill in TARGET_URL and PARAM
 3. Optionally set OS (defaults to "linux"; set to "windows" for Windows targets)
 
 ## Usage
 
 ```bash
-python3 exploit.py
+python3 probe.py
 ```
 
 ## Probes
@@ -31,7 +31,7 @@ Checks responses against 8 known signatures per OS (e.g., `root:x:0:0`, `[fonts]
 
 ## Output
 
-JSON with `schema_version: 2` and `measurements` containing baseline round, per-probe results with `matched_signatures`, `hash_matches_baseline`, and `length_delta`. No status or confidence -- the AI reads measurements to classify.
+JSON with `measurements` containing baseline round, per-probe results with `matched_signatures`, `hash_matches_baseline`, and `length_delta`. No status or confidence -- the AI reads measurements to classify.
 
 ## Exit Codes
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Java deserialization detection — send serialized object headers and measure responses.
 
-Output: schema_version 2 (measurements only, no status/confidence).
+Output: measurements only; no status or confidence.
 Exit codes: 0 = probes completed.
 """
 
@@ -154,7 +154,7 @@ def main():
             "response_snippet": body[:500] if len(body) > 500 else body,
         })
 
-    # Step 3: Content-Type acceptance check — does the endpoint accept serialized content types?
+    # Step 3: Record responses for serialized content types.
     content_type_probes = []
     for ct in ["application/x-java-serialized-object", "application/x-java-object"]:
         probe_count += 1
@@ -162,13 +162,12 @@ def main():
         content_type_probes.append({
             "content_type": ct,
             "round": rr,
-            "accepted": rr["status_code"] != 415,  # 415 = Unsupported Media Type
+            "status_is_415": rr["status_code"] == 415,
         })
-        print(f"[CT:{ct}] status={rr['status_code']}, accepted={rr['status_code'] != 415}", file=sys.stderr)
+        print(f"[CT:{ct}] status={rr['status_code']}", file=sys.stderr)
         time.sleep(0.3)
 
     result = {
-        "schema_version": 2,
         "vuln_type": "deserialization",
         "technique": "deserialization_rce",
         "started_at": started_at,

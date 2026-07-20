@@ -1,18 +1,18 @@
 package templates
 
-// TemplateConfig is the parsed template.json for a single exploit template.
+// TemplateConfig is the parsed template.json for a measurement template.
 type TemplateConfig struct {
-	Name           string          `json:"name"`
-	Description    string          `json:"description"`
-	VulnType       string          `json:"vuln_type"`
-	Technique      string          `json:"technique"`
-	AuthMethod     string          `json:"auth_method,omitempty"`
-	IDPattern      string          `json:"id_pattern,omitempty"`
-	Risk           int             `json:"risk"`
-	RunCommand     string          `json:"run_command"`
-	SuccessSignals []string        `json:"success_signals"`
-	Params         []TemplateParam `json:"params"`
-	Files          []string        `json:"files"`
+	Name              string          `json:"name"`
+	Description       string          `json:"description"`
+	VulnType          string          `json:"vuln_type"`
+	Technique         string          `json:"technique"`
+	AuthMethod        string          `json:"auth_method,omitempty"`
+	IDPattern         string          `json:"id_pattern,omitempty"`
+	Risk              int             `json:"risk"`
+	RunCommand        string          `json:"run_command"`
+	ObservationFields []string        `json:"observation_fields"`
+	Params            []TemplateParam `json:"params"`
+	Files             []string        `json:"files"`
 }
 
 // TemplateParam describes a configurable parameter in a template.

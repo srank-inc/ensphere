@@ -4,12 +4,12 @@
   "vuln_type": "xxe",
   "technique": "xxe_oob",
   "risk": 3,
-  "run_command": "python3 exploit.py",
-  "success_signals": ["status_code:200", "response_diff:with_entity_vs_without"],
+  "run_command": "python3 probe.py",
+  "observation_fields": ["baseline", "xxe_probes", "xxe_probes[].matched_error_signatures", "xxe_probes[].file_content_signatures"],
   "params": [
     {"name": "TARGET_URL", "description": "URL of the XML-accepting endpoint", "example": "http://localhost:3000/api/import", "required": true},
     {"name": "CALLBACK_URL", "description": "URL that the server will contact if XXE is processed", "example": "http://attacker.example.com:8888/xxe", "required": true},
     {"name": "METHOD", "description": "HTTP method (POST or PUT)", "example": "POST", "required": false}
   ],
-  "files": ["exploit.py", "README.md"]
+  "files": ["probe.py", "README.md"]
 }

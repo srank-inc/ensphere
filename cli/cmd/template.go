@@ -16,8 +16,8 @@ var templateList bool
 
 var templateCmd = &cobra.Command{
 	Use:   "template [name]",
-	Short: "Exploit templates for common vulnerability patterns",
-	Long: `List and materialize exploit templates for common vulnerability patterns.
+	Short: "Measurement templates for common vulnerability patterns",
+	Long: `List and materialize measurement templates for common vulnerability patterns.
 
 Examples:
   ensphere template --list                              # JSON list of templates

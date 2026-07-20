@@ -4,12 +4,12 @@
   "vuln_type": "file_upload",
   "technique": "content_type_mismatch",
   "risk": 2,
-  "run_command": "python3 exploit.py",
-  "success_signals": ["status_code:200", "upload_accepted"],
+  "run_command": "python3 probe.py",
+  "observation_fields": ["test_results", "status_code", "elapsed_ms", "body_hash", "body_length"],
   "params": [
     {"name": "UPLOAD_URL", "description": "File upload endpoint URL", "example": "http://localhost:3000/api/upload", "required": true},
     {"name": "AUTH_HEADER", "description": "Authorization header value", "example": "Bearer eyJ...", "required": false},
     {"name": "FIELD_NAME", "description": "Form field name for file upload", "example": "file", "required": false}
   ],
-  "files": ["exploit.py", "README.md"]
+  "files": ["probe.py", "README.md"]
 }

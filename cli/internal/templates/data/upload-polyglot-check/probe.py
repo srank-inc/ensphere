@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Upload polyglot check — test file upload validation with mismatched types.
 
-Output: schema_version 2 (measurements only, no status/confidence).
+Output: measurements only; no status or confidence.
 Exit codes: 0 = probes completed.
 """
 
@@ -95,8 +95,7 @@ def main():
     for name, filename, content_type, content in TEST_CASES:
         probe_count += 1
         rr, resp_body = make_upload(UPLOAD_URL, FIELD_NAME, filename, content_type, content, headers)
-        accepted = rr["status_code"] in (200, 201, 204)
-        print(f"[{name}] status={rr['status_code']} accepted={accepted}", file=sys.stderr)
+        print(f"[{name}] status={rr['status_code']}", file=sys.stderr)
         time.sleep(0.5)
 
         test_results.append({
@@ -104,11 +103,9 @@ def main():
             "filename": filename,
             "content_type": content_type,
             "round": rr,
-            "accepted": accepted,
         })
 
     result = {
-        "schema_version": 2,
         "vuln_type": "upload",
         "technique": "polyglot_bypass",
         "started_at": started_at,
@@ -116,7 +113,6 @@ def main():
         "measurements": {
             "tests_run": len(TEST_CASES),
             "test_results": test_results,
-            "accepted_count": sum(1 for t in test_results if t["accepted"]),
         },
     }
 

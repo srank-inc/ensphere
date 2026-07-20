@@ -7,14 +7,14 @@ for file content and XML parser error signatures.
 ## Setup
 
 1. Identify an endpoint that accepts XML input (e.g., import, SOAP, file upload)
-2. Edit `exploit.py` and fill in TARGET_URL and CALLBACK_URL
+2. Edit `probe.py` and fill in TARGET_URL and CALLBACK_URL
 3. Set up a listener on CALLBACK_URL to detect OOB requests (e.g., `python3 -m http.server 8888`)
 4. Optionally set METHOD (defaults to POST)
 
 ## Usage
 
 ```bash
-python3 exploit.py
+python3 probe.py
 ```
 
 ## Probes
@@ -35,7 +35,7 @@ and response bodies for known file content (passwd entries, win.ini sections).
 
 ## Output
 
-JSON with `schema_version: 2` and `measurements` containing probe_id, callback_url, baseline round, and per-probe results with `matched_error_signatures`, `file_content_signatures`, `hash_matches_baseline`, and `response_snippet`. No status or confidence -- the AI reads measurements to classify.
+JSON with `measurements` containing probe_id, callback_url, baseline round, and per-probe results with `matched_error_signatures`, `file_content_signatures`, `hash_matches_baseline`, and `response_snippet`. No status or confidence -- the AI reads measurements to classify.
 
 ## Exit Codes
 

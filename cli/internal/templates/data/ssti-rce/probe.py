@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """SSTI detection — inject math expressions for multiple template engines and check results.
 
-Output: schema_version 2 (measurements only, no status/confidence).
+Output: measurements only; no status or confidence.
 Exit codes: 0 = probes completed.
 """
 
@@ -130,7 +130,6 @@ def main():
         })
 
     result = {
-        "schema_version": 2,
         "vuln_type": "ssti",
         "technique": "expression_eval",
         "started_at": started_at,

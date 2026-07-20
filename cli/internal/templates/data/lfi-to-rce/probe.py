@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """LFI via directory traversal — send path traversal payloads and check for known file signatures.
 
-Output: schema_version 2 (measurements only, no status/confidence).
+Output: measurements only; no status or confidence.
 Exit codes: 0 = probes completed.
 """
 
@@ -44,7 +44,7 @@ WINDOWS_PROBES = [
     ("win_ini_double_encode", "..%255c..%255c..%255cwindows%255cwin.ini"),
 ]
 
-# Signatures that indicate successful file read
+# Literal response markers recorded without interpreting their cause
 LINUX_SIGNATURES = [
     ("passwd_entry", "root:x:0:0"),
     ("passwd_nologin", "/nologin"),
@@ -147,7 +147,6 @@ def main():
         })
 
     result = {
-        "schema_version": 2,
         "vuln_type": "lfi",
         "technique": "directory_traversal",
         "started_at": started_at,

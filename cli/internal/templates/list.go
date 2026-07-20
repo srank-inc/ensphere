@@ -1,6 +1,7 @@
 package templates
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -64,8 +65,13 @@ func loadConfig(name string) (*TemplateConfig, error) {
 		return nil, fmt.Errorf("read template.json: %w", err)
 	}
 	var cfg TemplateConfig
-	if err := json.Unmarshal(data, &cfg); err != nil {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&cfg); err != nil {
 		return nil, fmt.Errorf("parse template.json: %w", err)
+	}
+	if len(cfg.ObservationFields) == 0 {
+		return nil, fmt.Errorf("parse template.json: observation_fields is required")
 	}
 	return &cfg, nil
 }

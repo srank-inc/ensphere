@@ -5,13 +5,13 @@ Injects `pg_sleep()` payloads and measures response timing to detect blind SQLi.
 ## Setup
 
 1. Identify a URL with a query parameter that reaches a SQL query
-2. Edit `exploit.py` and fill in TARGET_URL, PARAM, and optionally AUTH_HEADER
+2. Edit `probe.py` and fill in TARGET_URL, PARAM, and optionally AUTH_HEADER
 3. Choose the correct BOUNDARY for the injection context
 
 ## Usage
 
 ```bash
-python3 exploit.py
+python3 probe.py
 ```
 
 ## Parameters
@@ -32,7 +32,7 @@ python3 exploit.py
 
 ## Output
 
-JSON with `schema_version: 2` and `measurements` containing per-round `round` results (status_code, elapsed_ms, body_hash, body_length), baseline/payload averages, delta_ms, and control round. No status or confidence — the AI reads measurements to classify.
+JSON with `measurements` containing per-round `round` results (status_code, elapsed_ms, body_hash, body_length), baseline/payload averages, delta_ms, and control round. No status or confidence — the AI reads measurements to classify.
 
 ## Exit Codes
 

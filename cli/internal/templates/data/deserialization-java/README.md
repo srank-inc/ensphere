@@ -7,13 +7,13 @@ checks error responses for deserialization-related signatures.
 ## Setup
 
 1. Identify an endpoint that accepts binary or object data (e.g., import, upload, RMI)
-2. Edit `exploit.py` and fill in TARGET_URL and ENDPOINT
+2. Edit `probe.py` and fill in TARGET_URL and ENDPOINT
 3. Optionally set AUTH_HEADER for authenticated endpoints
 
 ## Usage
 
 ```bash
-python3 exploit.py
+python3 probe.py
 ```
 
 ## Probes
@@ -32,7 +32,7 @@ InvalidClassException, StreamCorruptedException, etc.).
 
 ## Output
 
-JSON with `schema_version: 2` and `measurements` containing baseline rounds, per-probe results with `delta_ms`, `matched_error_signatures`, and `response_snippet`, plus content-type acceptance checks. No status or confidence -- the AI reads measurements to classify.
+JSON with `measurements` containing baseline rounds, per-probe results with `delta_ms`, `matched_error_signatures`, and `response_snippet`, plus content-type acceptance checks. No status or confidence -- the AI reads measurements to classify.
 
 ## Exit Codes
 
