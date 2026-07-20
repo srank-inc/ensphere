@@ -2,7 +2,6 @@ package cvss
 
 // CvssOutput is the JSON output for the cvss command.
 type CvssOutput struct {
-	Version      string            `json:"version"`
 	VectorString string            `json:"vector_string"`
 	BaseScore    float64           `json:"base_score"`
 	Severity     string            `json:"severity"`

@@ -141,7 +141,6 @@ func CalculateV40(av, ac, at, pr, ui, vc, vi, va, sc, si, sa string) (*CvssOutpu
 		vectorStr := fmt.Sprintf("CVSS:4.0/AV:%s/AC:%s/AT:%s/PR:%s/UI:%s/VC:%s/VI:%s/VA:%s/SC:%s/SI:%s/SA:%s",
 			av, ac, at, pr, ui, vc, vi, va, sc, si, sa)
 		return &CvssOutput{
-			Version:      "4.0",
 			VectorString: vectorStr,
 			BaseScore:    0.0,
 			Severity:     SeverityRating(0.0),
@@ -170,7 +169,6 @@ func CalculateV40(av, ac, at, pr, ui, vc, vi, va, sc, si, sa string) (*CvssOutpu
 		av, ac, at, pr, ui, vc, vi, va, sc, si, sa)
 
 	return &CvssOutput{
-		Version:      "4.0",
 		VectorString: vectorStr,
 		BaseScore:    baseScore,
 		Severity:     SeverityRating(baseScore),

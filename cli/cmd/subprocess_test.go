@@ -120,13 +120,13 @@ func TestCLIPayloadsJSONContract(t *testing.T) {
 }
 
 func TestCLICvssJSONContract(t *testing.T) {
-	result := runCLISplit(t, "cvss", "--version", "3.1", "--av", "N", "--ac", "L", "--pr", "N", "--ui", "N", "--s", "U", "--c", "H", "--i", "H", "--a", "H")
+	result := runCLISplit(t, "cvss", "--av", "N", "--ac", "L", "--at", "N", "--pr", "N", "--ui", "N", "--vc", "H", "--vi", "H", "--va", "H", "--sc", "H", "--si", "H", "--sa", "H")
 	if result.code != 0 {
 		t.Fatalf("expected exit 0, got %d stderr=%s", result.code, result.stderr)
 	}
 	var out map[string]any
 	decodeJSON(t, result.stdout, &out)
-	if out["version"] != "3.1" || out["severity"] != "Critical" || out["base_score"].(float64) != 9.8 {
+	if out["severity"] != "Critical" || out["base_score"].(float64) != 10.0 {
 		t.Fatalf("unexpected cvss output: %+v", out)
 	}
 }

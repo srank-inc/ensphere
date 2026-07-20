@@ -45,5 +45,5 @@ smoke: build
 	./bin/$(BINARY_NAME) template --list >/dev/null
 	./bin/$(BINARY_NAME) checklist --list >/dev/null
 	./bin/$(BINARY_NAME) compliance --list >/dev/null
-	./bin/$(BINARY_NAME) cvss --version 3.1 --av N --ac L --pr N --ui N --s U --c H --i H --a H >/dev/null
+	./bin/$(BINARY_NAME) cvss --av N --ac L --at N --pr N --ui N --vc H --vi H --va H --sc H --si H --sa H >/dev/null
 	@echo "smoke ok"

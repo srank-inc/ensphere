@@ -52,9 +52,6 @@ func TestCalculateV40(t *testing.T) {
 			if result.Severity != tt.severity {
 				t.Errorf("severity = %q, want %q", result.Severity, tt.severity)
 			}
-			if result.Version != "4.0" {
-				t.Errorf("version = %q, want %q", result.Version, "4.0")
-			}
 		})
 	}
 }
