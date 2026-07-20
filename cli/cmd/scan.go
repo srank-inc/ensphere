@@ -16,18 +16,17 @@ var (
 	scanExtensions   []string
 	scanExcludes     []string
 	scanExitZero     bool
-	scanMinRisk      int
 	scanAbsenceCheck bool
 	scanContextLines int
 )
 
 var scanCmd = &cobra.Command{
 	Use:   "scan [directory]",
-	Short: "Scan source code for dangerous sink patterns",
-	Long: `Scan a directory for code patterns that may indicate security vulnerabilities.
+	Short: "Scan source code for review-candidate pattern matches",
+	Long: `Scan a directory for deterministic source pattern matches that require analyst review.
 
-Uses the built-in sink pattern database to find dangerous function calls,
-SQL construction, command execution, and other security-relevant code patterns.
+Uses the built-in pattern database to locate function calls, SQL construction,
+command execution, and other review candidates. Matches are not findings.
 
 Examples:
   ensphere scan ./src                          # scan all categories
@@ -43,7 +42,6 @@ func init() {
 	scanCmd.Flags().StringSliceVar(&scanExtensions, "extensions", nil, "Override file extensions to scan (repeatable)")
 	scanCmd.Flags().StringSliceVar(&scanExcludes, "exclude", nil, "Additional glob patterns to exclude (repeatable)")
 	scanCmd.Flags().BoolVar(&scanExitZero, "exit-zero", false, "Always exit 0, even when matches are found")
-	scanCmd.Flags().IntVar(&scanMinRisk, "min-risk", 0, "Only exit 1 if matches at or above this risk level (1-5)")
 	scanCmd.Flags().BoolVar(&scanAbsenceCheck, "absence-check", false, "Enable IaC absence detection (missing security config)")
 	scanCmd.Flags().IntVar(&scanContextLines, "context-lines", 2, "Context lines before/after each match (0-5)")
 
@@ -88,20 +86,7 @@ func runScan(cmd *cobra.Command, args []string) error {
 	}
 
 	if !scanExitZero && result.TotalMatches > 0 {
-		if scanMinRisk > 0 {
-			hasHighRisk := false
-			for _, m := range result.Matches {
-				if m.Risk >= scanMinRisk {
-					hasHighRisk = true
-					break
-				}
-			}
-			if hasHighRisk {
-				os.Exit(1)
-			}
-		} else {
-			os.Exit(1)
-		}
+		os.Exit(1)
 	}
 	return nil
 }

@@ -7,7 +7,6 @@ type ScanMatch struct {
 	Column      int    `json:"column"`
 	PatternName string `json:"pattern_name"`
 	Category    string `json:"category"`
-	Risk        int    `json:"risk"`
 	MatchedText string `json:"matched_text"`
 	Context     string `json:"context"`
 	MatchType   string `json:"match_type,omitempty"` // "presence" (default) or "absence"
@@ -28,7 +27,6 @@ type ScanResult struct {
 type CategoryHit struct {
 	Category string `json:"category"`
 	Count    int    `json:"count"`
-	MaxRisk  int    `json:"max_risk"`
 }
 
 // ScanConfig holds configuration for a scan run.

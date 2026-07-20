@@ -3,583 +3,347 @@ categories:
     - name: raw_query
       pattern: '\.query\s*\('
       extensions: [.js, .ts, .py, .rb, .go, .java, .php]
-      description: "Raw SQL query execution — check for string interpolation"
-      risk: 3
     - name: sql_template_literal
       pattern: '`SELECT.*\$\{'
       extensions: [.js, .ts]
-      description: "SQL in template literal with interpolation"
-      risk: 4
     - name: sql_format_string
       pattern: '\.format\s*\(.*SELECT'
       extensions: [.py]
-      description: "Python string format with SQL — use parameterized queries"
-      risk: 4
     - name: sql_fstring
       pattern: "f[\"\\x27]SELECT"
       extensions: [.py]
-      description: "Python f-string with SQL query"
-      risk: 4
     - name: sql_concat
       pattern: '"SELECT.*"\s*\+'
       extensions: [.js, .ts, .java, .cs]
-      description: "SQL string concatenation — classic injection sink"
-      risk: 4
     - name: raw_sql_django
       pattern: '\.raw\s*\('
       extensions: [.py]
-      description: "Django raw SQL execution"
-      risk: 3
     - name: execute_sql
       pattern: "\\.execute\\s*\\(.*[\"\\x27]"
       extensions: [.py, .rb, .php]
-      description: "Direct SQL execute with string argument"
-      risk: 3
     - name: knex_raw
       pattern: 'knex\.raw\s*\('
       extensions: [.js, .ts]
-      description: "Knex.js raw query — check for proper bindings"
-      risk: 3
     - name: sequelize_literal
       pattern: 'Sequelize\.literal\s*\('
       extensions: [.js, .ts]
-      description: "Sequelize literal SQL — bypasses ORM sanitization"
-      risk: 4
     - name: prisma_raw
       pattern: '\$queryRaw|queryRawUnsafe'
       extensions: [.js, .ts]
-      description: "Prisma raw query — queryRawUnsafe skips parameterization"
-      risk: 4
-
   xss:
     - name: innerhtml
       pattern: '\.innerHTML\s*='
       extensions: [.js, .ts, .jsx, .tsx]
-      description: "Direct innerHTML assignment — XSS sink"
-      risk: 4
     - name: dangerously_set_inner_html
       pattern: 'dangerouslySetInnerHTML'
       extensions: [.jsx, .tsx]
-      description: "React explicit XSS opt-in"
-      risk: 4
     - name: document_write
       pattern: 'document\.write\s*\('
       extensions: [.js, .ts, .html]
-      description: "document.write — injects raw HTML into page"
-      risk: 4
     - name: outerhtml
       pattern: '\.outerHTML\s*='
       extensions: [.js, .ts, .jsx, .tsx]
-      description: "outerHTML assignment — replaces element with raw HTML"
-      risk: 4
     - name: insert_adjacent_html
       pattern: '\.insertAdjacentHTML\s*\('
       extensions: [.js, .ts]
-      description: "insertAdjacentHTML — injects raw HTML at position"
-      risk: 4
     - name: v_html
       pattern: 'v-html\s*='
       extensions: [.vue]
-      description: "Vue v-html directive — renders raw HTML"
-      risk: 4
     - name: bypass_sanitizer
       pattern: 'bypassSecurityTrust'
       extensions: [.ts]
-      description: "Angular DomSanitizer bypass"
-      risk: 4
     - name: eval
       pattern: '\beval\s*\('
       extensions: [.js, .ts, .py, .rb, .php]
-      description: "eval() — executes arbitrary code from string"
-      risk: 5
     - name: jquery_html
       pattern: '\$\(.*\)\.html\s*\('
       extensions: [.js, .ts]
-      description: "jQuery .html() — sets raw HTML content"
-      risk: 4
     - name: template_unescaped
       pattern: '\{\{\{.*\}\}\}|\{!!.*!!\}'
       extensions: [.hbs, .blade.php, .mustache]
-      description: "Unescaped template output (triple mustache / Blade raw)"
-      risk: 4
-
   ssrf:
     - name: fetch_dynamic
       pattern: "fetch\\s*\\([^\"\\x27`]"
       extensions: [.js, .ts]
-      description: "fetch() with dynamic URL — check for user-controlled input"
-      risk: 3
     - name: axios_dynamic
       pattern: "axios\\.(get|post|put|delete|request)\\s*\\([^\"\\x27`]"
       extensions: [.js, .ts]
-      description: "Axios request with dynamic URL"
-      risk: 3
     - name: requests_dynamic
       pattern: 'requests\.(get|post|put|delete)\s*\('
       extensions: [.py]
-      description: "Python requests with potentially dynamic URL"
-      risk: 3
     - name: urllib_open
       pattern: 'urllib\.request\.urlopen\s*\('
       extensions: [.py]
-      description: "urllib urlopen — check for URL validation"
-      risk: 3
     - name: http_client
       pattern: 'http\.Get\s*\(|http\.Post\s*\('
       extensions: [.go]
-      description: "Go HTTP client with dynamic URL"
-      risk: 3
     - name: curl_exec
       pattern: 'curl_exec\s*\('
       extensions: [.php]
-      description: "PHP curl execution — check URL source"
-      risk: 3
     - name: open_uri
       pattern: 'open-uri|OpenURI|URI\.open'
       extensions: [.rb]
-      description: "Ruby open-uri — follows redirects by default"
-      risk: 3
     - name: image_download
       pattern: '(download|fetch|load)(Image|File|URL|Remote)'
       extensions: [.js, .ts, .py, .rb, .go, .java, .php]
-      description: "Remote file/image download function — common SSRF vector"
-      risk: 3
-
   cmdi:
     - name: exec_child_process
       pattern: 'child_process\.(exec|execSync|spawn)\s*\('
       extensions: [.js, .ts]
-      description: "Node.js child_process execution — command injection sink"
-      risk: 5
     - name: os_system
       pattern: 'os\.system\s*\('
       extensions: [.py]
-      description: "Python os.system — executes shell command"
-      risk: 5
     - name: subprocess_shell
       pattern: 'subprocess\.(call|run|Popen)\s*\(.*shell\s*=\s*True'
       extensions: [.py]
-      description: "Python subprocess with shell=True"
-      risk: 5
     - name: exec_command
       pattern: 'exec\.Command\s*\('
       extensions: [.go]
-      description: "Go exec.Command — check for user input in args"
-      risk: 4
     - name: runtime_exec
       pattern: 'Runtime\.getRuntime\(\)\.exec\s*\('
       extensions: [.java]
-      description: "Java Runtime.exec — command execution"
-      risk: 5
     - name: process_builder
       pattern: 'ProcessBuilder\s*\('
       extensions: [.java]
-      description: "Java ProcessBuilder — check for user-controlled arguments"
-      risk: 4
     - name: shell_exec_php
       pattern: '(shell_exec|exec|system|passthru|popen)\s*\('
       extensions: [.php]
-      description: "PHP command execution functions"
-      risk: 5
     - name: backtick_exec
       pattern: '`[^`]*\$'
       extensions: [.rb, .php]
-      description: "Backtick command execution with interpolation"
-      risk: 5
     - name: system_rb
       pattern: '(system|%x)\s*[\(\[]'
       extensions: [.rb]
-      description: "Ruby system/command execution"
-      risk: 5
-
   lfi:
     - name: readfile
       pattern: '(readFile|readFileSync|createReadStream)\s*\('
       extensions: [.js, .ts]
-      description: "Node.js file read — check for path traversal"
-      risk: 3
     - name: open_file
       pattern: '(open|file_get_contents|fopen|include|require)\s*\('
       extensions: [.py, .php]
-      description: "File open/include — check for user-controlled paths"
-      risk: 4
     - name: path_join_unvalidated
       pattern: 'path\.(join|resolve)\s*\(.*req\.'
       extensions: [.js, .ts]
-      description: "Path.join with request input — may allow traversal"
-      risk: 3
     - name: send_file
       pattern: '(sendFile|sendfile|send_file)\s*\('
       extensions: [.js, .ts, .py, .rb]
-      description: "File serving function — check path is within allowed directory"
-      risk: 3
     - name: os_open
       pattern: 'os\.Open\s*\('
       extensions: [.go]
-      description: "Go file open — check for path traversal in user input"
-      risk: 3
     - name: static_file_serve
       pattern: '(express\.static|staticFiles|ServeFile)\s*\('
       extensions: [.js, .ts, .go]
-      description: "Static file serving — check base directory restrictions"
-      risk: 2
     - name: file_download
       pattern: '(Content-Disposition|attachment|download)\s*.*filename'
       extensions: [.js, .ts, .py, .rb, .go, .java, .php]
-      description: "File download with dynamic filename — path traversal risk"
-      risk: 3
     - name: zip_extract
       pattern: '(extractAll|ZipFile|unzip|tar\.Extract)'
       extensions: [.js, .ts, .py, .go, .java]
-      description: "Archive extraction — zip slip vulnerability risk"
-      risk: 3
-
   ssti:
     - name: template_render_string
       pattern: '(render_template_string|Template\s*\(|from_string)\s*\('
       extensions: [.py]
-      description: "Jinja2/Flask template from string — SSTI if user-controlled"
-      risk: 5
     - name: nunjucks_render
       pattern: 'nunjucks\.(renderString|render)\s*\('
       extensions: [.js, .ts]
-      description: "Nunjucks template render — check for user input in template"
-      risk: 4
     - name: ejs_render
       pattern: 'ejs\.render\s*\('
       extensions: [.js, .ts]
-      description: "EJS render with string template — SSTI sink"
-      risk: 4
     - name: pug_render
       pattern: 'pug\.(render|compile)\s*\('
       extensions: [.js, .ts]
-      description: "Pug/Jade template compilation from string"
-      risk: 4
     - name: freemarker_template
       pattern: 'Template\s*\(.*StringReader'
       extensions: [.java]
-      description: "Freemarker template from string — SSTI sink"
-      risk: 4
     - name: velocity_evaluate
       pattern: 'Velocity\.evaluate\s*\('
       extensions: [.java]
-      description: "Apache Velocity evaluate — processes template string"
-      risk: 4
     - name: erb_render
       pattern: 'ERB\.new\s*\('
       extensions: [.rb]
-      description: "Ruby ERB template from string — SSTI sink"
-      risk: 4
     - name: twig_template
       pattern: 'createTemplate\s*\(|loadTemplate\s*\('
       extensions: [.php]
-      description: "Twig dynamic template creation"
-      risk: 4
-
   deserialization:
     - name: json_parse_reviver
       pattern: 'JSON\.parse\s*\(.*,'
       extensions: [.js, .ts]
-      description: "JSON.parse with reviver — check for prototype pollution"
-      risk: 2
     - name: pickle_loads
       pattern: 'pickle\.(loads|load)\s*\('
       extensions: [.py]
-      description: "Python pickle deserialization — arbitrary code execution"
-      risk: 5
-    - name: yaml_load_unsafe
+    - name: yaml_load_call
       pattern: 'yaml\.(load|unsafe_load)\s*\('
       extensions: [.py]
-      description: "PyYAML unsafe load — code execution via YAML"
-      risk: 5
     - name: object_input_stream
       pattern: 'ObjectInputStream\s*\('
       extensions: [.java]
-      description: "Java ObjectInputStream — deserialization RCE risk"
-      risk: 5
     - name: xmldecoder
       pattern: 'XMLDecoder\s*\('
       extensions: [.java]
-      description: "Java XMLDecoder — arbitrary code execution"
-      risk: 5
     - name: unserialize_php
       pattern: 'unserialize\s*\('
       extensions: [.php]
-      description: "PHP unserialize — object injection risk"
-      risk: 5
     - name: marshal_load
       pattern: 'Marshal\.(load|restore)\s*\('
       extensions: [.rb]
-      description: "Ruby Marshal.load — arbitrary code execution"
-      risk: 5
     - name: gob_decode
       pattern: 'gob\.NewDecoder|gob\.Decode'
       extensions: [.go]
-      description: "Go gob deserialization — check input source"
-      risk: 3
     - name: node_serialize
       pattern: '(node-serialize|serialize|unserialize)\s*\('
       extensions: [.js, .ts]
-      description: "Node.js serialization library — check for eval in deserialize"
-      risk: 4
-
   nosql:
     - name: mongo_query_dynamic
       pattern: '\.find\s*\(\s*\{.*\$'
       extensions: [.js, .ts]
-      description: "MongoDB find with dynamic $ operator — NoSQL injection risk"
-      risk: 4
     - name: mongo_where
       pattern: '\.find\s*\(.*\$where'
       extensions: [.js, .ts]
-      description: "MongoDB $where clause — executes JavaScript on server"
-      risk: 5
     - name: mongo_regex_dynamic
       pattern: '\$regex.*req\.'
       extensions: [.js, .ts]
-      description: "MongoDB $regex with user input — ReDoS and injection risk"
-      risk: 4
     - name: mongoose_raw
       pattern: '\.aggregate\s*\(\s*\['
       extensions: [.js, .ts]
-      description: "Mongoose aggregation pipeline — check for user-controlled stages"
-      risk: 3
     - name: pymongo_query
       pattern: '(find|find_one|update|delete)\s*\(\s*\{.*\:'
       extensions: [.py]
-      description: "PyMongo query with dict literal — check for user input in keys"
-      risk: 3
-
   csrf:
     - name: no_csrf_middleware
       pattern: '(disable|skip|exclude).*csrf'
       extensions: [.js, .ts, .py, .rb, .php, .go]
-      description: "CSRF protection disabled or excluded — check if intentional"
-      risk: 4
     - name: cors_any_origin
       pattern: "origin:\\s*[\"\\x27]\\*[\"\\x27]|AllowAllOrigins|Access-Control-Allow-Origin.*\\*"
       extensions: [.js, .ts, .py, .rb, .go, .java]
-      description: "CORS allows all origins — may enable CSRF-like attacks"
-      risk: 4
     - name: samesite_none
       pattern: '(?i)samesite.*none'
       extensions: [.js, .ts, .py, .rb, .go, .java, .php]
-      description: "Cookie SameSite=None — cookies sent on cross-origin requests"
-      risk: 3
-
   jwt:
     - name: jwt_no_verify
       pattern: 'jwt\.(decode|verify).*verify\s*[:=]\s*false'
       extensions: [.js, .ts, .py, .rb]
-      description: "JWT decoded without signature verification"
-      risk: 5
-    - name: jwt_weak_secret
+    - name: jwt_literal_secret
       pattern: "jwt\\.sign.*[\"\\x27](secret|password|key|test|123)[\"\\x27]"
       extensions: [.js, .ts]
-      description: "JWT signed with weak/hardcoded secret"
-      risk: 5
     - name: jwt_none_algorithm
       pattern: "algorithm.*[\"\\x27]none[\"\\x27]|alg.*none"
       extensions: [.js, .ts, .py, .rb, .go, .java]
-      description: "JWT none algorithm configuration — signature bypass risk"
-      risk: 5
     - name: jwt_hs256_with_public_key
       pattern: 'HS256.*publicKey|publicKey.*HS256'
       extensions: [.js, .ts, .py, .go]
-      description: "JWT HS256 with public key — algorithm confusion attack risk"
-      risk: 5
-
   cors:
     - name: cors_reflect_origin
       pattern: "req\\.(headers?\\.origin|get\\s*\\(\\s*[\"\\x27]origin)"
       extensions: [.js, .ts, .py, .rb, .go]
-      description: "Origin header accessed — check if reflected in ACAO without validation"
-      risk: 3
     - name: cors_wildcard
       pattern: "Access-Control-Allow-Origin.*\\*|AllowAllOrigins.*true"
       extensions: [.js, .ts, .py, .rb, .go, .java, .php]
-      description: "CORS wildcard origin — no origin restriction"
-      risk: 4
     - name: cors_credentials_true
       pattern: 'Access-Control-Allow-Credentials.*true|AllowCredentials.*true'
       extensions: [.js, .ts, .py, .rb, .go, .java, .php]
-      description: "CORS credentials allowed — combined with origin reflection is exploitable"
-      risk: 4
-
   redirect:
     - name: redirect_param
       pattern: '(redirect|return|next|url|goto|dest|continue|redir)\s*=\s*req\.'
       extensions: [.js, .ts, .py, .rb, .go, .java, .php]
-      description: "Redirect destination from user input — open redirect risk"
-      risk: 3
     - name: redirect_header
       pattern: 'res\.(redirect|writeHead|setHeader)\s*\(.*req\.'
       extensions: [.js, .ts]
-      description: "HTTP redirect with user-controlled destination"
-      risk: 4
     - name: redirect_location
       pattern: 'Location.*req\.(query|params|body)'
       extensions: [.js, .ts, .py]
-      description: "Location header set from request input — open redirect"
-      risk: 4
-
   idor:
     - name: path_param_resource
       pattern: 'params\.(id|userId|user_id|orderId|accountId)'
       extensions: [.js, .ts]
-      description: "Resource ID from URL path — check for authorization before access"
-      risk: 3
     - name: no_ownership_check
       pattern: '\.findById\s*\(.*params\.'
       extensions: [.js, .ts]
-      description: "Database lookup by ID from params without ownership check"
-      risk: 4
     - name: direct_object_ref
       pattern: 'findOne\s*\(\s*\{.*id\s*:\s*(req\.|params\.|args\.)'
       extensions: [.js, .ts, .py]
-      description: "Direct database query with user-supplied ID — verify authorization"
-      risk: 4
-
   xxe:
     - name: dom_parser
       pattern: 'DOMParser\s*\(\)|parseFromString'
       extensions: [.js, .ts]
-      description: "Browser DOMParser — generally safe but check context"
-      risk: 2
     - name: xml_parse
       pattern: '(xml\.parse|parseString|etree\.parse|SAXParser)\s*\('
       extensions: [.py, .js, .ts, .java]
-      description: "XML parsing — check if external entities are disabled"
-      risk: 3
     - name: xml_reader_java
       pattern: '(XMLReader|SAXParserFactory|DocumentBuilderFactory)\.new'
       extensions: [.java]
-      description: "Java XML parser factory — must disable external entities"
-      risk: 4
     - name: libxml
       pattern: '(simplexml_load|DOMDocument|XMLReader)\s*'
       extensions: [.php]
-      description: "PHP XML parsing — check libxml_disable_entity_loader"
-      risk: 4
     - name: nokogiri
       pattern: 'Nokogiri::XML\s*\('
       extensions: [.rb]
-      description: "Ruby Nokogiri XML parser — check for NONET flag"
-      risk: 3
     - name: lxml_parse
       pattern: '(lxml\.etree\.parse|lxml\.etree\.fromstring)\s*\('
       extensions: [.py]
-      description: "Python lxml parser — check resolve_entities setting"
-      risk: 4
     - name: xml_unmarshal
       pattern: 'xml\.NewDecoder|xml\.Unmarshal'
       extensions: [.go]
-      description: "Go XML parsing — check for entity expansion"
-      risk: 2
     - name: xlsx_parse
       pattern: '(xlsx|openpyxl|ExcelJS|SheetJS)'
       extensions: [.js, .ts, .py, .java]
-      description: "Spreadsheet parsing — XLSX files are ZIP+XML, XXE possible"
-      risk: 3
-
   ldap:
     - name: ldap_search
       pattern: 'ldap\.(search|bind|compare)\s*\('
       extensions: [.py, .rb, .js, .ts]
-      description: "LDAP search/bind/compare — check for user input in filter string"
-      risk: 4
     - name: ldap_filter_concat
       pattern: '\(\&\(.*=.*\+.*\)'
       extensions: [.py, .js, .ts, .java, .go]
-      description: "LDAP filter with string concatenation — injection risk"
-      risk: 4
     - name: ldap_java
       pattern: '(DirContext|InitialDirContext|LdapContext)\.(search|lookup)\s*\('
       extensions: [.java]
-      description: "Java LDAP search or lookup — check for parameterized filters"
-      risk: 4
     - name: ldap_go
       pattern: 'ldap\.(NewSearchRequest|Search)\s*\('
       extensions: [.go]
-      description: "Go LDAP search — check for user input in filter"
-      risk: 3
     - name: ldap_php
       pattern: 'ldap_(search|bind|read)\s*\('
       extensions: [.php]
-      description: "PHP LDAP functions — check for unescaped user input in filter"
-      risk: 4
-
   xpath:
     - name: xpath_evaluate
       pattern: '(xpath|evaluate|selectNodes|selectSingleNode)\s*\('
       extensions: [.js, .ts, .py, .java, .php, .rb]
-      description: "XPath evaluation — check for user input in query"
-      risk: 4
     - name: xpath_compile
       pattern: 'XPathFactory|XPath\.compile\s*\('
       extensions: [.java]
-      description: "Java XPath compilation — check for dynamic query strings"
-      risk: 4
     - name: xpath_lxml
       pattern: '\.xpath\s*\('
       extensions: [.py]
-      description: "Python lxml/ElementTree XPath — check for user input in expression"
-      risk: 4
     - name: xpath_dom
       pattern: 'document\.evaluate\s*\('
       extensions: [.js, .ts]
-      description: "DOM XPath evaluation — check for user input in expression"
-      risk: 3
-
   header_injection:
     - name: set_header_dynamic
       pattern: '(setHeader|addHeader|writeHead|set)\s*\(.*req\.'
       extensions: [.js, .ts, .py, .java, .go]
-      description: "HTTP header set with request input — CRLF injection risk"
-      risk: 4
     - name: redirect_dynamic
       pattern: 'res\.redirect\s*\(.*req\.'
       extensions: [.js, .ts]
-      description: "Redirect with user-controlled URL — header injection via CRLF"
-      risk: 3
     - name: response_header_format
       pattern: 'Header\(\)\.Set\s*\(.*r\.'
       extensions: [.go]
-      description: "Go response header set with request input"
-      risk: 3
     - name: email_header
       pattern: '(send_mail|sendmail|MIMEText|MIMEMultipart)\s*\('
       extensions: [.py, .php]
-      description: "Email sending function — check for CRLF in headers"
-      risk: 3
-
   file_upload:
     - name: multer_upload
       pattern: 'multer\s*\(|upload\.(single|array|fields)\s*\('
       extensions: [.js, .ts]
-      description: "Multer file upload — check for extension/MIME validation"
-      risk: 3
     - name: file_upload_handler
       pattern: '(formidable|busboy|multiparty)\s*\('
       extensions: [.js, .ts]
-      description: "File upload handler — check for file type validation"
-      risk: 3
     - name: move_uploaded_file
       pattern: 'move_uploaded_file\s*\('
       extensions: [.php]
-      description: "PHP file upload move — check for extension and path validation"
-      risk: 4
     - name: file_save
       pattern: '(file\.save|request\.files|uploaded_file)\s*'
       extensions: [.py]
-      description: "Python file upload handling — check for filename sanitization"
-      risk: 3
     - name: storage_upload
       pattern: '(putObject|upload|writeFile)\s*\(.*filename'
       extensions: [.js, .ts, .py, .go]
-      description: "Cloud storage upload with dynamic filename — check for path traversal"
-      risk: 3
-
   # ============================================================
   # IaC — Terraform
   # ============================================================
@@ -587,54 +351,33 @@ categories:
     - name: tf_public_read_acl
       pattern: 'acl\s*=\s*"public-read"'
       extensions: [.tf]
-      description: "Terraform S3/GCS bucket with public-read ACL"
-      risk: 4
     - name: tf_public_readwrite_acl
       pattern: 'acl\s*=\s*"public-read-write"'
       extensions: [.tf]
-      description: "Terraform bucket with public-read-write ACL"
-      risk: 5
     - name: tf_open_cidr
       pattern: 'cidr_blocks\s*=\s*\["0\.0\.0\.0/0"\]'
       extensions: [.tf]
-      description: "Terraform security group with open CIDR 0.0.0.0/0"
-      risk: 4
     - name: tf_kms_rotation_disabled
       pattern: 'enable_key_rotation\s*=\s*false'
       extensions: [.tf]
-      description: "Terraform KMS key rotation disabled"
-      risk: 3
     - name: tf_force_destroy
       pattern: 'force_destroy\s*=\s*true'
       extensions: [.tf]
-      description: "Terraform bucket force_destroy enabled — data loss risk"
-      risk: 3
     - name: tf_rds_public
       pattern: 'publicly_accessible\s*=\s*true'
       extensions: [.tf]
-      description: "Terraform RDS instance publicly accessible"
-      risk: 4
     - name: tf_ebs_unencrypted
       pattern: 'encrypted\s*=\s*false'
       extensions: [.tf]
-      description: "Terraform EBS volume unencrypted"
-      risk: 3
     - name: tf_all_protocol
       pattern: 'protocol\s*=\s*"-1"'
       extensions: [.tf]
-      description: "Terraform security group rule with all-protocol (-1)"
-      risk: 3
     - name: tf_azure_open_nsg
       pattern: 'source_address_prefix\s*=\s*"\*"'
       extensions: [.tf]
-      description: "Terraform Azure NSG with wildcard source address"
-      risk: 4
     - name: tf_open_ipv6
       pattern: 'ipv6_cidr_blocks\s*=\s*\["::/0"\]'
       extensions: [.tf]
-      description: "Terraform security group with open IPv6 CIDR ::/0"
-      risk: 4
-
   # ============================================================
   # IaC — CloudFormation
   # ============================================================
@@ -642,34 +385,21 @@ categories:
     - name: cfn_open_cidr
       pattern: 'CidrIp:\s*0\.0\.0\.0/0'
       extensions: [.yaml, .yml, .json, .template]
-      description: "CloudFormation security group with open CIDR 0.0.0.0/0"
-      risk: 4
     - name: cfn_open_ipv6
       pattern: 'CidrIpv6:\s*::/0'
       extensions: [.yaml, .yml, .json]
-      description: "CloudFormation security group with open IPv6 CIDR"
-      risk: 4
     - name: cfn_wildcard_principal
       pattern: "Principal:\\s*['\"]?\\*"
       extensions: [.yaml, .yml, .json]
-      description: "CloudFormation wildcard principal — overly permissive"
-      risk: 4
     - name: cfn_public_acl_disabled
       pattern: 'BlockPublicAcls:\s*false'
       extensions: [.yaml, .yml, .json]
-      description: "CloudFormation S3 public access block disabled"
-      risk: 4
     - name: cfn_hardcoded_password
       pattern: 'MasterUserPassword:'
       extensions: [.yaml, .yml, .json]
-      description: "CloudFormation hardcoded database master password"
-      risk: 5
     - name: cfn_wildcard_action
       pattern: 'Action:\s*"\*"'
       extensions: [.yaml, .yml, .json]
-      description: "CloudFormation wildcard IAM action"
-      risk: 4
-
   # ============================================================
   # IaC — Dockerfile
   # ============================================================
@@ -678,33 +408,22 @@ categories:
       pattern: 'FROM\s+\S+:latest'
       filenames: [Dockerfile, Dockerfile.dev, Dockerfile.prod]
       extensions: [.dockerfile]
-      description: "Docker FROM with :latest tag — unpinned base image"
-      risk: 3
     - name: docker_root_user
       pattern: 'USER\s+root'
       filenames: [Dockerfile, Dockerfile.dev, Dockerfile.prod]
       extensions: [.dockerfile]
-      description: "Docker running as root user"
-      risk: 3
     - name: docker_copy_all
       pattern: 'COPY\s+\.\s+\.'
       filenames: [Dockerfile, Dockerfile.dev, Dockerfile.prod]
       extensions: [.dockerfile]
-      description: "Docker COPY entire directory — may include secrets"
-      risk: 3
     - name: docker_env_secret
       pattern: 'ENV\s+.*(?:PASSWORD|SECRET|API_KEY|PRIVATE_KEY)\s*='
       filenames: [Dockerfile, Dockerfile.dev, Dockerfile.prod]
       extensions: [.dockerfile]
-      description: "Docker ENV with hardcoded secret value"
-      risk: 4
     - name: docker_expose_ssh
       pattern: 'EXPOSE\s+22\b'
       filenames: [Dockerfile, Dockerfile.dev, Dockerfile.prod]
       extensions: [.dockerfile]
-      description: "Docker EXPOSE SSH port 22"
-      risk: 3
-
   # ============================================================
   # IaC — Kubernetes
   # ============================================================
@@ -712,44 +431,27 @@ categories:
     - name: k8s_privileged
       pattern: 'privileged:\s*true'
       extensions: [.yaml, .yml]
-      description: "Kubernetes privileged container"
-      risk: 5
     - name: k8s_host_network
       pattern: 'hostNetwork:\s*true'
       extensions: [.yaml, .yml]
-      description: "Kubernetes host network enabled"
-      risk: 4
     - name: k8s_host_pid
       pattern: 'hostPID:\s*true'
       extensions: [.yaml, .yml]
-      description: "Kubernetes host PID namespace enabled"
-      risk: 4
     - name: k8s_run_as_root
       pattern: 'runAsUser:\s*0\b'
       extensions: [.yaml, .yml]
-      description: "Kubernetes container running as root (UID 0)"
-      risk: 4
     - name: k8s_run_as_nonroot_false
       pattern: 'runAsNonRoot:\s*false'
       extensions: [.yaml, .yml]
-      description: "Kubernetes runAsNonRoot disabled — allows root"
-      risk: 4
     - name: k8s_priv_escalation
       pattern: 'allowPrivilegeEscalation:\s*true'
       extensions: [.yaml, .yml]
-      description: "Kubernetes allowPrivilegeEscalation enabled"
-      risk: 4
     - name: k8s_writable_rootfs
       pattern: 'readOnlyRootFilesystem:\s*false'
       extensions: [.yaml, .yml]
-      description: "Kubernetes writable root filesystem"
-      risk: 3
     - name: k8s_automount_sa
       pattern: 'automountServiceAccountToken:\s*true'
       extensions: [.yaml, .yml]
-      description: "Kubernetes auto-mount service account token"
-      risk: 3
-
 absence_rules:
   iac_terraform:
     - name: s3_missing_encryption
@@ -757,54 +459,38 @@ absence_rules:
       security_pattern: 'server_side_encryption_configuration'
       window: 30
       extensions: [.tf]
-      risk: 3
-      description: "S3 bucket without encryption configuration"
     - name: s3_missing_versioning
       pattern: 'resource\s+"aws_s3_bucket"\s+'
       security_pattern: 'versioning\s*\{'
       window: 30
       extensions: [.tf]
-      risk: 2
-      description: "S3 bucket without versioning"
     - name: s3_missing_logging
       pattern: 'resource\s+"aws_s3_bucket"\s+'
       security_pattern: 'logging\s*\{'
       window: 30
       extensions: [.tf]
-      risk: 2
-      description: "S3 bucket without access logging"
     - name: rds_missing_encryption
       pattern: 'resource\s+"aws_db_instance"\s+'
       security_pattern: 'storage_encrypted\s*=\s*true'
       window: 30
       extensions: [.tf]
-      risk: 3
-      description: "RDS instance without encryption"
     - name: ebs_missing_encryption
       pattern: 'resource\s+"aws_ebs_volume"\s+'
       security_pattern: 'encrypted\s*=\s*true'
       window: 20
       extensions: [.tf]
-      risk: 3
-      description: "EBS volume without encryption"
     - name: sg_missing_description
       pattern: 'resource\s+"aws_security_group"\s+'
       security_pattern: 'description\s*='
       window: 20
       extensions: [.tf]
-      risk: 1
-      description: "Security group without description"
     - name: gcs_missing_uniform_access
       pattern: 'resource\s+"google_storage_bucket"\s+'
       security_pattern: 'uniform_bucket_level_access'
       window: 30
       extensions: [.tf]
-      risk: 2
-      description: "GCS bucket without uniform bucket-level access"
     - name: azure_storage_missing_https
       pattern: 'resource\s+"azurerm_storage_account"\s+'
       security_pattern: 'enable_https_traffic_only\s*=\s*true'
       window: 30
       extensions: [.tf]
-      risk: 3
-      description: "Azure storage account without HTTPS enforcement"

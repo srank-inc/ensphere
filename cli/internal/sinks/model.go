@@ -2,15 +2,13 @@ package sinks
 
 // SinkPattern represents a single code sink pattern.
 type SinkPattern struct {
-	Name        string   `json:"name" yaml:"name"`
-	Pattern     string   `json:"pattern" yaml:"pattern"`
-	Extensions  []string `json:"extensions" yaml:"extensions"`
-	Filenames   []string `json:"filenames,omitempty" yaml:"filenames,omitempty"`
-	Description string   `json:"description" yaml:"description"`
-	Risk        int      `json:"risk" yaml:"risk"`
+	Name       string   `json:"name" yaml:"name"`
+	Pattern    string   `json:"pattern" yaml:"pattern"`
+	Extensions []string `json:"extensions" yaml:"extensions"`
+	Filenames  []string `json:"filenames,omitempty" yaml:"filenames,omitempty"`
 }
 
-// SinkCategory groups patterns by vulnerability type.
+// SinkCategory groups literal review patterns by catalog category.
 type SinkCategory struct {
 	Category string        `json:"category"`
 	Count    int           `json:"count"`
@@ -35,6 +33,4 @@ type AbsenceRule struct {
 	SecurityPattern string   `json:"security_pattern" yaml:"security_pattern"`
 	Window          int      `json:"window" yaml:"window"`
 	Extensions      []string `json:"extensions" yaml:"extensions"`
-	Risk            int      `json:"risk" yaml:"risk"`
-	Description     string   `json:"description" yaml:"description"`
 }

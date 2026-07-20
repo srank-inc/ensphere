@@ -32,7 +32,6 @@ type compiledPattern struct {
 	re         *regexp.Regexp
 	name       string
 	category   string
-	risk       int
 	extensions map[string]bool
 	filenames  map[string]bool
 }
@@ -87,7 +86,6 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 				re:         re,
 				name:       p.Name,
 				category:   cat,
-				risk:       p.Risk,
 				extensions: exts,
 				filenames:  fnames,
 			})
@@ -122,14 +120,12 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 						extUnion[ext] = true
 					}
 					absenceRules = append(absenceRules, compiledAbsenceRule{
-						re:          re,
-						securityRe:  secRe,
-						name:        r.Name,
-						category:    cat,
-						risk:        r.Risk,
-						window:      r.Window,
-						extensions:  exts,
-						description: r.Description,
+						re:         re,
+						securityRe: secRe,
+						name:       r.Name,
+						category:   cat,
+						window:     r.Window,
+						extensions: exts,
 					})
 				}
 			}
@@ -264,12 +260,8 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 
 	// Build summary
 	catCounts := make(map[string]int)
-	catMaxRisk := make(map[string]int)
 	for _, m := range allMatches {
 		catCounts[m.Category]++
-		if m.Risk > catMaxRisk[m.Category] {
-			catMaxRisk[m.Category] = m.Risk
-		}
 	}
 
 	var summary []CategoryHit
@@ -277,7 +269,6 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 		summary = append(summary, CategoryHit{
 			Category: cat,
 			Count:    count,
-			MaxRisk:  catMaxRisk[cat],
 		})
 	}
 	sort.Slice(summary, func(i, j int) bool {
@@ -347,7 +338,6 @@ func scanFile(path, baseDir string, patterns []compiledPattern, contextLines int
 				Column:      loc[0] + 1,
 				PatternName: p.name,
 				Category:    p.category,
-				Risk:        p.risk,
 				MatchedText: matched,
 				Context:     context,
 			})
@@ -359,14 +349,12 @@ func scanFile(path, baseDir string, patterns []compiledPattern, contextLines int
 
 // compiledAbsenceRule holds a pre-compiled absence rule.
 type compiledAbsenceRule struct {
-	re          *regexp.Regexp
-	securityRe  *regexp.Regexp
-	name        string
-	category    string
-	risk        int
-	window      int
-	extensions  map[string]bool
-	description string
+	re         *regexp.Regexp
+	securityRe *regexp.Regexp
+	name       string
+	category   string
+	window     int
+	extensions map[string]bool
 }
 
 // scanFileAbsence scans a file for resource declarations missing security configuration.
@@ -420,7 +408,6 @@ func scanFileAbsence(path, baseDir string, rules []compiledAbsenceRule, contextL
 					Column:      1,
 					PatternName: r.name,
 					Category:    r.category,
-					Risk:        r.risk,
 					MatchedText: matched,
 					Context:     context,
 					MatchType:   "absence",
