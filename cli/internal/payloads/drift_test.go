@@ -8,7 +8,7 @@ import (
 )
 
 // Canary values: these counts are tied to docs (README.md, ENSPHERE-GO-SPEC.md,
-// ENSPHERE-FULL-KALI-COVERAGE.md). When payloads are added or removed, update
+// ENSPHERE-EXTERNAL-TOOL-INTEGRATION-PLAN.md). When payloads are added or removed, update
 // both this test AND the documentation.
 const expectedPayloadCount = 1206
 const expectedVulnTypeCount = 27

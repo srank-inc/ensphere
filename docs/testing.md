@@ -34,7 +34,13 @@ Expected local artifacts from builds and smoke runs include `bin/`, `cli/enspher
 
 ## JSON Contracts
 
-CLI JSON tests assert parsed semantics rather than pretty formatting. Breaking output changes require an intentional schema version bump where the command exposes `schema_version`. Verify outputs must remain measurement-only and must not add exact JSON fields named `status`, `confidence`, `confirmed`, `safe`, or `potential`.
+CLI JSON tests assert current parsed semantics rather than pretty formatting.
+Verify outputs must remain measurement-only and must not add exact JSON fields
+named `status`, `confidence`, `confirmed`, `safe`, or `potential`.
+
+Runner YAML inputs use strict field decoding. Tests cover the current plan,
+recon profile, finding registry, Session 10 handoff/outcome, and derived-report
+contracts directly.
 
 ## Test File Inventory
 
@@ -42,6 +48,8 @@ CLI JSON tests assert parsed semantics rather than pretty formatting. Breaking o
 |------|---------|---------|
 | `cmd/helpers_test.go` | cmd | Command helper behavior: header parsing and verify exit-code mapping |
 | `cmd/subprocess_test.go` | cmd | Subprocess CLI contract tests for help, JSON output, evidence, scope failure, and malformed headers |
+| `cmd/run_test.go` | cmd | Runner CLI lifecycle, report gates, human-authorized Session 10 handoff, and status-preserving Session 11 derivation |
+| `runner/workspace_test.go` | runner | Current workspace/planning/report contracts, evidence/citation gates, and optional validation boundaries |
 | `verify/helpers_test.go` | verify | Shared test utilities (newTestServer, baseProbeConfig, assertScopeErr, handler factories) |
 | `verify/probe_test.go` | verify | Core infrastructure (CheckScope, CheckMaxRisk, HTTPProbe) |
 | `verify/sqli_test.go` | verify | SQLi DB engine normalization and DB-specific payload selection |

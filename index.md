@@ -1,6 +1,6 @@
 # Ensphere Project Index
 
-Last updated: 2026-06-08
+Last updated: 2026-07-18
 
 Use this file as the fast orientation layer for AI agents and contributors. It
 points to the durable project rules, active plans, generated assets, and
@@ -16,18 +16,20 @@ folder-local indexes.
 | CLI command reference | [docs/cli-reference.md](docs/cli-reference.md) |
 | Agent assessment workflow | [docs/agent-workflow.md](docs/agent-workflow.md) |
 | Installed skill entry point | [skills/SKILL.md](skills/SKILL.md) |
+| Active product plan | [docs/ensphere-product-plan.html](docs/ensphere-product-plan.html) |
+| Current Go CLI specification | [ENSPHERE-GO-SPEC.md](ENSPHERE-GO-SPEC.md) |
 
 ## Current Direction
 
-Ensphere is an evidence-first autonomous application security assessment system
-for AI agents and human analysts. The Go CLI remains a deterministic
+Ensphere is an evidence-first, agent-guided application security assessment
+system. The Go CLI remains a deterministic
 measurement engine: Ensphere produces verifiable facts; the AI or human analyst
 produces security judgments.
 
-The active direction is broad, adaptive assessment before exploitation. Sessions
-01-09 produce the evidence-backed assessment, Session 10 optionally proves
-selected findings by exploitation, and Session 11 optionally regenerates the
-exploit-verified report. External tools are treated as source-provided leads
+The active direction is a broad, adaptive, complete assessment in Sessions
+01–09. Session 10 optionally accepts human-authorized impact validation for
+explicitly selected findings, and Session 11 attaches those outcomes without
+overwriting the Session 09 judgment. External tools are source-provided leads
 that must preserve provenance and stay separate from Ensphere-owned
 measurements.
 
@@ -43,9 +45,9 @@ project docs. If that ever changes, write a new model from scratch.
 | [cli/internal/runner/](cli/internal/runner/) | Agent workspace runner, plan/report/final gates, Session 10 handoff. |
 | [assets/seeds/](assets/seeds/) | YAML payload source data compiled into embedded SQLite. |
 | [skills/](skills/) | Agent skill, methodology, checklists, and shared contracts. |
+| [skills/evaluation/](skills/evaluation/) | Blind ground-truth benchmark protocol, manifest, and reviewer template. |
 | [docs/](docs/) | Engineering docs, workflow docs, plans, testing, and dogfood runbooks. |
 | [templates/](templates/) | Workspace configuration template. |
-| [sample-reports/](sample-reports/) | Evidence-backed sample reports from dogfood targets. |
 
 ## Folder Indexes
 
@@ -58,7 +60,6 @@ project docs. If that ever changes, write a new model from scratch.
 | Framework checklists | [skills/checklists/index.md](skills/checklists/index.md) |
 | Payload seeds | [assets/seeds/index.md](assets/seeds/index.md) |
 | Config templates | [templates/index.md](templates/index.md) |
-| Sample reports | [sample-reports/index.md](sample-reports/index.md) |
 
 ## Dependency Surface
 

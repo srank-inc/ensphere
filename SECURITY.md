@@ -1,6 +1,6 @@
 # Security Policy
 
-Ensphere is an evidence-first autonomous application security assessment toolkit and may contain offensive payloads, proof-of-concept templates, and measurement probes. Use it only for systems where you have explicit authorization.
+Ensphere is an evidence-first application security assessment toolkit and may contain offensive payloads and measurement probes. Use it only for systems where you have explicit authorization. Session 10 is disabled by default; when explicitly selected, each strict plan must name a human or AI executor, receive human authorization bound to its exact SHA-256, and pass the pre-execution readiness gate.
 
 ## Reporting Security Issues
 

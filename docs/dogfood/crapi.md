@@ -101,4 +101,6 @@ ensphere evidence verify --file "$EVIDENCE"
 ensphere evidence query --file "$EVIDENCE" --summary
 ```
 
-Only regenerate `sample-reports/ensphere-report-crapi.md` from verified local evidence and saved transcripts.
+Complete Sessions 01–09, freeze the local report, and then score it with
+[../../skills/evaluation/README.md](../../skills/evaluation/README.md). Do not
+consult target ground truth before the report is frozen.

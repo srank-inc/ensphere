@@ -42,9 +42,9 @@ Output includes `query`, `count`, and `results[]` with payload, placeholders, ev
 ## Run
 
 Create and inspect the `ensphere-pentest/` workspace used by the agent
-workflow. The runner is conservative: it writes deterministic workspace files,
-`next-action.md`, and `agent-prompt.md`; it does not run AI reasoning or execute
-exploit attempts by itself.
+workflow. The runner writes deterministic workspace files, `next-action.md`,
+and `agent-prompt.md`; it does not run AI reasoning. Session 10 is disabled by
+default and requires human authorization for the exact plan and named executor.
 
 ```bash
 ensphere run init \
@@ -58,10 +58,15 @@ ensphere run plan
 ensphere run next
 ensphere run report
 
-# Only after Session 09 is DONE, exploitation is enabled, and findings are selected:
-ensphere run exploit --finding VULN-001 --finding VULN-004
+# Only after Session 09 is DONE, impact validation is enabled, and findings are selected:
+ensphere run validate-impact --finding VULN-001 --finding VULN-004
 
-# Only after Session 10 writes exploit outcomes:
+# Only after writing a strict plan and recording approval of its exact SHA-256:
+ensphere run impact-ready \
+  --finding VULN-001 \
+  --authorization 10-impact-validation/authorizations/VULN-001-agent.yaml
+
+# Only after Session 10 writes impact-validation outcomes:
 ensphere run final
 ```
 
@@ -73,9 +78,10 @@ Common flags:
 --source                 Source availability: yes or no
 --target-type            auto, web_app, api_backend, static_site, mobile_client_remote_backend, mobile_client_offline, desktop_or_extension_client, cloud_only, library_or_cli
 --cloud                  none, aws, gcp, azure, kubernetes, or comma-separated
---exploitation-enabled   Write config with optional Session 10 enabled
+--impact-validation-enabled   Write config with optional Session 10 enabled
 --force                  For run plan, overwrite an existing assessment plan from config
---finding                Finding ID for run exploit, repeatable
+--finding                Finding ID for run validate-impact, repeatable
+--authorization          Workspace-relative authorization YAML for run impact-ready
 ```
 
 `run plan` writes `assessment-plan.yaml` and mirrors it to
@@ -95,33 +101,55 @@ assessment.
 reports are missing, sessions 01, 01.5, or 02-08 are not terminal,
 `assessment-plan.yaml` is missing or invalid, evidence hash-chain verification
 fails, or an existing finding registry contains uncited findings, missing
-required registry fields, invalid finding buckets, invalid confidence/severity
-values, invalid evidence categories, invalid coverage labels, or unsafe
-absolute/escaping transcript, artifact, or cleanup paths.
+required finding fields, invalid statuses (`confirmed`, `likely`,
+`informational`, `not_supported`, `not_tested`), inconsistent evidence strength,
+missing CVSS v4 vectors for vulnerability findings, invalid confidence/severity/
+priority values, invalid evidence categories, invalid coverage labels, missing
+or unsafe transcript/artifact/cleanup paths, or an incomplete final report and
+evidence appendix.
 
-`run exploit` validates and prepares selected finding files for Session 10. It
-refuses to run unless exploitation is explicitly enabled in `config.md` or
-`assessment-plan.yaml`, Session 09 is marked `DONE`,
-`09-report/finding-registry.yaml` exists and is valid, and every selected
+Runner-generated state, plans, recon profiles, report artifacts, Session 10
+handoffs/outcomes, and derived registries use one canonical schema. Unknown
+fields are rejected rather than ignored.
+
+`run validate-impact` validates and prepares selected finding files for Session 10. It
+refuses to run unless impact validation is explicitly enabled in the current
+`assessment-plan.yaml` (the init/config flag feeds plan generation), Session 09 is marked `DONE`, its report/appendix and
+finding registry are valid, and every selected
 finding ID exists in that registry. It writes
-`10-exploitation/selected-findings.yaml` with `max_risk`, allowed actions,
-forbidden actions, cleanup requirements, required human/environment/plan gates,
-and workspace-relative evidence paths. It does not execute exploitation and
-still requires the Session 10 gates from the skill methodology. `run next`
-exposes Session 10 only after that handoff file exists and resolves against the
-valid Session 09 registry; it exposes Session 11 only after Session 10 is marked
-`DONE`.
+`10-impact-validation/selected-findings.yaml` with `max_risk`, allowed actions,
+forbidden actions, cleanup requirements, required authorization/environment/
+plan gates, permitted executors (`human`, `agent`), and workspace-relative
+evidence paths, including a dedicated authorization directory. It prepares the
+handoff but does not autonomously execute it.
+For each selected finding, `run impact-ready` validates the machine-readable
+plan, its current SHA-256, the separate human-authorization record, ordered
+action IDs, executor, environment, identity/role, exact target/operation,
+action/time/risk limits, stop and rollback rules, and evidence paths. It sends
+no request, writes a hash-bound readiness attestation, and must report
+`ready: true` before either executor acts.
+`run next` exposes Session 10 only after that handoff file exists and resolves
+against the valid Session 09 registry. It never starts or offers Session 11;
+the human must explicitly invoke `run final` after Session 10 is `DONE`.
 
-`run final` validates `10-exploitation/exploit-outcomes.yaml` against the
+`run final` validates `10-impact-validation/impact-validation-outcomes.yaml` against the
 Session 09 finding registry and Session 10 selected-finding handoff. It blocks
-when a selected finding has no outcome, an exploited outcome lacks proof
-citations, cleanup status is missing, or citation paths are unsafe. On success
-it writes a derived `11-final-report/finding-registry.yaml` plus evidence
-appendix. It does not modify `09-report/finding-registry.yaml` or evidence rows.
+when a selected finding has no outcome, exact-plan authorization is missing,
+the separate authorization file does not match the plan SHA-256, the executor
+or environment differs, performed actions or elapsed time exceed authorization,
+executor-specific evidence is invalid, an `objective_achieved` outcome lacks
+proof citations, the readiness attestation predates authorization, changed, or
+postdates execution,
+Session 10 evidence IDs do not resolve through a valid hash chain, cleanup proof
+is missing, or citation paths are missing/unsafe.
+On success it writes a derived
+`11-final-report/finding-registry.yaml` plus evidence appendix. It preserves the
+Session 09 `status` and records the optional result in
+`impact_validation_outcome_status`; it does not modify Session 09 artifacts.
 
 ## Verify
 
-All verify commands require `--in-scope`. Output is JSON schema v2 with measurements only. No verify command emits CLI-owned vulnerability status, confidence, or exploitability.
+All verify commands require `--in-scope`. Output is measurement-only JSON. No verify command emits CLI-owned vulnerability status, confidence, or exploitability.
 
 Common flags include:
 
@@ -146,7 +174,7 @@ ensphere verify authz --url "https://target/api/admin" --low-token "user-token" 
 ensphere verify csrf --url "https://target/api/action" --method POST --in-scope target
 ensphere verify cors --url "https://target/api/data" --in-scope target
 ensphere verify jwt --url "https://target/api/me" --token "jwt" --technique alg_none --in-scope target
-ensphere verify ratelimit --url "https://target/api/login" --method POST --burst-count 100 --window-sec 10 --in-scope target
+ensphere verify ratelimit --url "https://target/api/login" --method POST --burst-count 10 --window-sec 10 --in-scope target
 ```
 
 Supported probe families:
@@ -251,11 +279,10 @@ xss-reflected-poc, xxe-oob-extract
 
 ## CVSS
 
-Calculate CVSS v3.1 or v4.0 scores from explicitly supplied metrics.
+Calculate a CVSS 4.0 score from explicitly supplied metrics.
 
 ```bash
-ensphere cvss --version 3.1 --av N --ac L --pr N --ui N --s U --c H --i H --a H
-ensphere cvss --version 4.0 --av N --ac L --at N --pr N --ui N --vc H --vi H --va H --sc H --si H --sa H
+ensphere cvss --av N --ac L --at N --pr N --ui N --vc H --vi H --va H --sc H --si H --sa H
 ```
 
 CVSS severity is deterministic from supplied metrics. It is not inferred by Ensphere.

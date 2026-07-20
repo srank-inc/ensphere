@@ -56,8 +56,5 @@ Desktop.ini
 .settings/
 .classpath
 
-# ── Sample reports (to be regenerated with Ensphere) ─────────────
-sample-reports/ensphere-report-*.md
-
 # ── Claude Code local settings ──────────────────────────────────
 .claude/settings.local.json

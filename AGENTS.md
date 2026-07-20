@@ -25,11 +25,11 @@ Go CLI binary (`ensphere`) + portable AI-agent skill files (`skills/`). CLI comm
 | `cli/internal/verify/` | Verification probe logic |
 | `cli/internal/evidence/` | JSONL evidence writer/reader |
 | `cli/internal/payloads/` | SQLite DB + query logic |
-| `cli/internal/runner/` | Workspace runner, report/final gates, Session 10 handoff |
-| `cli/internal/templates/` | Pre-built Python 3 exploit scripts |
+| `cli/internal/runner/` | Workspace runner, report/final gates, strict Session 10 handoff and pre-execution authorization gate |
+| `cli/internal/templates/` | Pre-built Python 3 measurement probes |
 | `cli/internal/checklist/` | Framework-specific security checklists |
 | `cli/internal/compliance/` | Compliance framework mappings |
-| `cli/internal/cvss/` | CVSS v3.1/v4.0 scoring engine |
+| `cli/internal/cvss/` | CVSS v4.0 scoring engine |
 | `cli/internal/scan/` | Static sink pattern scanner |
 | `cli/internal/sinks/` | Sink pattern database |
 | `cli/internal/callback/` | OOB callback HTTP listener |
@@ -103,4 +103,7 @@ See `docs/testing.md` for the full test file inventory, conventions, and drift g
 | Workflow contract | skills/shared/workflow-contract.md |
 | Development guide | docs/development.md |
 | Test inventory & conventions | docs/testing.md |
-| Autonomous pentest expansion plan | docs/ensphere-autonomous-pentest-expansion-plan.html |
+| Active product plan | docs/ensphere-product-plan.html |
+| Production hardening plan | docs/production-grade-hardening-plan.html |
+| External-tool integration plan | ENSPHERE-EXTERNAL-TOOL-INTEGRATION-PLAN.md |
+| Current Go CLI specification | ENSPHERE-GO-SPEC.md |

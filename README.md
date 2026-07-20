@@ -6,7 +6,7 @@
 
 # Ensphere
 
-Ensphere is an evidence-first autonomous application security assessment system for AI agents and human analysts. It combines a deterministic Go CLI, an agent workspace runner, curated payload data, scoped measurement probes, hash-chained evidence, optional exploit planning, source sink discovery, cloud checks, compliance mapping, and portable methodology files.
+Ensphere is an evidence-first, agent-guided application security assessment system for authorized software. It combines a deterministic Go CLI, a guarded workspace runner, curated payload data, scoped measurement probes, hash-chained evidence, source sink discovery, cloud checks, compliance mapping, and portable methodology files. Optional impact validation is human-authorized.
 
 The project is built around a strict product boundary:
 
@@ -21,18 +21,20 @@ Ensphere can send requests, measure timing, hash responses, count rows, validate
 | Curated payload database | 1206 payloads across 27 vulnerability types, generated from YAML seeds into embedded SQLite |
 | Native measurement probes | 33 scoped probes for SQLi, XSS, SSRF, auth, authz, cloud, API, and protocol issues |
 | Evidence logging | JSONL evidence with write-time `EVID-XXX` IDs, hash-chain integrity, redaction, and cross-process locking |
-| Exploit templates | Python 3 stdlib-only templates for reproducible proof-of-concept work |
+| Measurement templates | Python 3 stdlib-only probes that record raw observations without threshold verdicts |
 | Static sink discovery | Regex-based source sink candidates labeled as `analysis_depth: "pattern_match"` |
 | Cloud parsing and probes | Provider CLI-based checks plus Prowler and Trivy result ingestion |
 | Compliance mapping | OWASP, PCI-DSS, SOC 2, ISO 27001, and OWASP API Security mappings |
-| Runner and report gates | Workspace initialization, deterministic session planning, next-action prompts, report readiness gates, Session 10 handoff, and Session 11 final-registry derivation |
+| Runner and report gates | Workspace initialization, deterministic planning, strict report gates, human-authorized Session 10 handoff, and non-destructive Session 11 derivation |
 | Agent methodology | Portable skill files and adaptive 01-11 assessment workflow for Codex, Claude Code, and other agent surfaces |
 | External ingestion roadmap | Nmap, Nuclei, SARIF, ZAP/Burp, SQLMap, and similar tools are planned as source-provided leads, not Ensphere-owned judgments |
 
-The canonical workflow separates assessment from exploitation: Sessions 01-09
-produce a broad evidence-backed assessment, Session 10 optionally proves
-selected findings by exploitation, and Session 11 regenerates an
-exploit-verified final report.
+Sessions 01–09 produce the complete evidence-backed assessment. Session 10 is
+optional, disabled by default, and limited to explicitly selected findings.
+Each exact plan revision requires a separate human authorization record bound
+to the plan SHA-256 and names either the human or AI as executor. Session 11
+accepts only bounded execution and cleanup records, then attaches those
+outcomes without replacing the Session 09 finding status.
 
 ## Quick Start
 
@@ -67,9 +69,11 @@ ensphere run init \
 ensphere run plan
 ensphere run next
 ensphere run report
-# Optional after Session 09 is DONE and exploitation is explicitly enabled:
-# ensphere run exploit --finding VULN-001
-# Optional after Session 10 writes exploit outcomes:
+# Optional after Session 09 is DONE and impact validation is explicitly enabled:
+# ensphere run validate-impact --finding VULN-001
+# Optional after the exact strict plan SHA-256 is human-authorized:
+# ensphere run impact-ready --finding VULN-001 --authorization 10-impact-validation/authorizations/VULN-001-agent.yaml
+# Optional after Session 10 writes impact-validation outcomes:
 # ensphere run final
 ```
 
@@ -81,12 +85,12 @@ AI agent surface. `run init` refuses to overwrite an initialized workspace; use
 Session 01.5 should review and update it after Recon evidence. `run report`
 writes the Session 09 readiness gate and checks assessment-plan validity,
 terminal session states, session reports, evidence hash chains, and finding
-registry contracts. `run exploit` requires Session 09 to be marked `DONE`,
+registry contracts. `run validate-impact` requires Session 09 to be marked `DONE`,
 validates selected IDs against the Session 09 finding registry, and writes the
-Session 10 handoff with the exploit policy; the runner does not execute
-exploitation by itself. `run final` derives the Session 11 finding registry from
-Session 10 outcomes without modifying Session 09 evidence or registry
-artifacts.
+Session 10 handoff with exact-plan authorization, environment, executor, and
+cleanup gates. `run final` derives the Session 11 registry
+without modifying Session 09 evidence, registry artifacts, or base finding
+statuses; optional outcomes live in `impact_validation_outcome_status`.
 
 ## Requirements
 
@@ -135,11 +139,10 @@ See the full command reference in [docs/cli-reference.md](docs/cli-reference.md)
 
 All verify commands require explicit `--in-scope` validation before network execution. Probes also support throttling, timeout controls, and max-risk gates. Scope failures return exit code `2`; runtime failures return exit code `3`.
 
-Verify output is JSON schema v2 and measurement-only:
+Verify output is measurement-only JSON:
 
 ```json
 {
-  "schema_version": 2,
   "vuln_type": "sqli",
   "technique": "blind_time",
   "probe_count": 3,
@@ -184,7 +187,10 @@ cd cli && go test -race -short ./internal/verify/
 | [docs/development.md](docs/development.md) | Architecture, build, testing, and contribution rules |
 | [docs/testing.md](docs/testing.md) | Test inventory, CI gates, and generated drift checks |
 | [docs/dogfood/README.md](docs/dogfood/README.md) | Local dogfood runbooks |
-| [docs/ensphere-autonomous-pentest-expansion-plan.html](docs/ensphere-autonomous-pentest-expansion-plan.html) | Active evidence-first autonomy roadmap |
+| [docs/ensphere-product-plan.html](docs/ensphere-product-plan.html) | Active product direction, methodology quality standard, and priorities |
+| [docs/production-grade-hardening-plan.html](docs/production-grade-hardening-plan.html) | Active conformance and release-readiness plan |
+| [ENSPHERE-EXTERNAL-TOOL-INTEGRATION-PLAN.md](ENSPHERE-EXTERNAL-TOOL-INTEGRATION-PLAN.md) | External-artifact ingestion roadmap |
+| [ENSPHERE-GO-SPEC.md](ENSPHERE-GO-SPEC.md) | Current Go CLI implementation contract and known conformance gaps |
 
 ## Distribution
 

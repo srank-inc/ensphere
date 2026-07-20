@@ -4,7 +4,7 @@ Purpose: verify Ensphere against the Capital API sandbox using real local eviden
 
 ## Target
 
-The legacy sample report used:
+The benchmark workspace uses:
 
 ```bash
 export BASE_URL="http://capital-api.sandbox.local:8000"
@@ -70,4 +70,6 @@ ensphere evidence verify --file "$EVIDENCE"
 ensphere evidence query --file "$EVIDENCE" --summary
 ```
 
-Only regenerate `sample-reports/ensphere-report-capital-api.md` after each finding traces to verified evidence and a saved transcript.
+Complete Sessions 01–09 and score the local report with
+[../../skills/evaluation/README.md](../../skills/evaluation/README.md). Keep the
+report local unless its evidence workspace is also ready for review.

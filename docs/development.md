@@ -2,7 +2,7 @@
 
 ## Core Principle
 
-Ensphere is an evidence-first autonomous assessment system built around a
+Ensphere is an evidence-first, agent-guided assessment system built around a
 measurement and execution engine. The CLI and generated assets produce
 deterministic facts. The AI or human analyst produces security judgments.
 
@@ -36,10 +36,10 @@ Not allowed in code:
 | `cli/internal/evidence/` | JSONL evidence writer and reader |
 | `cli/internal/payloads/` | Embedded SQLite payload database and query logic |
 | `cli/internal/runner/` | Workspace runner, assessment-plan drafting, report/final gates, Session 10 handoff |
-| `cli/internal/templates/` | Embedded Python 3 exploit templates |
+| `cli/internal/templates/` | Embedded Python 3 measurement templates |
 | `cli/internal/checklist/` | Embedded checklist loader |
 | `cli/internal/compliance/` | Compliance mappings |
-| `cli/internal/cvss/` | CVSS v3.1 and v4.0 calculators |
+| `cli/internal/cvss/` | CVSS v4.0 calculator |
 | `cli/internal/scan/` | Regex-based sink scanner |
 | `cli/internal/sinks/` | Sink pattern database |
 | `cli/internal/callback/` | OOB callback HTTP listener |
@@ -108,7 +108,7 @@ Valid enum values are defined in `cli/internal/enums/enums.go`.
 - Keep README human-facing and concise.
 - Keep [../index.md](../index.md), [index.md](index.md), and folder-local
   indexes current when adding or retiring major docs, plans, runbooks, seeds,
-  checklists, or sample reports.
+  checklists, benchmark protocols, or runbooks.
 - Put CLI details in [cli-reference.md](cli-reference.md).
 - Put agent workflow and runner semantics in [agent-workflow.md](agent-workflow.md), [../skills/shared/workflow-contract.md](../skills/shared/workflow-contract.md), and `skills/`.
 - Update [testing.md](testing.md) when test inventory, gates, or drift checks change.
