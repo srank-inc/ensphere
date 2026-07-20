@@ -11,19 +11,21 @@ import (
 )
 
 var (
-	runWorkspace           string
-	runTarget              string
-	runSource              string
-	runTargetType          string
-	runCloud               string
-	runInScope             string
-	runOutOfScope          string
-	runLoginURL            string
-	runUsername            string
-	runPassword            string
-	runExploitEnabled      bool
-	runPlanForce           bool
-	runSelectedFindingRefs []string
+	runWorkspace                   string
+	runTarget                      string
+	runSource                      string
+	runTargetType                  string
+	runCloud                       string
+	runInScope                     string
+	runOutOfScope                  string
+	runLoginURL                    string
+	runUsername                    string
+	runPassword                    string
+	runImpactValidationEnabled     bool
+	runPlanForce                   bool
+	runImpactValidationFindingRefs []string
+	runImpactReadinessFinding      string
+	runImpactAuthorizationPath     string
 )
 
 var runCmd = &cobra.Command{
@@ -33,7 +35,9 @@ var runCmd = &cobra.Command{
 
 The runner is conservative: it writes deterministic workspace files,
 next-action.md, and agent-prompt.md for Codex, Claude Code, or another agent.
-It does not execute AI reasoning or run exploit attempts by itself.`,
+It does not execute AI reasoning. Session 10 is disabled by default. When a
+human explicitly enables it and selects findings, either a human or an AI agent
+may execute the exact approved plan.`,
 }
 
 var runInitCmd = &cobra.Command{
@@ -45,17 +49,17 @@ var runInitCmd = &cobra.Command{
 			os.Exit(2)
 		}
 		out, err := runner.InitWorkspace(runner.InitConfig{
-			Workspace:           runWorkspace,
-			TargetURL:           runTarget,
-			SourceCode:          runSource,
-			TargetType:          runTargetType,
-			Cloud:               runCloud,
-			InScope:             runInScope,
-			OutOfScope:          runOutOfScope,
-			LoginURL:            runLoginURL,
-			Username:            runUsername,
-			Password:            runPassword,
-			ExploitationEnabled: runExploitEnabled,
+			Workspace:               runWorkspace,
+			TargetURL:               runTarget,
+			SourceCode:              runSource,
+			TargetType:              runTargetType,
+			Cloud:                   runCloud,
+			InScope:                 runInScope,
+			OutOfScope:              runOutOfScope,
+			LoginURL:                runLoginURL,
+			Username:                runUsername,
+			Password:                runPassword,
+			ImpactValidationEnabled: runImpactValidationEnabled,
 		})
 		if err != nil {
 			return err
@@ -114,7 +118,7 @@ var runReportCmd = &cobra.Command{
 
 var runFinalCmd = &cobra.Command{
 	Use:   "final",
-	Short: "Derive Session 11 registry from exploit outcomes",
+	Short: "Derive a validation-aware Session 11 registry without replacing Session 09 status",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		out, err := runner.RunFinalReport(runWorkspace)
 		if err != nil {
@@ -124,14 +128,26 @@ var runFinalCmd = &cobra.Command{
 	},
 }
 
-var runExploitCmd = &cobra.Command{
-	Use:   "exploit",
-	Short: "Prepare selected findings for optional Session 10",
+var runValidateImpactCmd = &cobra.Command{
+	Use:   "validate-impact",
+	Short: "Prepare selected findings for optional human-authorized Session 10",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		out, err := runner.PrepareExploit(runWorkspace, runSelectedFindingRefs)
+		out, err := runner.PrepareImpactValidation(runWorkspace, runImpactValidationFindingRefs)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err)
 			os.Exit(2)
+		}
+		return encodeRunJSON(out)
+	},
+}
+
+var runImpactReadyCmd = &cobra.Command{
+	Use:   "impact-ready",
+	Short: "Validate an exact Session 10 plan and human authorization before execution",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		out, err := runner.CheckImpactValidationReady(runWorkspace, runImpactReadinessFinding, runImpactAuthorizationPath)
+		if err != nil {
+			return err
 		}
 		return encodeRunJSON(out)
 	},
@@ -149,12 +165,16 @@ func init() {
 	runInitCmd.Flags().StringVar(&runLoginURL, "login-url", "", "Login URL")
 	runInitCmd.Flags().StringVar(&runUsername, "username", "", "Test username")
 	runInitCmd.Flags().StringVar(&runPassword, "password", "", "Test password")
-	runInitCmd.Flags().BoolVar(&runExploitEnabled, "exploitation-enabled", false, "Enable optional Session 10 planning")
+	runInitCmd.Flags().BoolVar(&runImpactValidationEnabled, "impact-validation-enabled", false, "Enable optional human-authorized Session 10 planning")
 
 	runPlanCmd.Flags().BoolVar(&runPlanForce, "force", false, "Overwrite an existing assessment-plan.yaml from config")
-	runExploitCmd.Flags().StringArrayVar(&runSelectedFindingRefs, "finding", nil, "Finding ID to select for Session 10; repeatable")
+	runValidateImpactCmd.Flags().StringArrayVar(&runImpactValidationFindingRefs, "finding", nil, "Finding ID to select for human-authorized Session 10; repeatable")
+	runImpactReadyCmd.Flags().StringVar(&runImpactReadinessFinding, "finding", "", "Selected Session 09 finding ID")
+	runImpactReadyCmd.Flags().StringVar(&runImpactAuthorizationPath, "authorization", "", "Workspace-relative strict human-authorization YAML path")
+	_ = runImpactReadyCmd.MarkFlagRequired("finding")
+	_ = runImpactReadyCmd.MarkFlagRequired("authorization")
 
-	runCmd.AddCommand(runInitCmd, runStatusCmd, runNextCmd, runPlanCmd, runReportCmd, runExploitCmd, runFinalCmd)
+	runCmd.AddCommand(runInitCmd, runStatusCmd, runNextCmd, runPlanCmd, runReportCmd, runValidateImpactCmd, runImpactReadyCmd, runFinalCmd)
 	rootCmd.AddCommand(runCmd)
 }
 

@@ -9,21 +9,20 @@ type Session struct {
 }
 
 type InitConfig struct {
-	Workspace           string
-	TargetURL           string
-	SourceCode          string
-	TargetType          string
-	Cloud               string
-	InScope             string
-	OutOfScope          string
-	LoginURL            string
-	Username            string
-	Password            string
-	ExploitationEnabled bool
+	Workspace               string
+	TargetURL               string
+	SourceCode              string
+	TargetType              string
+	Cloud                   string
+	InScope                 string
+	OutOfScope              string
+	LoginURL                string
+	Username                string
+	Password                string
+	ImpactValidationEnabled bool
 }
 
 type Status struct {
-	SchemaVersion        int               `json:"schema_version"`
 	Workspace            string            `json:"workspace"`
 	ConfigPath           string            `json:"config_path"`
 	ProgressPath         string            `json:"progress_path"`
@@ -36,7 +35,6 @@ type Status struct {
 }
 
 type NextAction struct {
-	SchemaVersion  int               `json:"schema_version"`
 	Workspace      string            `json:"workspace"`
 	Session        *Session          `json:"session,omitempty"`
 	PlanDecision   *PlanDecisionView `json:"plan_decision,omitempty"`
@@ -46,24 +44,27 @@ type NextAction struct {
 	Message        string            `json:"message"`
 }
 
-type ExploitSelection struct {
-	SchemaVersion           int      `json:"schema_version"`
-	Workspace               string   `json:"workspace"`
-	Findings                []string `json:"findings"`
-	FindingRegistryPath     string   `json:"finding_registry_path"`
-	SelectionPath           string   `json:"selection_path"`
-	ActionPath              string   `json:"action_path"`
-	PromptPath              string   `json:"prompt_path"`
-	MaxRisk                 int      `json:"max_risk"`
-	AllowedActions          []string `json:"allowed_actions"`
-	ForbiddenActions        []string `json:"forbidden_actions"`
-	CleanupRequired         bool     `json:"cleanup_required"`
-	CleanupEvidenceRequired bool     `json:"cleanup_evidence_required"`
-	Message                 string   `json:"message"`
+type ImpactValidationSelection struct {
+	Workspace                          string   `json:"workspace"`
+	Findings                           []string `json:"findings"`
+	FindingRegistryPath                string   `json:"finding_registry_path"`
+	SelectionPath                      string   `json:"selection_path"`
+	ActionPath                         string   `json:"action_path"`
+	PromptPath                         string   `json:"prompt_path"`
+	MaxRisk                            int      `json:"max_risk"`
+	AllowedActions                     []string `json:"allowed_actions"`
+	ForbiddenActions                   []string `json:"forbidden_actions"`
+	CleanupRequired                    bool     `json:"cleanup_required"`
+	CleanupEvidenceRequired            bool     `json:"cleanup_evidence_required"`
+	HumanAuthorizationRequired         bool     `json:"human_authorization_required"`
+	AuthorizationRecordRequired        bool     `json:"authorization_record_required"`
+	EnvironmentAcknowledgementRequired bool     `json:"environment_acknowledgement_required"`
+	PermittedExecutors                 []string `json:"permitted_executors"`
+	ValidationPlanRequired             bool     `json:"validation_plan_required"`
+	Message                            string   `json:"message"`
 }
 
 type ReportGateOutput struct {
-	SchemaVersion        int               `json:"schema_version" yaml:"schema_version"`
 	Workspace            string            `json:"workspace" yaml:"workspace"`
 	Ready                bool              `json:"ready" yaml:"ready"`
 	GatePath             string            `json:"gate_path" yaml:"gate_path"`
@@ -84,7 +85,6 @@ type ReportGateIssue struct {
 }
 
 type FinalReportOutput struct {
-	SchemaVersion      int               `json:"schema_version" yaml:"schema_version"`
 	Workspace          string            `json:"workspace" yaml:"workspace"`
 	Ready              bool              `json:"ready" yaml:"ready"`
 	SourceRegistryPath string            `json:"source_registry_path" yaml:"source_registry_path"`
@@ -100,66 +100,193 @@ type FinalReportOutput struct {
 }
 
 type FindingRegistry struct {
-	SchemaVersion int              `json:"schema_version" yaml:"schema_version"`
 	GeneratedFrom string           `json:"generated_from" yaml:"generated_from"`
 	Findings      []FindingSummary `json:"findings" yaml:"findings"`
 }
 
 type FindingSummary struct {
-	ID                      string   `json:"id" yaml:"id"`
-	Title                   string   `json:"title" yaml:"title"`
-	Category                string   `json:"category" yaml:"category"`
-	Status                  string   `json:"status" yaml:"status"`
-	Confidence              string   `json:"confidence" yaml:"confidence"`
-	Severity                string   `json:"severity" yaml:"severity"`
-	CVSSV4                  string   `json:"cvss_v4" yaml:"cvss_v4"`
-	CVSSV31                 string   `json:"cvss_v31" yaml:"cvss_v31"`
-	EvidenceIDs             []string `json:"evidence_ids" yaml:"evidence_ids"`
-	Transcripts             []string `json:"transcripts" yaml:"transcripts"`
-	ArtifactPaths           []string `json:"artifact_paths" yaml:"artifact_paths,omitempty"`
-	CleanupEvidence         []string `json:"cleanup_evidence" yaml:"cleanup_evidence,omitempty"`
-	ImportRefs              []string `json:"import_refs" yaml:"import_refs"`
-	ManualNotes             []string `json:"manual_notes" yaml:"manual_notes"`
-	EvidenceCategories      []string `json:"evidence_categories" yaml:"evidence_categories"`
-	CoverageLabel           string   `json:"coverage_label" yaml:"coverage_label"`
-	ExploitCandidate        bool     `json:"exploit_candidate" yaml:"exploit_candidate"`
-	ExploitCandidateReason  string   `json:"exploit_candidate_reason" yaml:"exploit_candidate_reason"`
-	SelectedForExploitation bool     `json:"selected_for_exploitation" yaml:"selected_for_exploitation"`
-	OriginalStatus          string   `json:"original_status" yaml:"original_status,omitempty"`
-	ExploitVerified         bool     `json:"exploit_verified" yaml:"exploit_verified,omitempty"`
-	ExploitOutcomeReason    string   `json:"exploit_outcome_reason" yaml:"exploit_outcome_reason,omitempty"`
-	CleanupStatus           string   `json:"cleanup_status" yaml:"cleanup_status,omitempty"`
-	Notes                   string   `json:"notes" yaml:"notes"`
+	ID                                 string   `json:"id" yaml:"id"`
+	Title                              string   `json:"title" yaml:"title"`
+	Category                           string   `json:"category" yaml:"category"`
+	Status                             string   `json:"status" yaml:"status"`
+	Confidence                         string   `json:"confidence" yaml:"confidence"`
+	EvidenceStrength                   string   `json:"evidence_strength" yaml:"evidence_strength"`
+	Severity                           string   `json:"severity" yaml:"severity"`
+	Priority                           string   `json:"priority" yaml:"priority"`
+	CVSSV4                             string   `json:"cvss_v4" yaml:"cvss_v4"`
+	AffectedAssets                     []string `json:"affected_assets" yaml:"affected_assets"`
+	AffectedLocations                  []string `json:"affected_locations" yaml:"affected_locations"`
+	ObservedFacts                      []string `json:"observed_facts" yaml:"observed_facts"`
+	RootCause                          string   `json:"root_cause" yaml:"root_cause"`
+	SecurityImpact                     string   `json:"security_impact" yaml:"security_impact"`
+	BusinessImpact                     string   `json:"business_impact" yaml:"business_impact"`
+	Remediation                        string   `json:"remediation" yaml:"remediation"`
+	ValidationCriteria                 []string `json:"validation_criteria" yaml:"validation_criteria"`
+	EvidenceIDs                        []string `json:"evidence_ids" yaml:"evidence_ids"`
+	Transcripts                        []string `json:"transcripts" yaml:"transcripts"`
+	ArtifactPaths                      []string `json:"artifact_paths" yaml:"artifact_paths,omitempty"`
+	CleanupEvidence                    []string `json:"cleanup_evidence" yaml:"cleanup_evidence,omitempty"`
+	ImportRefs                         []string `json:"import_refs" yaml:"import_refs"`
+	ManualNotes                        []string `json:"manual_notes" yaml:"manual_notes"`
+	EvidenceCategories                 []string `json:"evidence_categories" yaml:"evidence_categories"`
+	CoverageLabel                      string   `json:"coverage_label" yaml:"coverage_label"`
+	ImpactValidationCandidate          bool     `json:"impact_validation_candidate" yaml:"impact_validation_candidate"`
+	ImpactValidationCandidateReason    string   `json:"impact_validation_candidate_reason" yaml:"impact_validation_candidate_reason"`
+	SelectedForImpactValidation        bool     `json:"selected_for_impact_validation" yaml:"selected_for_impact_validation"`
+	ImpactValidationOutcomeStatus      string   `json:"impact_validation_outcome_status" yaml:"impact_validation_outcome_status,omitempty"`
+	ImpactValidationOutcomeReason      string   `json:"impact_validation_outcome_reason" yaml:"impact_validation_outcome_reason,omitempty"`
+	ImpactValidationExecutor           string   `json:"impact_validation_executor" yaml:"impact_validation_executor,omitempty"`
+	ImpactValidationAuthorization      []string `json:"impact_validation_authorization" yaml:"impact_validation_authorization,omitempty"`
+	ImpactValidationEvidenceIDs        []string `json:"impact_validation_evidence_ids" yaml:"impact_validation_evidence_ids,omitempty"`
+	ImpactValidationTranscripts        []string `json:"impact_validation_transcripts" yaml:"impact_validation_transcripts,omitempty"`
+	ImpactValidationArtifactPaths      []string `json:"impact_validation_artifact_paths" yaml:"impact_validation_artifact_paths,omitempty"`
+	ImpactValidationCleanupEvidence    []string `json:"impact_validation_cleanup_evidence" yaml:"impact_validation_cleanup_evidence,omitempty"`
+	ImpactValidationCleanupStatus      string   `json:"impact_validation_cleanup_status" yaml:"impact_validation_cleanup_status,omitempty"`
+	ImpactValidationEvidenceCategories []string `json:"impact_validation_evidence_categories" yaml:"impact_validation_evidence_categories,omitempty"`
+	ImpactValidationNotes              string   `json:"impact_validation_notes" yaml:"impact_validation_notes,omitempty"`
+	Notes                              string   `json:"notes" yaml:"notes"`
 }
 
-type ExploitOutcomes struct {
-	SchemaVersion int              `json:"schema_version" yaml:"schema_version"`
-	GeneratedFrom string           `json:"generated_from" yaml:"generated_from"`
-	Outcomes      []ExploitOutcome `json:"outcomes" yaml:"outcomes"`
+type ImpactValidationOutcomes struct {
+	GeneratedFrom string                    `json:"generated_from" yaml:"generated_from"`
+	Outcomes      []ImpactValidationOutcome `json:"outcomes" yaml:"outcomes"`
 }
 
-type ExploitOutcome struct {
-	ID                 string   `json:"id" yaml:"id"`
-	Status             string   `json:"status" yaml:"status"`
-	OutcomeReason      string   `json:"outcome_reason" yaml:"outcome_reason,omitempty"`
-	EvidenceIDs        []string `json:"evidence_ids" yaml:"evidence_ids,omitempty"`
-	Transcripts        []string `json:"transcripts" yaml:"transcripts,omitempty"`
-	ArtifactPaths      []string `json:"artifact_paths" yaml:"artifact_paths,omitempty"`
-	CleanupEvidence    []string `json:"cleanup_evidence" yaml:"cleanup_evidence,omitempty"`
-	CleanupStatus      string   `json:"cleanup_status" yaml:"cleanup_status,omitempty"`
-	EvidenceCategories []string `json:"evidence_categories" yaml:"evidence_categories,omitempty"`
-	Notes              string   `json:"notes" yaml:"notes,omitempty"`
+type SelectedFindingsHandoff struct {
+	Enabled                            bool              `json:"enabled" yaml:"enabled"`
+	FindingRegistryPath                string            `json:"finding_registry_path" yaml:"finding_registry_path"`
+	MaxRisk                            int               `json:"max_risk" yaml:"max_risk"`
+	AllowedActions                     []string          `json:"allowed_actions" yaml:"allowed_actions"`
+	ForbiddenActions                   []string          `json:"forbidden_actions" yaml:"forbidden_actions"`
+	SelectedFindings                   []string          `json:"selected_findings" yaml:"selected_findings"`
+	CleanupRequired                    bool              `json:"cleanup_required" yaml:"cleanup_required"`
+	CleanupEvidenceRequired            bool              `json:"cleanup_evidence_required" yaml:"cleanup_evidence_required"`
+	HumanAuthorizationRequired         bool              `json:"human_authorization_required" yaml:"human_authorization_required"`
+	AuthorizationRecordRequired        bool              `json:"authorization_record_required" yaml:"authorization_record_required"`
+	EnvironmentAcknowledgementRequired bool              `json:"environment_acknowledgement_required" yaml:"environment_acknowledgement_required"`
+	PermittedExecutors                 []string          `json:"permitted_executors" yaml:"permitted_executors"`
+	ValidationPlanRequired             bool              `json:"validation_plan_required" yaml:"validation_plan_required"`
+	EvidencePaths                      map[string]string `json:"evidence_paths" yaml:"evidence_paths"`
+}
+
+type ImpactValidationOutcome struct {
+	ID                 string             `json:"id" yaml:"id"`
+	Status             string             `json:"status" yaml:"status"`
+	OutcomeReason      string             `json:"outcome_reason" yaml:"outcome_reason,omitempty"`
+	Executor           string             `json:"executor" yaml:"executor"`
+	AuthorizationPath  string             `json:"authorization_path" yaml:"authorization_path"`
+	ReadinessPath      string             `json:"readiness_path" yaml:"readiness_path"`
+	Execution          Session10Execution `json:"execution" yaml:"execution"`
+	EvidenceIDs        []string           `json:"evidence_ids" yaml:"evidence_ids,omitempty"`
+	Transcripts        []string           `json:"transcripts" yaml:"transcripts,omitempty"`
+	ArtifactPaths      []string           `json:"artifact_paths" yaml:"artifact_paths,omitempty"`
+	CleanupEvidence    []string           `json:"cleanup_evidence" yaml:"cleanup_evidence,omitempty"`
+	CleanupStatus      string             `json:"cleanup_status" yaml:"cleanup_status,omitempty"`
+	EvidenceCategories []string           `json:"evidence_categories" yaml:"evidence_categories,omitempty"`
+	Notes              string             `json:"notes" yaml:"notes,omitempty"`
+}
+
+type Session10Authorization struct {
+	FindingID               string   `json:"finding_id" yaml:"finding_id"`
+	PlanPath                string   `json:"plan_path" yaml:"plan_path"`
+	PlanRevision            string   `json:"plan_revision" yaml:"plan_revision"`
+	PlanSHA256              string   `json:"plan_sha256" yaml:"plan_sha256"`
+	AuthorizedBy            string   `json:"authorized_by" yaml:"authorized_by"`
+	AuthorizedAt            string   `json:"authorized_at" yaml:"authorized_at"`
+	Executor                string   `json:"executor" yaml:"executor"`
+	Environment             string   `json:"environment" yaml:"environment"`
+	EnvironmentAcknowledged bool     `json:"environment_acknowledged" yaml:"environment_acknowledged"`
+	AuthorizedActionIDs     []string `json:"authorized_action_ids" yaml:"authorized_action_ids"`
+	MaxActions              int      `json:"max_actions" yaml:"max_actions"`
+	MaxDurationMinutes      int      `json:"max_duration_minutes" yaml:"max_duration_minutes"`
+	MaxRisk                 int      `json:"max_risk" yaml:"max_risk"`
+}
+
+type Session10Execution struct {
+	StartedAt              string                    `json:"started_at" yaml:"started_at"`
+	CompletedAt            string                    `json:"completed_at" yaml:"completed_at"`
+	Environment            string                    `json:"environment" yaml:"environment"`
+	PerformedActions       []Session10ExecutedAction `json:"performed_actions" yaml:"performed_actions"`
+	ActionCount            int                       `json:"action_count" yaml:"action_count"`
+	StopConditionTriggered bool                      `json:"stop_condition_triggered" yaml:"stop_condition_triggered"`
+	StopConditionReason    string                    `json:"stop_condition_reason" yaml:"stop_condition_reason,omitempty"`
+	RollbackStatus         string                    `json:"rollback_status" yaml:"rollback_status"`
+}
+
+type Session10Plan struct {
+	FindingID            string                `json:"finding_id" yaml:"finding_id"`
+	Objective            string                `json:"objective" yaml:"objective"`
+	Session09EvidenceIDs []string              `json:"session09_evidence_ids" yaml:"session09_evidence_ids"`
+	Executor             string                `json:"executor" yaml:"executor"`
+	Environment          string                `json:"environment" yaml:"environment"`
+	Identity             string                `json:"identity" yaml:"identity"`
+	Role                 string                `json:"role" yaml:"role"`
+	Actions              []Session10PlanAction `json:"actions" yaml:"actions"`
+	MaxActions           int                   `json:"max_actions" yaml:"max_actions"`
+	MaxDurationMinutes   int                   `json:"max_duration_minutes" yaml:"max_duration_minutes"`
+	MaxRisk              int                   `json:"max_risk" yaml:"max_risk"`
+	StopConditions       []string              `json:"stop_conditions" yaml:"stop_conditions"`
+	RollbackSteps        []string              `json:"rollback_steps" yaml:"rollback_steps"`
+	CleanupVerification  []string              `json:"cleanup_verification" yaml:"cleanup_verification"`
+	TranscriptPath       string                `json:"transcript_path" yaml:"transcript_path"`
+	ArtifactDirectory    string                `json:"artifact_directory" yaml:"artifact_directory"`
+	CleanupEvidencePath  string                `json:"cleanup_evidence_path" yaml:"cleanup_evidence_path"`
+}
+
+type Session10PlanAction struct {
+	ID                   string   `json:"id" yaml:"id"`
+	ActionType           string   `json:"action_type" yaml:"action_type"`
+	Target               string   `json:"target" yaml:"target"`
+	Operation            string   `json:"operation" yaml:"operation"`
+	Risk                 int      `json:"risk" yaml:"risk"`
+	ExpectedObservations []string `json:"expected_observations" yaml:"expected_observations"`
+}
+
+type Session10ExecutedAction struct {
+	ID             string   `json:"id" yaml:"id"`
+	Target         string   `json:"target" yaml:"target"`
+	Operation      string   `json:"operation" yaml:"operation"`
+	Identity       string   `json:"identity" yaml:"identity"`
+	Role           string   `json:"role" yaml:"role"`
+	StartedAt      string   `json:"started_at" yaml:"started_at"`
+	CompletedAt    string   `json:"completed_at" yaml:"completed_at"`
+	ExitStatus     string   `json:"exit_status" yaml:"exit_status"`
+	ResultSummary  string   `json:"result_summary" yaml:"result_summary"`
+	TranscriptPath string   `json:"transcript_path" yaml:"transcript_path"`
+	ArtifactPaths  []string `json:"artifact_paths" yaml:"artifact_paths,omitempty"`
+}
+
+type ImpactValidationReadiness struct {
+	Workspace         string            `json:"workspace"`
+	FindingID         string            `json:"finding_id"`
+	AuthorizationPath string            `json:"authorization_path"`
+	PlanPath          string            `json:"plan_path,omitempty"`
+	Executor          string            `json:"executor,omitempty"`
+	AttestationPath   string            `json:"attestation_path,omitempty"`
+	Ready             bool              `json:"ready"`
+	Issues            []ReportGateIssue `json:"issues,omitempty"`
+	Message           string            `json:"message"`
+}
+
+type ImpactValidationReadinessAttestation struct {
+	FindingID           string `json:"finding_id" yaml:"finding_id"`
+	AuthorizationPath   string `json:"authorization_path" yaml:"authorization_path"`
+	AuthorizationSHA256 string `json:"authorization_sha256" yaml:"authorization_sha256"`
+	PlanPath            string `json:"plan_path" yaml:"plan_path"`
+	PlanSHA256          string `json:"plan_sha256" yaml:"plan_sha256"`
+	Executor            string `json:"executor" yaml:"executor"`
+	CheckedAt           string `json:"checked_at" yaml:"checked_at"`
+	Ready               bool   `json:"ready" yaml:"ready"`
 }
 
 type AssessmentPlan struct {
-	SchemaVersion  int                    `json:"schema_version" yaml:"schema_version"`
-	Draft          bool                   `json:"draft" yaml:"draft"`
-	Target         PlanTarget             `json:"target" yaml:"target"`
-	Sessions       map[string]PlanSession `json:"sessions" yaml:"sessions"`
-	Exploitation   PlanExploitation       `json:"exploitation" yaml:"exploitation"`
-	HumanOverrides []string               `json:"human_overrides" yaml:"human_overrides"`
-	CreatedBy      string                 `json:"created_by" yaml:"created_by"`
-	CreatedAt      string                 `json:"created_at" yaml:"created_at"`
+	Draft            bool                   `json:"draft" yaml:"draft"`
+	Target           PlanTarget             `json:"target" yaml:"target"`
+	Sessions         map[string]PlanSession `json:"sessions" yaml:"sessions"`
+	ImpactValidation PlanImpactValidation   `json:"impact_validation" yaml:"impact_validation"`
+	HumanOverrides   []string               `json:"human_overrides" yaml:"human_overrides"`
+	CreatedBy        string                 `json:"created_by" yaml:"created_by"`
+	CreatedAt        string                 `json:"created_at" yaml:"created_at"`
 }
 
 type PlanTarget struct {
@@ -187,7 +314,7 @@ type PlanSession struct {
 	RequiredInput []string `json:"required_input,omitempty" yaml:"required_input,omitempty"`
 }
 
-type PlanExploitation struct {
+type PlanImpactValidation struct {
 	Enabled                 bool     `json:"enabled" yaml:"enabled"`
 	SelectedFindings        []string `json:"selected_findings" yaml:"selected_findings"`
 	MaxRisk                 int      `json:"max_risk" yaml:"max_risk"`
@@ -198,7 +325,6 @@ type PlanExploitation struct {
 }
 
 type PlanOutput struct {
-	SchemaVersion  int             `json:"schema_version"`
 	Workspace      string          `json:"workspace"`
 	PlanPath       string          `json:"plan_path"`
 	MirrorPath     string          `json:"mirror_path"`
@@ -212,14 +338,14 @@ type PlanOutput struct {
 }
 
 type PlanSummary struct {
-	Exists              bool              `json:"exists"`
-	Valid               bool              `json:"valid"`
-	Validation          []string          `json:"validation,omitempty"`
-	TargetType          string            `json:"target_type,omitempty"`
-	SourceMode          string            `json:"source_mode,omitempty"`
-	CoverageLabel       string            `json:"coverage_label,omitempty"`
-	ExploitationEnabled bool              `json:"exploitation_enabled"`
-	SessionDecisions    map[string]string `json:"session_decisions,omitempty"`
+	Exists                  bool              `json:"exists"`
+	Valid                   bool              `json:"valid"`
+	Validation              []string          `json:"validation,omitempty"`
+	TargetType              string            `json:"target_type,omitempty"`
+	SourceMode              string            `json:"source_mode,omitempty"`
+	CoverageLabel           string            `json:"coverage_label,omitempty"`
+	ImpactValidationEnabled bool              `json:"impact_validation_enabled"`
+	SessionDecisions        map[string]string `json:"session_decisions,omitempty"`
 }
 
 type PlanDecisionView struct {
@@ -232,7 +358,6 @@ type PlanDecisionView struct {
 }
 
 type ReconTargetProfile struct {
-	SchemaVersion        int                     `json:"schema_version" yaml:"schema_version"`
 	Target               ReconProfileTarget      `json:"target" yaml:"target"`
 	BackendInventory     []BackendInventoryEntry `json:"backend_inventory,omitempty" yaml:"backend_inventory,omitempty"`
 	Signals              TargetSignals           `json:"signals,omitempty" yaml:"signals,omitempty"`
@@ -279,6 +404,6 @@ var Sessions = []Session{
 	{ID: "07", Name: "Cloud Security", Methodology: "skills/methodology/07-cloud.md", Directory: "07-cloud"},
 	{ID: "08", Name: "API Security", Methodology: "skills/methodology/08-api.md", Directory: "08-api"},
 	{ID: "09", Name: "Evidence-Based Assessment Report", Methodology: "skills/methodology/09-report.md", Directory: "09-report"},
-	{ID: "10", Name: "Optional Prove-by-Exploitation", Methodology: "skills/methodology/10-exploitation.md", Directory: "10-exploitation", Optional: true},
-	{ID: "11", Name: "Exploit-Verified Final Report", Methodology: "skills/methodology/11-final-report.md", Directory: "11-final-report", Optional: true},
+	{ID: "10", Name: "Optional Human-Authorized Impact Validation", Methodology: "skills/methodology/10-impact-validation.md", Directory: "10-impact-validation", Optional: true},
+	{ID: "11", Name: "Optional Validation-Aware Final Report", Methodology: "skills/methodology/11-final-report.md", Directory: "11-final-report", Optional: true},
 }

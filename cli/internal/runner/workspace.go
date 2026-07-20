@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -79,7 +77,6 @@ func WorkspaceStatus(workspace string) (*Status, error) {
 		planSummary.Valid = false
 	}
 	return &Status{
-		SchemaVersion:        1,
 		Workspace:            workspace,
 		ConfigPath:           configPath(workspace),
 		ProgressPath:         progressPath(workspace),
@@ -101,18 +98,17 @@ func WriteNextAction(workspace string) (*NextAction, error) {
 		return nil, err
 	}
 	action := &NextAction{
-		SchemaVersion: 1,
-		Workspace:     workspace,
-		Session:       status.NextSession,
-		PlanDecision:  status.NextPlanDecision,
-		ActionPath:    filepath.Join(workspace, "next-action.md"),
-		PromptPath:    filepath.Join(workspace, "agent-prompt.md"),
+		Workspace:    workspace,
+		Session:      status.NextSession,
+		PlanDecision: status.NextPlanDecision,
+		ActionPath:   filepath.Join(workspace, "next-action.md"),
+		PromptPath:   filepath.Join(workspace, "agent-prompt.md"),
 	}
 	if status.AssessmentPlan != nil {
 		action.PlanValidation = status.AssessmentPlan.Validation
 	}
 	if status.NextSession == nil {
-		action.Message = "No next session. Assessment is complete, optional exploitation is disabled, or no Session 10 findings have been selected."
+		action.Message = "No next session. Assessment is complete, optional impact validation is disabled, or no Session 10 findings have been selected."
 	} else {
 		action.Message = fmt.Sprintf("Next session: %s - %s", status.NextSession.ID, status.NextSession.Name)
 	}
@@ -125,15 +121,15 @@ func WriteNextAction(workspace string) (*NextAction, error) {
 	return action, nil
 }
 
-func PrepareExploit(workspace string, findings []string) (*ExploitSelection, error) {
+func PrepareImpactValidation(workspace string, findings []string) (*ImpactValidationSelection, error) {
 	if workspace == "" {
 		workspace = defaultWorkspace
 	}
 	if err := ensureWorkspaceInitialized(workspace); err != nil {
 		return nil, err
 	}
-	if !exploitationEnabled(workspace) {
-		return nil, fmt.Errorf("exploitation is not enabled; set exploitation enabled in config or assessment-plan.yaml before selecting Session 10 findings")
+	if !impactValidationEnabled(workspace) {
+		return nil, fmt.Errorf("impact validation is not enabled; explicitly enable optional Session 10 in config or assessment-plan.yaml before selecting findings")
 	}
 	findings = cleanFindings(findings)
 	if len(findings) == 0 {
@@ -149,22 +145,28 @@ func PrepareExploit(workspace string, findings []string) (*ExploitSelection, err
 	if err := requireSessionDone(workspace, "09", "Session 10 selection"); err != nil {
 		return nil, err
 	}
-	policy := exploitationPolicy(workspace)
-	dir := filepath.Join(workspace, "10-exploitation")
+	gate, err := RunReport(workspace)
+	if err != nil {
+		return nil, fmt.Errorf("run Session 09 report gate: %w", err)
+	}
+	if !gate.Ready {
+		return nil, fmt.Errorf("Session 09 report gate is not ready; resolve: %s", reportIssueCodes(gate.Issues))
+	}
+	policy := impactValidationPolicy(workspace)
+	dir := filepath.Join(workspace, "10-impact-validation")
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return nil, fmt.Errorf("create exploitation directory: %w", err)
+		return nil, fmt.Errorf("create impact validation directory: %w", err)
 	}
 	selectionPath := filepath.Join(dir, "selected-findings.yaml")
 	if err := os.WriteFile(selectionPath, []byte(renderSelectedFindings(findings, registryPath, policy)), 0644); err != nil {
 		return nil, fmt.Errorf("write selected findings: %w", err)
 	}
 	action := &NextAction{
-		SchemaVersion: 1,
-		Workspace:     workspace,
-		Session:       sessionByID("10"),
-		ActionPath:    filepath.Join(workspace, "next-action.md"),
-		PromptPath:    filepath.Join(workspace, "agent-prompt.md"),
-		Message:       "Next session: 10 - Optional Prove-by-Exploitation",
+		Workspace:  workspace,
+		Session:    sessionByID("10"),
+		ActionPath: filepath.Join(workspace, "next-action.md"),
+		PromptPath: filepath.Join(workspace, "agent-prompt.md"),
+		Message:    "Next session: 10 - Optional Human-Authorized Impact Validation",
 	}
 	if err := os.WriteFile(action.ActionPath, []byte(renderNextAction(action)), 0644); err != nil {
 		return nil, fmt.Errorf("write next action: %w", err)
@@ -172,26 +174,30 @@ func PrepareExploit(workspace string, findings []string) (*ExploitSelection, err
 	if err := os.WriteFile(action.PromptPath, []byte(renderAgentPrompt(action)), 0644); err != nil {
 		return nil, fmt.Errorf("write agent prompt: %w", err)
 	}
-	return &ExploitSelection{
-		SchemaVersion:           1,
-		Workspace:               workspace,
-		Findings:                findings,
-		FindingRegistryPath:     registryPath,
-		SelectionPath:           selectionPath,
-		ActionPath:              action.ActionPath,
-		PromptPath:              action.PromptPath,
-		MaxRisk:                 policy.MaxRisk,
-		AllowedActions:          policy.AllowedActions,
-		ForbiddenActions:        policy.ForbiddenActions,
-		CleanupRequired:         policy.CleanupRequired,
-		CleanupEvidenceRequired: policy.CleanupEvidenceRequired,
-		Message:                 "Selected findings validated against the Session 09 registry and written. Session 10 still requires explicit approval and safety gates before execution.",
+	return &ImpactValidationSelection{
+		Workspace:                          workspace,
+		Findings:                           findings,
+		FindingRegistryPath:                registryPath,
+		SelectionPath:                      selectionPath,
+		ActionPath:                         action.ActionPath,
+		PromptPath:                         action.PromptPath,
+		MaxRisk:                            policy.MaxRisk,
+		AllowedActions:                     policy.AllowedActions,
+		ForbiddenActions:                   policy.ForbiddenActions,
+		CleanupRequired:                    policy.CleanupRequired,
+		CleanupEvidenceRequired:            policy.CleanupEvidenceRequired,
+		HumanAuthorizationRequired:         true,
+		AuthorizationRecordRequired:        true,
+		EnvironmentAcknowledgementRequired: true,
+		PermittedExecutors:                 []string{"human", "agent"},
+		ValidationPlanRequired:             true,
+		Message:                            "Selected findings validated against the Session 09 registry. Session 10 remains paused until a human authorizes the exact plan and executor for each finding.",
 	}, nil
 }
 
 func renderConfig(cfg InitConfig) string {
 	enabled := "false"
-	if cfg.ExploitationEnabled {
+	if cfg.ImpactValidationEnabled {
 		enabled = "true"
 	}
 	return fmt.Sprintf(`# Pentest Configuration
@@ -214,16 +220,22 @@ func renderConfig(cfg InitConfig) string {
 - Rules to avoid: no DoS, no data destruction
 - Areas to focus: 
 
-## Exploitation
+## Impact Validation
+- Execution model: optional and human-authorized; executor is human or agent
 - Enabled: %s
 - Selected findings: []
 - Max risk: 3
-- Allowed actions: read_only_data_extraction, browser_js_execution
-- Forbidden actions: data_deletion, persistence, credential_dumping
+- Allowed actions: non_sensitive_canary_read, benign_browser_execution
+- Forbidden actions: sensitive_data_access, data_deletion, persistence, credential_dumping
+- Human authorization required: true
+- Authorization record required: true
+- Permitted executors: human, agent
+- Cleanup required: true
 - Cleanup evidence required: true
 
 ## Authorization
 This test is fully authorized against the specified controlled environment.
+This general assessment authorization does not authorize Session 10 actions.
 `, cfg.TargetURL, cfg.SourceCode, cfg.TargetType, cfg.Cloud, cfg.LoginURL, cfg.Username, cfg.Password, cfg.InScope, cfg.OutOfScope, enabled)
 }
 
@@ -242,7 +254,7 @@ func renderProgress(workspace string) string {
 
 func renderNextAction(action *NextAction) string {
 	if action.Session == nil {
-		return "# Next Action\n\nNo next session. Assessment is complete, optional exploitation is disabled, or no Session 10 findings have been selected.\n"
+		return "# Next Action\n\nNo next session. Assessment is complete, optional impact validation is disabled, or no Session 10 findings have been selected.\n"
 	}
 	var planBlock string
 	if action.PlanDecision != nil {
@@ -266,6 +278,18 @@ func renderNextAction(action *NextAction) string {
 			planBlock += fmt.Sprintf("- %s\n", issue)
 		}
 	}
+	instruction := `Open the Ensphere skill, read the methodology file above, and run this session
+against the configured target. Keep evidence factual and update progress when
+the session completes.`
+	if action.Session.ID == "10" {
+		instruction = `Open the Ensphere skill and Session 10 methodology. Validate the handoff and
+prepare a strict bounded YAML plan for each selected finding. Do not execute any
+action until a human authorizes that exact plan SHA-256 and executor and
+ensphere run impact-ready returns ready: true.`
+	} else if action.Session.ID == "11" {
+		instruction = `Open the Ensphere skill and Session 11 methodology. Produce the optional
+derived report while preserving every Session 09 finding status.`
+	}
 	return fmt.Sprintf(`# Next Action
 
 ## Session
@@ -277,23 +301,26 @@ func renderNextAction(action *NextAction) string {
 %s
 
 ## Instruction
-Open the Ensphere skill, read the methodology file above, and run this session
-against the configured target. Keep evidence factual and update progress when
-the session completes.
-`, action.Session.ID, action.Session.Name, action.Session.Methodology, action.Session.Directory, time.Now().UTC().Format(time.RFC3339), planBlock)
+%s
+`, action.Session.ID, action.Session.Name, action.Session.Methodology, action.Session.Directory, time.Now().UTC().Format(time.RFC3339), planBlock, instruction)
 }
 
 func renderAgentPrompt(action *NextAction) string {
 	if action.Session == nil {
 		return "ensphere status\n"
 	}
+	if action.Session.ID == "10" {
+		return fmt.Sprintf("ensphere 10\n\nRead %s and prepare the strict human-authorized impact-validation plans using %s and %s. Do not execute until exact SHA-256 authorization is recorded and run impact-ready returns ready: true.\n", action.Session.Methodology, configPath(action.Workspace), progressPath(action.Workspace))
+	}
+	if action.Session.ID == "11" {
+		return fmt.Sprintf("ensphere 11\n\nRead %s and write the derived validation-aware report using %s and %s. Preserve Session 09 finding statuses.\n", action.Session.Methodology, configPath(action.Workspace), progressPath(action.Workspace))
+	}
 	return fmt.Sprintf("ensphere %s\n\nRead %s and execute the session using %s and %s.\n", action.Session.ID, action.Session.Methodology, configPath(action.Workspace), progressPath(action.Workspace))
 }
 
-func renderSelectedFindings(findings []string, registryPath string, policy PlanExploitation) string {
-	policy = normalizeExploitationPolicy(policy)
+func renderSelectedFindings(findings []string, registryPath string, policy PlanImpactValidation) string {
+	policy = normalizeImpactValidationPolicy(policy)
 	var b strings.Builder
-	b.WriteString("schema_version: 1\n")
 	b.WriteString("enabled: true\n")
 	b.WriteString(fmt.Sprintf("finding_registry_path: %q\n", registryPath))
 	b.WriteString(fmt.Sprintf("max_risk: %d\n", policy.MaxRisk))
@@ -311,14 +338,20 @@ func renderSelectedFindings(findings []string, registryPath string, policy PlanE
 	}
 	b.WriteString(fmt.Sprintf("cleanup_required: %t\n", policy.CleanupRequired))
 	b.WriteString(fmt.Sprintf("cleanup_evidence_required: %t\n", policy.CleanupEvidenceRequired))
-	b.WriteString("human_approval_required: true\n")
+	b.WriteString("human_authorization_required: true\n")
+	b.WriteString("authorization_record_required: true\n")
 	b.WriteString("environment_acknowledgement_required: true\n")
-	b.WriteString("exploit_plan_required: true\n")
+	b.WriteString("permitted_executors:\n")
+	b.WriteString("  - \"human\"\n")
+	b.WriteString("  - \"agent\"\n")
+	b.WriteString("validation_plan_required: true\n")
 	b.WriteString("evidence_paths:\n")
-	b.WriteString("  evidence_jsonl: \"10-exploitation/evidence.jsonl\"\n")
-	b.WriteString("  transcript_dir: \"10-exploitation/transcripts\"\n")
-	b.WriteString("  artifact_dir: \"10-exploitation/artifacts\"\n")
-	b.WriteString("  cleanup_report: \"10-exploitation/cleanup.md\"\n")
+	b.WriteString("  evidence_jsonl: \"10-impact-validation/evidence.jsonl\"\n")
+	b.WriteString("  transcript_dir: \"10-impact-validation/transcripts\"\n")
+	b.WriteString("  artifact_dir: \"10-impact-validation/artifacts\"\n")
+	b.WriteString("  authorization_dir: \"10-impact-validation/authorizations\"\n")
+	b.WriteString("  readiness_dir: \"10-impact-validation/readiness\"\n")
+	b.WriteString("  cleanup_report: \"10-impact-validation/cleanup.md\"\n")
 	return b.String()
 }
 
@@ -374,7 +407,9 @@ func nextSession(states map[string]string, session10Ready bool) *Session {
 		if session.ID == "10" && !session10Ready {
 			return nil
 		}
-		if session.ID == "11" && strings.ToUpper(strings.TrimSpace(states["10"])) != stateDone {
+		if session.ID == "11" {
+			// Session 11 is invoked only through the explicit `run final` command.
+			// It is never the automatic next session, even after Session 10 is done.
 			return nil
 		}
 		state := strings.ToUpper(states[session.ID])
@@ -390,7 +425,7 @@ func nextSession(states map[string]string, session10Ready bool) *Session {
 }
 
 func session10Ready(workspace string) bool {
-	if !exploitationEnabled(workspace) {
+	if !impactValidationEnabled(workspace) {
 		return false
 	}
 	if err := validateAssessmentPlanIfPresent(workspace); err != nil {
@@ -401,7 +436,7 @@ func session10Ready(workspace string) bool {
 		return false
 	}
 	findings := selectedFindingsFromHandoff(workspace)
-	return len(findings) > 0 && validateSelectedFindings(workspace, findings) == nil
+	return len(findings) > 0 && validateSelectedFindings(workspace, findings) == nil && validateSession10Handoff(workspace) == nil
 }
 
 func requireSessionDone(workspace, id, gate string) error {
@@ -419,11 +454,13 @@ func requireSessionDone(workspace, id, gate string) error {
 	return nil
 }
 
-func exploitationEnabled(workspace string) bool {
-	if plan, err := ReadAssessmentPlan(assessmentPlanPath(workspace)); err == nil && plan.Exploitation.Enabled {
-		return true
+func impactValidationEnabled(workspace string) bool {
+	planPath := assessmentPlanPath(workspace)
+	if fileExists(planPath) {
+		plan, err := ReadAssessmentPlan(planPath)
+		return err == nil && plan.ImpactValidation.Enabled
 	}
-	if cfg, err := readConfig(workspace); err == nil && cfg.ExploitationEnabled {
+	if cfg, err := readConfig(workspace); err == nil && cfg.ImpactValidationEnabled {
 		return true
 	}
 	return false
@@ -444,54 +481,132 @@ func validateAssessmentPlanIfPresent(workspace string) error {
 	return nil
 }
 
-func exploitationPolicy(workspace string) PlanExploitation {
+func impactValidationPolicy(workspace string) PlanImpactValidation {
 	if plan, err := ReadAssessmentPlan(assessmentPlanPath(workspace)); err == nil {
-		return normalizeExploitationPolicy(plan.Exploitation)
+		return normalizeImpactValidationPolicy(plan.ImpactValidation)
 	}
-	return normalizeExploitationPolicy(defaultExploitationPolicy(exploitationEnabled(workspace)))
+	return normalizeImpactValidationPolicy(defaultImpactValidationPolicy(impactValidationEnabled(workspace)))
 }
 
-func defaultExploitationPolicy(enabled bool) PlanExploitation {
-	return PlanExploitation{
+func defaultImpactValidationPolicy(enabled bool) PlanImpactValidation {
+	return PlanImpactValidation{
 		Enabled:                 enabled,
 		SelectedFindings:        []string{},
 		MaxRisk:                 3,
-		AllowedActions:          []string{"read_only_data_extraction", "browser_js_execution"},
-		ForbiddenActions:        []string{"data_deletion", "persistence", "credential_dumping"},
+		AllowedActions:          []string{"non_sensitive_canary_read", "benign_browser_execution"},
+		ForbiddenActions:        []string{"sensitive_data_access", "data_deletion", "persistence", "credential_dumping"},
 		CleanupRequired:         true,
 		CleanupEvidenceRequired: true,
 	}
 }
 
-func normalizeExploitationPolicy(policy PlanExploitation) PlanExploitation {
+func normalizeImpactValidationPolicy(policy PlanImpactValidation) PlanImpactValidation {
 	if policy.MaxRisk == 0 {
 		policy.MaxRisk = 3
 	}
 	policy.AllowedActions = cleanFindings(policy.AllowedActions)
 	if len(policy.AllowedActions) == 0 {
-		policy.AllowedActions = []string{"read_only_data_extraction", "browser_js_execution"}
+		policy.AllowedActions = []string{"non_sensitive_canary_read", "benign_browser_execution"}
 	}
 	policy.ForbiddenActions = cleanFindings(policy.ForbiddenActions)
 	if len(policy.ForbiddenActions) == 0 {
-		policy.ForbiddenActions = []string{"data_deletion", "persistence", "credential_dumping"}
+		policy.ForbiddenActions = []string{"sensitive_data_access", "data_deletion", "persistence", "credential_dumping"}
 	}
 	return policy
 }
 
 func selectedFindingsFromHandoff(workspace string) []string {
-	raw, err := os.ReadFile(filepath.Join(workspace, "10-exploitation", "selected-findings.yaml"))
+	selection, err := readSelectedFindingsHandoff(workspace)
 	if err == nil {
-		var selection struct {
-			SelectedFindings []string `yaml:"selected_findings"`
-		}
-		if yaml.Unmarshal(raw, &selection) == nil {
-			findings := cleanFindings(selection.SelectedFindings)
-			if len(findings) > 0 {
-				return findings
-			}
+		findings := cleanFindings(selection.SelectedFindings)
+		if len(findings) > 0 {
+			return findings
 		}
 	}
 	return nil
+}
+
+func readSelectedFindingsHandoff(workspace string) (*SelectedFindingsHandoff, error) {
+	path := filepath.Join(workspace, "10-impact-validation", "selected-findings.yaml")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read Session 10 handoff: %w", err)
+	}
+	var selection SelectedFindingsHandoff
+	if err := decodeStrictYAML(raw, &selection); err != nil {
+		return nil, fmt.Errorf("parse Session 10 handoff: %w", err)
+	}
+	return &selection, nil
+}
+
+func validateSession10Handoff(workspace string) error {
+	selection, err := readSelectedFindingsHandoff(workspace)
+	if err != nil {
+		return err
+	}
+	if !selection.Enabled {
+		return fmt.Errorf("Session 10 handoff must set enabled: true")
+	}
+	if filepath.Clean(selection.FindingRegistryPath) != filepath.Clean(findingRegistryPath(workspace)) {
+		return fmt.Errorf("Session 10 handoff finding_registry_path must reference the current Session 09 registry")
+	}
+	if len(cleanFindings(selection.SelectedFindings)) == 0 {
+		return fmt.Errorf("Session 10 handoff must select at least one finding")
+	}
+	if selection.MaxRisk < 1 || selection.MaxRisk > 5 {
+		return fmt.Errorf("Session 10 handoff max_risk must be between 1 and 5")
+	}
+	if len(cleanFindings(selection.AllowedActions)) == 0 || len(cleanFindings(selection.ForbiddenActions)) == 0 {
+		return fmt.Errorf("Session 10 handoff must define allowed_actions and forbidden_actions")
+	}
+	for _, action := range selection.AllowedActions {
+		if containsRegistryValue(selection.ForbiddenActions, action) {
+			return fmt.Errorf("Session 10 handoff action %q cannot be both allowed and forbidden", action)
+		}
+	}
+	if !selection.HumanAuthorizationRequired || !selection.AuthorizationRecordRequired || !selection.EnvironmentAcknowledgementRequired {
+		return fmt.Errorf("Session 10 handoff must require human authorization, an authorization record, and environment acknowledgement")
+	}
+	if !selection.ValidationPlanRequired {
+		return fmt.Errorf("Session 10 handoff must require a per-finding validation plan")
+	}
+	if !selection.CleanupRequired || !selection.CleanupEvidenceRequired {
+		return fmt.Errorf("Session 10 handoff must require cleanup and cleanup evidence")
+	}
+	if len(selection.PermittedExecutors) != 2 || !containsRegistryValue(selection.PermittedExecutors, "human") || !containsRegistryValue(selection.PermittedExecutors, "agent") {
+		return fmt.Errorf("Session 10 handoff permitted_executors must be exactly human and agent")
+	}
+	for _, executor := range selection.PermittedExecutors {
+		if !validImpactValidationExecutor(executor) {
+			return fmt.Errorf("Session 10 handoff executor %q is invalid", executor)
+		}
+	}
+	requiredEvidencePaths := map[string]string{
+		"evidence_jsonl":    "10-impact-validation/evidence.jsonl",
+		"transcript_dir":    "10-impact-validation/transcripts",
+		"artifact_dir":      "10-impact-validation/artifacts",
+		"authorization_dir": "10-impact-validation/authorizations",
+		"readiness_dir":     "10-impact-validation/readiness",
+		"cleanup_report":    "10-impact-validation/cleanup.md",
+	}
+	if len(selection.EvidencePaths) != len(requiredEvidencePaths) {
+		return fmt.Errorf("Session 10 handoff evidence_paths must use the canonical current paths")
+	}
+	for key, expected := range requiredEvidencePaths {
+		if selection.EvidencePaths[key] != expected {
+			return fmt.Errorf("Session 10 handoff evidence_paths.%s must be %q", key, expected)
+		}
+	}
+	return nil
+}
+
+func validImpactValidationExecutor(value string) bool {
+	switch strings.TrimSpace(value) {
+	case "human", "agent":
+		return true
+	default:
+		return false
+	}
 }
 
 func validateSelectedFindings(workspace string, findings []string) error {

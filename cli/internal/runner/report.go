@@ -81,6 +81,7 @@ func buildReportGate(workspace string) *ReportGateOutput {
 			registryState = "invalid"
 			issues = append(issues, registryIssues...)
 		}
+		issues = append(issues, validateSession09Artifacts(workspace)...)
 	}
 
 	ready := !hasErrorIssue(issues)
@@ -90,7 +91,6 @@ func buildReportGate(workspace string) *ReportGateOutput {
 	}
 
 	return &ReportGateOutput{
-		SchemaVersion:        1,
 		Workspace:            workspace,
 		Ready:                ready,
 		GatePath:             reportGatePath(workspace),
@@ -156,9 +156,6 @@ func validateFindingRegistry(path string) []ReportGateIssue {
 		return []ReportGateIssue{gateIssue("error", "finding_registry_parse_failed", path, err.Error())}
 	}
 	var issues []ReportGateIssue
-	if registry.SchemaVersion != 1 {
-		issues = append(issues, gateIssue("error", "finding_registry_invalid", path, "schema_version must be 1"))
-	}
 	seen := make(map[string]struct{}, len(registry.Findings))
 	for i, finding := range registry.Findings {
 		refPath := fmt.Sprintf("%s#findings[%d]", path, i)
@@ -186,10 +183,38 @@ func validateFindingRegistry(path string) []ReportGateIssue {
 		} else if !validFindingConfidence(finding.Confidence) {
 			issues = append(issues, gateIssue("error", "finding_confidence_invalid", refPath, fmt.Sprintf("finding confidence %q is invalid", finding.Confidence)))
 		}
+		if strings.TrimSpace(finding.EvidenceStrength) == "" {
+			issues = append(issues, gateIssue("error", "finding_evidence_strength_missing", refPath, "evidence_strength is required"))
+		} else if !validEvidenceStrength(finding.EvidenceStrength) {
+			issues = append(issues, gateIssue("error", "finding_evidence_strength_invalid", refPath, fmt.Sprintf("evidence_strength %q is invalid", finding.EvidenceStrength)))
+		}
+		if strings.TrimSpace(finding.Status) == "confirmed" && !strongFindingEvidence(finding.EvidenceStrength) {
+			issues = append(issues, gateIssue("error", "finding_confirmed_evidence_weak", refPath, "confirmed findings require direct or corroborated evidence_strength"))
+		}
+		if strings.TrimSpace(finding.Status) == "likely" && strings.TrimSpace(finding.EvidenceStrength) == "insufficient" {
+			issues = append(issues, gateIssue("error", "finding_likely_evidence_insufficient", refPath, "likely findings cannot use insufficient evidence_strength"))
+		}
 		if strings.TrimSpace(finding.Severity) == "" {
 			issues = append(issues, gateIssue("error", "finding_severity_missing", refPath, "finding severity is required"))
 		} else if !validFindingSeverity(finding.Severity) {
 			issues = append(issues, gateIssue("error", "finding_severity_invalid", refPath, fmt.Sprintf("finding severity %q is invalid", finding.Severity)))
+		}
+		if strings.TrimSpace(finding.Priority) == "" {
+			issues = append(issues, gateIssue("error", "finding_priority_missing", refPath, "priority is required"))
+		} else if !validFindingPriority(finding.Priority) {
+			issues = append(issues, gateIssue("error", "finding_priority_invalid", refPath, fmt.Sprintf("priority %q is invalid", finding.Priority)))
+		}
+		if vulnerabilityFindingStatus(finding.Status) {
+			severity := strings.TrimSpace(finding.Severity)
+			if severity == "info" || severity == "informational" || severity == "none" || severity == "not_applicable" {
+				issues = append(issues, gateIssue("error", "finding_vulnerability_severity_invalid", refPath, "confirmed and likely findings require critical, high, medium, or low severity"))
+			}
+			if !strings.HasPrefix(strings.TrimSpace(finding.CVSSV4), "CVSS:4.0/") {
+				issues = append(issues, gateIssue("error", "finding_cvss_v4_missing", refPath, "confirmed and likely findings require a CVSS v4.0 vector"))
+			}
+		}
+		if reportableFindingStatus(finding.Status) {
+			issues = append(issues, validateReportableFindingFields(refPath, finding)...)
 		}
 		if !findingHasCitation(finding) {
 			issues = append(issues, gateIssue("error", "finding_uncited", refPath, fmt.Sprintf("finding %s has no evidence_ids, transcripts, import_refs, or manual_notes", displayFindingID(id))))
@@ -204,6 +229,9 @@ func validateFindingRegistry(path string) []ReportGateIssue {
 			if !validEvidenceCategory(category) {
 				issues = append(issues, gateIssue("error", "finding_evidence_category_invalid", refPath, fmt.Sprintf("evidence category %q is invalid", category)))
 			}
+		}
+		if !containsRegistryValue(finding.EvidenceCategories, "agent_judgment") {
+			issues = append(issues, gateIssue("error", "finding_agent_judgment_missing", refPath, "finding registry entries require agent_judgment to identify report-layer conclusions"))
 		}
 		if strings.TrimSpace(finding.CoverageLabel) == "" {
 			issues = append(issues, gateIssue("error", "finding_coverage_missing", refPath, "coverage_label is required"))
@@ -224,7 +252,7 @@ func readFindingRegistry(path string) (*FindingRegistry, error) {
 
 func parseFindingRegistry(raw []byte) (*FindingRegistry, error) {
 	var registry FindingRegistry
-	if err := yaml.Unmarshal(raw, &registry); err != nil {
+	if err := decodeStrictYAML(raw, &registry); err != nil {
 		return nil, fmt.Errorf("parse finding registry: %w", err)
 	}
 	return &registry, nil
@@ -352,13 +380,8 @@ func hasNonEmptyString(values []string) bool {
 }
 
 func validFindingStatus(value string) bool {
-	switch normalizeRegistryValue(value) {
-	case "exploited",
-		"strong_evidence_not_exploited",
-		"blocked_by_security",
-		"blocked_by_operational_constraint",
-		"false_positive",
-		"not_tested":
+	switch strings.TrimSpace(value) {
+	case "confirmed", "likely", "informational", "not_supported", "not_tested":
 		return true
 	default:
 		return false
@@ -366,7 +389,7 @@ func validFindingStatus(value string) bool {
 }
 
 func validFindingConfidence(value string) bool {
-	switch normalizeRegistryValue(value) {
+	switch strings.TrimSpace(value) {
 	case "high", "medium", "low", "not_applicable", "none":
 		return true
 	default:
@@ -375,7 +398,7 @@ func validFindingConfidence(value string) bool {
 }
 
 func validFindingSeverity(value string) bool {
-	switch normalizeRegistryValue(value) {
+	switch strings.TrimSpace(value) {
 	case "critical", "high", "medium", "low", "info", "informational", "not_applicable", "none":
 		return true
 	default:
@@ -384,20 +407,21 @@ func validFindingSeverity(value string) bool {
 }
 
 func validEvidenceCategory(value string) bool {
-	switch normalizeRegistryValue(value) {
+	switch strings.TrimSpace(value) {
 	case "imported_lead",
 		"ensphere_measurement",
+		"source_review",
+		"manual_observation",
+		"human_authorization",
+		"human_execution",
+		"agent_execution",
 		"agent_judgment",
-		"exploit_attempt",
-		"exploit_result":
+		"impact_validation_attempt",
+		"impact_validation_result":
 		return true
 	default:
 		return false
 	}
-}
-
-func normalizeRegistryValue(value string) string {
-	return strings.ToLower(strings.TrimSpace(strings.ReplaceAll(value, "-", "_")))
 }
 
 func displayFindingID(id string) string {
@@ -430,10 +454,131 @@ func validateCitationPaths(workspace, refPath, field string, values []string) []
 			rel, err := filepath.Rel(workspace, joined)
 			if err != nil || strings.HasPrefix(rel, "..") || filepath.IsAbs(rel) {
 				issues = append(issues, gateIssue("error", "finding_path_unsafe", refPath, fmt.Sprintf("%s path %q resolves outside workspace", field, value)))
+				continue
+			}
+			if !fileExists(joined) {
+				issues = append(issues, gateIssue("error", "finding_path_missing", refPath, fmt.Sprintf("%s path %q does not exist", field, value)))
 			}
 		}
 	}
 	return issues
+}
+
+func validEvidenceStrength(value string) bool {
+	switch strings.TrimSpace(value) {
+	case "direct", "corroborated", "indicative", "insufficient":
+		return true
+	default:
+		return false
+	}
+}
+
+func strongFindingEvidence(value string) bool {
+	switch strings.TrimSpace(value) {
+	case "direct", "corroborated":
+		return true
+	default:
+		return false
+	}
+}
+
+func validFindingPriority(value string) bool {
+	switch strings.TrimSpace(value) {
+	case "P0", "P1", "P2", "P3", "P4", "NONE", "NOT_APPLICABLE":
+		return true
+	default:
+		return false
+	}
+}
+
+func reportableFindingStatus(value string) bool {
+	switch strings.TrimSpace(value) {
+	case "confirmed", "likely", "informational":
+		return true
+	default:
+		return false
+	}
+}
+
+func vulnerabilityFindingStatus(value string) bool {
+	switch strings.TrimSpace(value) {
+	case "confirmed", "likely":
+		return true
+	default:
+		return false
+	}
+}
+
+func validateReportableFindingFields(refPath string, finding FindingSummary) []ReportGateIssue {
+	var issues []ReportGateIssue
+	requireList := func(code, field string, values []string) {
+		if !hasNonEmptyString(values) {
+			issues = append(issues, gateIssue("error", code, refPath, field+" is required for reportable findings"))
+		}
+	}
+	requireText := func(code, field, value string) {
+		if strings.TrimSpace(value) == "" {
+			issues = append(issues, gateIssue("error", code, refPath, field+" is required for reportable findings"))
+		}
+	}
+	requireList("finding_affected_assets_missing", "affected_assets", finding.AffectedAssets)
+	requireList("finding_affected_locations_missing", "affected_locations", finding.AffectedLocations)
+	requireList("finding_observed_facts_missing", "observed_facts", finding.ObservedFacts)
+	requireText("finding_root_cause_missing", "root_cause", finding.RootCause)
+	requireText("finding_security_impact_missing", "security_impact", finding.SecurityImpact)
+	requireText("finding_business_impact_missing", "business_impact", finding.BusinessImpact)
+	requireText("finding_remediation_missing", "remediation", finding.Remediation)
+	requireList("finding_validation_criteria_missing", "validation_criteria", finding.ValidationCriteria)
+	return issues
+}
+
+func validateSession09Artifacts(workspace string) []ReportGateIssue {
+	var issues []ReportGateIssue
+	reportPath := filepath.Join(workspace, "09-report", "report.md")
+	appendixPath := filepath.Join(workspace, "09-report", "evidence-appendix.md")
+	if !fileExists(reportPath) || isEmptyFile(reportPath) {
+		issues = append(issues, gateIssue("error", "final_report_missing", reportPath, "a non-empty Session 09 report.md is required when the finding registry exists"))
+	} else {
+		raw, err := os.ReadFile(reportPath)
+		if err != nil {
+			issues = append(issues, gateIssue("error", "final_report_read_failed", reportPath, err.Error()))
+		} else {
+			required := []string{
+				"authorization", "executive summary", "scope and methodology", "coverage",
+				"finding summary", "detailed findings", "tested defenses",
+				"unresolved and not-tested areas", "attack paths and risk scenarios",
+				"remediation roadmap", "contextual compliance mapping",
+			}
+			for _, section := range required {
+				if !hasMarkdownHeading(raw, section) {
+					issues = append(issues, gateIssue("error", "final_report_section_missing", reportPath, fmt.Sprintf("required report section %q is missing", section)))
+				}
+			}
+		}
+	}
+	if !fileExists(appendixPath) || isEmptyFile(appendixPath) {
+		issues = append(issues, gateIssue("error", "evidence_appendix_missing", appendixPath, "a non-empty Session 09 evidence-appendix.md is required when the finding registry exists"))
+	}
+	return issues
+}
+
+func hasMarkdownHeading(raw []byte, required string) bool {
+	required = normalizeReportHeading(required)
+	for _, line := range strings.Split(string(raw), "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "#") {
+			continue
+		}
+		heading := normalizeReportHeading(strings.TrimLeft(line, "#"))
+		if heading == required || strings.Contains(heading, required) {
+			return true
+		}
+	}
+	return false
+}
+
+func normalizeReportHeading(value string) string {
+	return strings.Join(strings.Fields(strings.ToLower(strings.TrimSpace(value))), " ")
 }
 
 func safeWorkspaceRelativePath(value string) bool {

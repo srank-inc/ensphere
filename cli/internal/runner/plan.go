@@ -59,14 +59,13 @@ func RunPlan(workspace string, force bool) (*PlanOutput, error) {
 		existing, err := ReadAssessmentPlan(path)
 		if err != nil {
 			return &PlanOutput{
-				SchemaVersion: 1,
-				Workspace:     workspace,
-				PlanPath:      path,
-				MirrorPath:    mirrorPath,
-				Written:       false,
-				Valid:         false,
-				Validation:    []string{err.Error()},
-				Message:       "Existing assessment plan could not be parsed. Use --force to regenerate a draft from config.",
+				Workspace:  workspace,
+				PlanPath:   path,
+				MirrorPath: mirrorPath,
+				Written:    false,
+				Valid:      false,
+				Validation: []string{err.Error()},
+				Message:    "Existing assessment plan could not be parsed. Use --force to regenerate a draft from config.",
 			}, nil
 		}
 		plan = existing
@@ -101,15 +100,14 @@ func RunPlan(workspace string, force bool) (*PlanOutput, error) {
 	}
 
 	out := &PlanOutput{
-		SchemaVersion: 1,
-		Workspace:     workspace,
-		PlanPath:      path,
-		MirrorPath:    mirrorPath,
-		Written:       written,
-		Valid:         len(validation) == 0,
-		Validation:    validation,
-		Message:       message,
-		Plan:          plan,
+		Workspace:  workspace,
+		PlanPath:   path,
+		MirrorPath: mirrorPath,
+		Written:    written,
+		Valid:      len(validation) == 0,
+		Validation: validation,
+		Message:    message,
+		Plan:       plan,
 	}
 	out.NextActionPath = action.ActionPath
 	out.PromptPath = action.PromptPath
@@ -138,7 +136,7 @@ func BuildAssessmentPlan(cfg InitConfig, workspace string) *AssessmentPlan {
 	var backendInventory []BackendInventoryEntry
 	var clientExposureReview []string
 	var signals *TargetSignals
-	if profile != nil && profile.SchemaVersion == 1 && validTargetType(profile.Target.Type) {
+	if profile != nil && validTargetType(profile.Target.Type) {
 		targetType = normalizeTargetType(profile.Target.Type)
 		if validSourceMode(profile.Target.SourceMode) {
 			sourceMode = profile.Target.SourceMode
@@ -148,7 +146,7 @@ func BuildAssessmentPlan(cfg InitConfig, workspace string) *AssessmentPlan {
 			coverage = profile.Target.CoverageLabel
 		}
 		classificationSource = "01-recon/target-profile.yaml"
-		classificationConfidence = normalizeClassificationConfidence(profile.Target.ClassificationConfidence)
+		classificationConfidence = strings.TrimSpace(profile.Target.ClassificationConfidence)
 		rationale = append([]string{}, profile.Target.Rationale...)
 		if len(profile.Target.EvidenceRefs) > 0 {
 			rationale = append(rationale, "Evidence: "+strings.Join(profile.Target.EvidenceRefs, ", "))
@@ -164,8 +162,7 @@ func BuildAssessmentPlan(cfg InitConfig, workspace string) *AssessmentPlan {
 
 	hasCredentials := strings.TrimSpace(cfg.Username) != "" || strings.TrimSpace(cfg.Password) != "" || strings.TrimSpace(cfg.LoginURL) != ""
 	plan := &AssessmentPlan{
-		SchemaVersion: 1,
-		Draft:         true,
+		Draft: true,
 		Target: PlanTarget{
 			Type:                     targetType,
 			URL:                      cfg.TargetURL,
@@ -183,12 +180,12 @@ func BuildAssessmentPlan(cfg InitConfig, workspace string) *AssessmentPlan {
 		},
 		Sessions:       make(map[string]PlanSession, len(planSessionKeys)),
 		HumanOverrides: []string{},
-		Exploitation: PlanExploitation{
-			Enabled:                 cfg.ExploitationEnabled,
+		ImpactValidation: PlanImpactValidation{
+			Enabled:                 cfg.ImpactValidationEnabled,
 			SelectedFindings:        []string{},
 			MaxRisk:                 3,
-			AllowedActions:          []string{"read_only_data_extraction", "browser_js_execution"},
-			ForbiddenActions:        []string{"data_deletion", "persistence", "credential_dumping"},
+			AllowedActions:          []string{"non_sensitive_canary_read", "benign_browser_execution"},
+			ForbiddenActions:        []string{"sensitive_data_access", "data_deletion", "persistence", "credential_dumping"},
 			CleanupRequired:         true,
 			CleanupEvidenceRequired: true,
 		},
@@ -209,7 +206,7 @@ func ReadAssessmentPlan(path string) (*AssessmentPlan, error) {
 		return nil, fmt.Errorf("read assessment plan: %w", err)
 	}
 	var plan AssessmentPlan
-	if err := yaml.Unmarshal(raw, &plan); err != nil {
+	if err := decodeStrictYAML(raw, &plan); err != nil {
 		return nil, fmt.Errorf("parse assessment plan: %w", err)
 	}
 	return &plan, nil
@@ -220,9 +217,6 @@ func ValidateAssessmentPlan(plan *AssessmentPlan) []string {
 		return []string{"assessment plan is nil"}
 	}
 	var problems []string
-	if plan.SchemaVersion != 1 {
-		problems = append(problems, "schema_version must be 1")
-	}
 	if !validTargetType(plan.Target.Type) {
 		problems = append(problems, fmt.Sprintf("target.type %q is invalid", plan.Target.Type))
 	}
@@ -275,13 +269,22 @@ func ValidateAssessmentPlan(plan *AssessmentPlan) []string {
 		if strings.TrimSpace(session.Reason) == "" {
 			problems = append(problems, fmt.Sprintf("sessions.%s.reason is required", key))
 		}
+		if len(session.EvidenceRefs) == 0 {
+			problems = append(problems, fmt.Sprintf("sessions.%s.evidence_refs is required", key))
+		}
 		problems = append(problems, validateWorkspaceRelativeRefs(fmt.Sprintf("sessions.%s.evidence_refs", key), session.EvidenceRefs)...)
 	}
-	if plan.Exploitation.Enabled && plan.Exploitation.MaxRisk < 1 {
-		problems = append(problems, "exploitation.max_risk must be set when exploitation is enabled")
+	if plan.ImpactValidation.Enabled && plan.ImpactValidation.MaxRisk < 1 {
+		problems = append(problems, "impact_validation.max_risk must be set when impact validation is enabled")
 	}
-	if plan.Exploitation.MaxRisk > 5 {
-		problems = append(problems, "exploitation.max_risk must be 5 or lower")
+	if plan.ImpactValidation.Enabled && !plan.ImpactValidation.CleanupRequired {
+		problems = append(problems, "impact_validation.cleanup_required must be true when impact validation is enabled")
+	}
+	if plan.ImpactValidation.Enabled && !plan.ImpactValidation.CleanupEvidenceRequired {
+		problems = append(problems, "impact_validation.cleanup_evidence_required must be true when impact validation is enabled")
+	}
+	if plan.ImpactValidation.MaxRisk > 5 {
+		problems = append(problems, "impact_validation.max_risk must be 5 or lower")
 	}
 	sort.Strings(problems)
 	return problems
@@ -293,7 +296,7 @@ func readReconTargetProfile(path string) (*ReconTargetProfile, error) {
 		return nil, err
 	}
 	var profile ReconTargetProfile
-	if err := yaml.Unmarshal(raw, &profile); err != nil {
+	if err := decodeStrictYAML(raw, &profile); err != nil {
 		return nil, fmt.Errorf("parse recon target profile: %w", err)
 	}
 	return &profile, nil
@@ -316,9 +319,6 @@ func ValidateReconTargetProfile(profile *ReconTargetProfile) []string {
 		return []string{"recon target profile is nil"}
 	}
 	var problems []string
-	if profile.SchemaVersion != 1 {
-		problems = append(problems, "recon target profile schema_version must be 1")
-	}
 	if !validTargetType(profile.Target.Type) {
 		problems = append(problems, fmt.Sprintf("recon target profile target.type %q is invalid", profile.Target.Type))
 	}
@@ -333,7 +333,7 @@ func ValidateReconTargetProfile(profile *ReconTargetProfile) []string {
 	if strings.TrimSpace(profile.Target.ClassificationConfidence) == "" {
 		problems = append(problems, "recon target profile target.classification_confidence is required")
 	} else {
-		confidence := strings.ToLower(strings.TrimSpace(strings.ReplaceAll(profile.Target.ClassificationConfidence, "-", "_")))
+		confidence := strings.TrimSpace(profile.Target.ClassificationConfidence)
 		if !validClassificationConfidence(confidence) {
 			problems = append(problems, fmt.Sprintf("recon target profile target.classification_confidence %q is invalid", profile.Target.ClassificationConfidence))
 		}
@@ -420,14 +420,14 @@ func loadPlanSummary(workspace string) *PlanSummary {
 		}
 	}
 	return &PlanSummary{
-		Exists:              true,
-		Valid:               len(validation) == 0,
-		Validation:          validation,
-		TargetType:          plan.Target.Type,
-		SourceMode:          plan.Target.SourceMode,
-		CoverageLabel:       plan.Target.CoverageLabel,
-		ExploitationEnabled: plan.Exploitation.Enabled,
-		SessionDecisions:    decisions,
+		Exists:                  true,
+		Valid:                   len(validation) == 0,
+		Validation:              validation,
+		TargetType:              plan.Target.Type,
+		SourceMode:              plan.Target.SourceMode,
+		CoverageLabel:           plan.Target.CoverageLabel,
+		ImpactValidationEnabled: plan.ImpactValidation.Enabled,
+		SessionDecisions:        decisions,
 	}
 }
 
@@ -531,9 +531,9 @@ func parseConfigMarkdown(text string) InitConfig {
 			case "out of scope":
 				cfg.OutOfScope = value
 			}
-		case "Exploitation":
+		case "Impact Validation":
 			if key == "enabled" {
-				cfg.ExploitationEnabled = parseBool(value)
+				cfg.ImpactValidationEnabled = parseBool(value)
 			}
 		}
 	}
@@ -564,7 +564,7 @@ func draftSessionDecision(key, targetType, sourceMode string, cloud []string, ha
 }
 
 func applyReconProfileDecisions(plan *AssessmentPlan, profile *ReconTargetProfile, hasCredentials bool, cloud []string) {
-	if profile == nil || profile.SchemaVersion != 1 {
+	if profile == nil {
 		return
 	}
 	targetType := plan.Target.Type
@@ -789,14 +789,6 @@ func profilePathForPlan(workspace string, profile *ReconTargetProfile) string {
 		return ""
 	}
 	return filepath.ToSlash(filepath.Join("01-recon", "target-profile.yaml"))
-}
-
-func normalizeClassificationConfidence(value string) string {
-	value = strings.ToLower(strings.TrimSpace(strings.ReplaceAll(value, "-", "_")))
-	if validClassificationConfidence(value) {
-		return value
-	}
-	return "medium"
 }
 
 func validClassificationConfidence(value string) bool {
