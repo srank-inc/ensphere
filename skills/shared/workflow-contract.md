@@ -1,131 +1,129 @@
 # Ensphere Workflow Contract
 
-This file is the shared contract for autonomous Ensphere assessments. It keeps
-the skill workflow aligned with the product boundary:
+> Ensphere produces verifiable facts. The analyst produces security judgments.
 
-> Ensphere produces verifiable facts. The AI or human analyst produces all
-> security judgments.
+This contract applies to every session. A session methodology may narrow these
+rules, but it may not weaken scope, evidence, stop, or human-approval controls.
 
-## Native Measurement Core
+## Responsibilities
 
-Ensphere must not be reduced to only a skill plus external tool ingestion.
-External tools create leads and coverage, but Ensphere's native probes, payload
-corpus, scope validation, evidence writer, callback capture, redaction, and
-replayable measurements are the native measurement layer.
+| Area | Deterministic Ensphere layer | Analyst layer |
+|------|-------------------------------|---------------|
+| Scope | Parse configured assets, validate hosts, and record identifiers. | Decide whether authorization and coverage are sufficient. |
+| Discovery | Inventory cited endpoints, inputs, roles, fetchers, render contexts, cloud assets, and source candidates. | Decide relevance, applicability, and residual gaps. |
+| Validation | Send bounded requests and record payloads, responses, timing, hashes, callbacks, counts, and configuration values. | Define falsifiable claims and interpret baseline/probe/control evidence. |
+| External tools | Preserve raw source, rule, severity, transcript, and parser state. | Corroborate, deduplicate, classify, and prioritize leads. |
+| Reporting | Check artifact presence, schemas, safe paths, selected IDs, and evidence integrity. | Assign status, confidence, severity, impact, priority, and remediation. |
+| Optional Session 10 | Validate enablement, selected IDs, limits, outcome completeness, paths, and cleanup records. | Analyst writes the exact plan; a human authorizes it and names either the human or AI as executor; the analyst interprets and reports results. |
 
-The agent can reason with tool output, but reports become defensible only when
-claims cite Ensphere evidence, transcripts, imported leads, or explicitly
-labeled manual notes.
+The deterministic layer must not assign vulnerability status, confidence,
+exploitability, or business impact, and must not infer a threshold-based
+security conclusion.
+
+## Required Session Lifecycle
+
+Every assessment session uses this sequence:
+
+1. **Preflight** — confirm authorization, selected target, environment, scope,
+   identity/role, source/live availability, prior artifacts, limits, and a
+   writable evidence path.
+2. **Coverage matrix** — enumerate the applicable surface and mark each item
+   `planned`, `tested`, `not_tested`, `blocked`, or `not_applicable`, with a
+   reason and provenance.
+3. **Candidate generation** — create narrow claims from recon, source review,
+   imported leads, and observed behavior. A candidate is not a finding.
+4. **Controlled validation** — use the baseline/probe/control cycle in
+   [evidence-standards.md](evidence-standards.md).
+5. **Candidate resolution** — record status, confidence, evidence strength,
+   alternatives considered, and citations.
+6. **Stop check** — stop when the claim is supported or contradicted, the
+   approved action/request limit is reached, safety or stability changes, or
+   the next step would broaden scope or increase impact only for proof.
+7. **Session report** — state coverage, resolved findings, tested defenses,
+   unresolved candidates, limitations, evidence index, and next-session inputs.
+
+Do not replace this lifecycle with fixed payload counts, bypass quotas, tool
+escalation ladders, or "test until exploited" behavior.
 
 ## Session Decisions
 
-Use these values in `assessment-plan.yaml` when deciding whether a session
-should run.
+| Decision | Required basis |
+|----------|----------------|
+| `run` | Affirmative evidence that relevant surface exists and required inputs are available. |
+| `limited` | Surface exists, but named assets, roles, data, protocols, regions, or environments are unavailable. |
+| `blocked` | Surface exists, but testing cannot proceed safely or meaningfully; name the missing input and impact. |
+| `skip` | A deliberate human choice with evidence, rationale, and accepted coverage risk. |
+| `force` | A human override with provenance, reason, and any tighter limits. |
+| `uncertain` | Recon cannot prove presence or absence; preserve the gap and run only bounded discovery or request direction. |
+| `not_applicable` | Affirmative inventory shows the category does not exist for the selected target. |
 
-| Decision | Meaning | Required Record |
-|----------|---------|-----------------|
-| `run` | Session applies and should execute. | Evidence-backed reason and expected inputs. |
-| `skip` | Session does not apply to this target. | Skipped-session report with evidence and limitations. |
-| `force` | Human explicitly overrides auto-skip. | Override reason and special scope constraints. |
-| `limited` | Session can run only against part of the intended surface. | Coverage limits, missing inputs, and safe alternate checks. |
-| `blocked` | Relevant surface exists but cannot execute safely or meaningfully. | Blocking condition, required user input, and residual coverage gap. |
-| `uncertain` | Recon did not prove presence or absence of surface. | Default to run unless human accepts skip risk. |
-| `not_applicable` | Normal network pentest workflow is not valid for the target type. | Target classification report and recommended alternate mode. |
+Do not infer `not_applicable` from missing credentials, failed discovery, or a
+single absent signal.
 
 ## Execution States
 
-Use these values in `progress.md` to describe work execution state.
-
-| State | Meaning |
-|-------|---------|
-| `PENDING` | Not started. |
-| `IN_PROGRESS` | Currently running or resumable from checkpoint. |
-| `DONE` | Completed and report written. |
-| `SKIPPED` | Deliberately skipped with report and reason. |
-| `BLOCKED` | Relevant but could not continue without missing input or unsafe action. |
-| `NOT_APPLICABLE` | Target type makes this session invalid. |
+`PENDING`, `IN_PROGRESS`, `DONE`, `SKIPPED`, `BLOCKED`, and
+`NOT_APPLICABLE` describe workflow state only. `DONE` means the planned work
+and session report are complete; it does not mean the target is secure.
 
 ## Coverage Labels
 
-Every session report and final report coverage table should use one of these
-labels.
+| Label | Meaning |
+|-------|---------|
+| `full` | All necessary source/environment inputs, accounts, roles, assets, regions, and relevant protocols for the planned surface were available and exercised. |
+| `partial` | Some planned surface was exercised; the report names every material gap and its effect. |
+| `blocked` | Relevant surface exists, but safe meaningful testing could not proceed. |
+| `source_only` | Source/configuration review without a live target. |
+| `black_box_only` | Live behavioral testing without source. |
+| `client_only` | The supplied artifact is a client and its backend was not supplied or authorized. |
+| `cloud_only` | Only cloud, Kubernetes, or IaC assets were in scope. |
 
-| Label | Meaning | Report Requirement |
-|-------|---------|--------------------|
-| `full` | Required inputs were available and the planned session surface was tested. | State covered categories and cite evidence. |
-| `partial` | Some relevant surface was tested, but scope, credentials, data, or stability limited coverage. | Name the missing coverage and avoid broad assurance language. |
-| `blocked` | Relevant surface exists, but testing could not execute safely or meaningfully. | Record the blocker and required input. |
-| `source_only` | Source review occurred without a live executable target. | Call it source review, not dynamic assessment proof. |
-| `black_box_only` | Live behavioral testing occurred without source code. | Reference endpoints and transcripts, not file paths. |
-| `client_only` | Primary artifact is a mobile, desktop, browser extension, or static client without a supplied backend. | Report client exposure facts and backend testing limitations. |
-| `cloud_only` | Target is cloud, Kubernetes, or IaC without an app HTTP surface. | Run cloud checks and state app sessions were not applicable. |
+Coverage labels describe the session plan, not product-wide assurance. They
+must be supported by the coverage matrix.
 
-## Evidence Categories
+## Scope and Safety
 
-Use these categories when building finding registries and report appendices.
-They are not replacements for factual evidence `result` stages.
+- Use only assets, accounts, tenants, data, and roles explicitly placed in
+  scope. Default to an external unprivileged perspective.
+- Prefer owned/synthetic objects, non-sensitive canaries, read-only provider
+  APIs, and reversible changes.
+- Do not enumerate unrelated assets, extract sensitive data, access secret
+  values, obtain cloud tokens, dump credentials, establish persistence, evade
+  rate limits, perform load/DoS testing, or test third parties.
+- A higher-risk or state-changing step requires explicit authorization in the
+  session plan, defined limits, rollback, and evidence of cleanup.
+- Treat source candidates and scanner output as leads. Do not claim dynamic
+  reachability or exploitability without corresponding evidence.
 
-| Category | Lives In | Meaning | Judgment Boundary |
-|----------|----------|---------|-------------------|
-| `imported_lead` | Evidence ledger or importer output. | Factual scanner or external tool output: matched URL, template ID, source severity, transcript, or parsed artifact. | Lead only. Source severity is not Ensphere-confirmed severity. |
-| `ensphere_measurement` | Evidence ledger. | Native Ensphere probe, payload selection, response measurement, callback receipt, hash, or parser result. | Measurement only. No vulnerability status or confidence. |
-| `agent_judgment` | Finding registry, report, or analyst notes. | AI or human classification, confidence, severity, exploitability, business impact, and remediation priority. | Must cite evidence. Never stored as factual CLI measurement. |
-| `exploit_attempt` | Session 10 evidence and transcripts. | Planned exploit command, request sequence, expected proof, stop condition, and observed response. | Attempt record only until impact evidence exists. |
-| `exploit_result` | Session 10 report and Session 11 final report. | Exploit outcome bucket derived from attempts, artifacts, callbacks, screenshots, or transcript proof. | Report judgment backed by exploit evidence. |
+## Reporting Contract
 
-## Finding Buckets
+Session 09 is always the complete, decision-ready assessment report. It must be
+useful even when Sessions 10–11 never run.
 
-Finding buckets are report judgments, never CLI measurement fields.
+For each finding preserve status, confidence, severity, priority, evidence
+strength, affected assets and locations, observed facts, root cause, security
+and business impact, remediation, validation criteria, and citations. Separate
+observed attack paths from hypothetical risk scenarios. Compliance mappings
+are contextual mappings, not certification `PASS`/`FAIL` judgments.
 
-| Bucket | Use When |
-|--------|----------|
-| `EXPLOITED` | Session 10 or category evidence reaches impact proof: data extracted, unauthorized action completed, JavaScript executed, internal service reached, or equivalent proof. |
-| `STRONG_EVIDENCE_NOT_EXPLOITED` | Evidence supports a real issue, but exploit proof was disabled, not selected, or not required for the assessment. |
-| `BLOCKED_BY_SECURITY` | A security control prevented exploitation after systematic bypass attempts. |
-| `BLOCKED_BY_OPERATIONAL_CONSTRAINT` | Missing account, missing test data, unstable service, unavailable callback, or authorization boundary prevented proof. |
-| `FALSE_POSITIVE` | Systematic testing showed the suspected weakness is not exploitable in scope. |
-| `NOT_TESTED` | The surface was outside scope, skipped, blocked, or unavailable. |
+Session 10 never starts automatically. It requires explicit enablement,
+selected finding IDs, environment acknowledgement, a bounded per-finding plan,
+limits, cleanup, and a structured human-authorization record for the exact plan
+revision and SHA-256. The separate record names `human` or `agent` as executor
+and captures the environment, actions, and action/time/risk limits. A changed
+plan hash requires new authorization. The outcome must include bounded action
+and time accounting plus cleanup evidence. Before execution, the deterministic
+`run impact-ready` gate must validate the strict plan and authorization with
+`ready: true`.
 
-## Agent Contract
+Session 11 is an optional derived report. It preserves the Session 09 registry
+and status, attaches a separate `impact_validation_outcome_status` with evidence and
+cleanup state, and identifies the selected subset. Non-selected findings remain
+valid assessment results but were not impact-validated.
 
-| Area | Ensphere Must Measure | Agent May Decide |
-|------|-----------------------|------------------|
-| Scope and target | Configured hosts, in-scope checks, discovered endpoints, target type, and coverage labels. | Whether coverage is sufficient for a conclusion, or whether to ask for more inputs. |
-| Probing | Exact payload, request, response metadata, timing, hashes, callbacks, and artifacts. | Whether measurements support a finding, false positive, blocked state, or further testing. |
-| External tools | Source tool, source file, source rule ID, source severity, raw matched evidence, and parser status. | Whether a tool lead is relevant, exploitable, duplicate, or worth native verification. |
-| Reporting | Evidence IDs, transcript paths, skipped-session reports, hash verification status, and redaction state. | Severity, confidence, business impact, attack path, remediation priority, and final narrative. |
-| Exploitation | Selected finding IDs, exploit attempts, observed responses, cleanup actions, and resulting artifacts. | Whether proof satisfies exploited, blocked, strong-evidence, or false-positive report buckets. |
+## External Tool Trust
 
-## External Tool Trust Model
-
-Imported scanner output is never an Ensphere-confirmed finding by itself.
-
-Importers must preserve:
-- Source tool
-- Source file
-- Source rule or template ID
-- Source severity and confidence, when provided
-- Raw matched evidence or transcript reference
-- Parser status and parse errors
-
-Reports may cite imported leads, but they must label source severity as
-source-provided until corroborated by native Ensphere measurements or manual
-proof.
-
-## Report Honesty Rules
-
-- No uncited finding: every finding needs an evidence ID, transcript path,
-  import reference, or explicitly labeled manual note.
-- Report paths must be workspace-relative: transcript, artifact, and cleanup
-  references must not be absolute paths, URLs, parent-directory traversal, or
-  anything outside `ensphere-pentest/`.
-- No implied coverage: skipped, blocked, partial, source-only, black-box-only,
-  client-only, and cloud-only coverage must be visible in the executive summary
-  and appendix.
-- No exploit wording unless Session 10 proves it: use strong evidence,
-  suspected, blocked, or not selected when exploit proof did not run or did not
-  succeed.
-- No scanner laundering: imported scanner severity remains source-provided
-  until the agent cites corroborating Ensphere evidence or manual proof.
-- No silent evidence failure: hash-chain or transcript failures are report
-  limitations, not internal details to hide.
+Imported tools create leads and coverage, not Ensphere-confirmed findings.
+Preserve the tool, version, input scope, rule/template ID, source severity and
+confidence, raw artifact, parser status, and errors. Any analyst conclusion
+must cite the imported lead and whatever corroboration supports it.

@@ -1,150 +1,85 @@
-# Session 11: Exploit-Verified Final Report
+# Session 11: Optional Validation-Aware Final Report
 
-Session 11 runs only after Session 10 executed. It regenerates the final report
-from Session 09 plus Session 10 outcomes. It must not rewrite original evidence
-rows or imply exploit proof where none exists.
+## Objective
 
-Read first:
-- `skills/shared/workflow-contract.md`
-- `skills/shared/evidence-standards.md`
-- `ensphere-pentest/config.md`
-- `ensphere-pentest/assessment-plan.yaml`
-- `ensphere-pentest/09-report/report.md`
-- `ensphere-pentest/09-report/finding-registry.yaml`
-- `ensphere-pentest/10-exploitation/report.md`
-- `ensphere-pentest/10-exploitation/exploit-outcomes.yaml`
-- `ensphere-pentest/10-exploitation/evidence.jsonl`
-- `ensphere-pentest/10-exploitation/cleanup.md`
-
-## Output Artifacts
-
-```text
-ensphere-pentest/11-final-report/
-  report.md
-  finding-registry.yaml
-  evidence-appendix.md
-```
+Create a derived report that attaches human-authorized Session 10 outcomes to the
+complete Session 09 assessment. Preserve the Session 09 registry, evidence, and
+base finding status.
 
 ## Preconditions
 
-1. Session 10 exists and was not skipped.
-2. Every selected finding has an outcome bucket.
-3. Cleanup or rollback status is recorded for every exploit attempt.
-4. Session 09 finding registry exists.
-5. Evidence hash-chain verification has been run or failure is documented.
+- Session 09 is complete and its report/registry remain available.
+- Session 10 is `DONE` and was explicitly selected.
+- Every selected finding has exactly one valid outcome, evidence citation,
+  authorization provenance, executor provenance, and cleanup status.
+- All cited paths are workspace-relative and available.
 
-If any precondition fails, write a blocked report explaining the missing input
-and do not produce an exploit-verified final report.
+Run:
 
-Run `ensphere run final` before writing the final report. The runner validates
-that selected findings exist, every selected finding has exactly one Session 10
-outcome, exploited outcomes have proof citations, cleanup status is present,
-and citation paths are workspace-relative. It then writes
-`ensphere-pentest/11-final-report/finding-registry.yaml` as a derived registry.
-It does not modify `09-report/finding-registry.yaml` or any evidence rows.
-
-## Phase 1: Merge Finding State
-
-Start from the Session 09 finding registry. For each finding:
-
-- If selected and Session 10 reached impact proof, promote to `EXPLOITED`.
-- If selected and blocked by security control, mark `BLOCKED_BY_SECURITY`.
-- If selected and blocked by missing operational input, mark
-  `BLOCKED_BY_OPERATIONAL_CONSTRAINT`.
-- If selected and disproven, mark `FALSE_POSITIVE`.
-- If not selected, preserve Session 09 status and label it clearly as not
-  exploit-verified.
-
-Do not remove or rewrite original evidence IDs. Add Session 10 evidence IDs,
-transcript paths, artifact paths, and cleanup evidence as additional references
-in the Session 11 registry only.
-
-## Phase 2: Regenerate Final Report
-
-The report must clearly separate:
-
-- Exploited findings
-- Strong evidence but not exploited
-- Blocked by security controls
-- Blocked by operational constraints
-- False positives
-- Not selected for exploitation
-- Cleanup limitations
-
-## Report Template
-
-Write `ensphere-pentest/11-final-report/report.md`:
-
-```markdown
-# Exploit-Verified Final Security Report
-
-## Authorization & Attestation
-[Copy authorization from config.md]
-
-## Executive Summary
-- **Target**:
-- **Assessment Mode**:
-- **Exploit Verification**: enabled and completed
-- **Selected Findings**:
-- **Cleanup Status**:
-
-## Scope, Coverage, and Limitations
-
-| Session | Decision | Execution State | Coverage Label | Limitation |
-|---------|----------|-----------------|----------------|------------|
-
-## Finding State Summary
-
-| State | Count |
-|-------|-------|
-| EXPLOITED | N |
-| STRONG_EVIDENCE_NOT_EXPLOITED | N |
-| BLOCKED_BY_SECURITY | N |
-| BLOCKED_BY_OPERATIONAL_CONSTRAINT | N |
-| FALSE_POSITIVE | N |
-
-## Exploited Findings
-
-For each exploited finding:
-- Original Session 09 evidence
-- Session 10 exploit evidence
-- Reproduction steps
-- Cleanup evidence
-- Remediation
-
-## Strong Evidence Not Exploited
-
-Include findings that were not selected or did not reach exploit proof.
-
-## Blocked Findings
-
-Separate security-control blocks from operational blocks.
-
-## False Positives
-
-Appendix only unless client needs explicit closure.
-
-## Evidence Appendix
-
-| Evidence ID | Source Session | Category | Path | Finding |
-|-------------|----------------|----------|------|---------|
-
-## Cleanup Appendix
-
-| Finding | Cleanup Status | Evidence | Residual Risk |
-|---------|----------------|----------|---------------|
+```bash
+ensphere run final
 ```
 
-## Report Honesty Rules
+Resolve every error before writing the report. The command derives
+`11-final-report/finding-registry.yaml`; it must not modify Session 09 artifacts.
 
-- Do not use "exploited" unless Session 10 evidence proves impact.
-- Do not imply skipped or blocked sessions were covered.
-- Do not convert source-provided scanner severity into Ensphere severity without
-  cited corroborating evidence or manual proof.
-- Do not hide hash-chain, transcript, cleanup, or redaction failures.
-- Do not rewrite Session 09 evidence rows.
+## Merge Rules
 
-## End State
+For every finding:
 
-Mark Session 11 `DONE` only after the final report and updated finding registry
-are written.
+- preserve `status`, `confidence`, `evidence_strength`, severity, priority, and
+  Session 09 citations;
+- if selected, attach `impact_validation_outcome_status`, outcome reason,
+  executor, authorization evidence, transcripts/artifacts, and cleanup state;
+- if not selected, leave optional outcome fields empty and label the finding
+  “not selected for optional impact validation” in the report;
+- do not interpret a missing outcome as a negative security result;
+- do not present selection coverage as assessment coverage.
+
+A contradictory Session 10 outcome does not
+automatically rewrite the base status. Record the contradiction and have the
+analyst issue a cited reassessment/erratum if the original judgment should
+change. Deterministic merging never makes that judgment.
+
+## Required Report Structure
+
+Write `11-final-report/report.md` with:
+
+1. authorization, scope, and derivation statement;
+2. executive summary from Session 09 plus clearly separated validation changes;
+3. assessment coverage and a separate selected-validation coverage table;
+4. the original finding summary with base statuses preserved;
+5. optional validation outcome summary;
+6. detailed findings showing Session 09 judgment and Session 10 outcome in
+   separate fields;
+7. contradictions or analyst errata;
+8. cleanup and unresolved operational/safety limitations;
+9. remediation roadmap and validation criteria;
+10. evidence/provenance appendix identifying original versus Session 10
+    evidence.
+
+For each selected finding show:
+
+- Session 09 status, confidence, and evidence strength;
+- Session 10 outcome and outcome reason;
+- exact approved objective and limits;
+- executor and human-authorization references;
+- validation evidence citations;
+- cleanup status;
+- whether the outcome changed any analyst recommendation, with reasoning.
+
+## Honesty Rules
+
+- Session 11 is derived, not a replacement history.
+- `objective_achieved` describes only the optional outcome for the selected
+  finding; it is not a new base status.
+- Non-selected findings remain valid assessment results but were not
+  impact-validated.
+- Blocked validation does not mean a security control is effective unless the
+  cited outcome establishes that exact claim.
+- Do not remove failed attempts, contradictory facts, cleanup limitations, or
+  Session 09 coverage gaps.
+- Do not expand compliance or assurance claims because optional validation ran.
+
+Mark Session 11 `DONE` only after the report, derived registry, evidence
+appendix, and original/derived separation are internally consistent.

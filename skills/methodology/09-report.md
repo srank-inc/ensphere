@@ -1,345 +1,147 @@
 # Session 09: Evidence-Based Assessment Report
 
-Synthesize Sessions 01 through 08 into an evidence-based assessment report and
-finding registry. Session 09 does not perform exploitation and does not claim
-exploit proof unless earlier session evidence already proves impact. Optional
-prove-by-exploitation belongs to Session 10, and the exploit-verified final
-report belongs to Session 11.
+## Objective
 
-Read first:
-- `skills/shared/workflow-contract.md`
-- `skills/shared/evidence-standards.md`
+Produce the complete, decision-ready assessment from Sessions 01–08. Session
+09 stands on its own; optional Sessions 10–11 are never required to make its
+findings valid or its report complete.
 
-Before writing the report, run:
+Session 09 performs no new target probing.
+
+## Pre-Report Gate
+
+Run:
 
 ```bash
 ensphere run report
 ```
 
-If the report gate returns `ready: false`, read
-`ensphere-pentest/09-report/report-gate.md` and resolve all `error` issues
-before treating Session 09 as complete. Warning issues may be carried into the
-report as explicit limitations.
+Resolve every gate error. Warnings become explicit limitations. Confirm all
+planned sessions are terminal, reports exist, evidence chains were checked, and
+the assessment plan agrees with actual coverage.
 
-The gate validates readiness facts only: assessment-plan validity, terminal
-session states, per-session `report.md` presence, evidence hash chains, and the
-finding registry contract. It does not decide whether findings are true,
-severe, exploitable, or important; those remain AI/human report judgments that
-must cite evidence.
+## Synthesis Process
 
-## Tool Selection
+1. Read config, plan, progress, all session reports, evidence ledgers,
+   transcripts, imported artifacts, and checkpoints/limitations.
+2. Build a claim-to-evidence matrix. Deduplicate by root cause and affected
+   control, while preserving distinct assets, roles, and consequences.
+3. Separate observed facts from analyst judgments.
+4. Resolve contradictions and source/live drift. Do not silently choose the
+   more severe interpretation.
+5. Assign status, evidence strength, confidence, severity, and priority
+   independently under the shared evidence standard.
+6. Write CVSS v4.0 metric rationale for applicable vulnerability findings.
+7. Distinguish an observed multi-step attack path from a risk scenario whose
+   edges were not all tested.
+8. Write remediation at the root-cause/control level and concrete validation
+   criteria.
 
-| Need | Tier | Tool |
-|------|------|------|
-| CVSS scoring | Tier 1 | `ensphere cvss` |
-| Compliance mapping | Tier 1 | `ensphere compliance` |
-| Evidence lookup | Tier 1 | `ensphere evidence query` |
-| Not applicable | Tier 2 | No HTTP probing during reporting |
-| Not applicable | Tier 3 | No browser testing during reporting |
+## Finding Registry
 
-## Process
-
-1. Read all session reports:
-   - `ensphere-pentest/01-recon/report.md`
-   - `ensphere-pentest/01.5-session-plan/report.md`
-   - `ensphere-pentest/02-injection/report.md`
-   - `ensphere-pentest/03-auth/report.md`
-   - `ensphere-pentest/04-authz/report.md`
-   - `ensphere-pentest/05-xss/report.md`
-   - `ensphere-pentest/06-ssrf/report.md`
-   - `ensphere-pentest/07-cloud/report.md`
-   - `ensphere-pentest/08-api/report.md`
-
-2. Read external scan results (if they exist):
-   - `ensphere-pentest/01-recon/nmap.txt`
-   - `ensphere-pentest/01-recon/subdomains.txt`
-   - `ensphere-pentest/01-recon/httpx.txt`
-
-3. Read `ensphere-pentest/config.md` for target details and authorization statement.
-
-4. Read `ensphere-pentest/assessment-plan.yaml` for target type, session decisions, coverage labels, blocked sessions, and limitations.
-
-5. Read all evidence files from sessions 02-08:
-   - `ensphere-pentest/02-injection/evidence.jsonl`
-   - `ensphere-pentest/03-auth/evidence.jsonl`
-   - `ensphere-pentest/04-authz/evidence.jsonl`
-   - `ensphere-pentest/05-xss/evidence.jsonl`
-   - `ensphere-pentest/06-ssrf/evidence.jsonl`
-   - `ensphere-pentest/07-cloud/evidence.jsonl`
-   - `ensphere-pentest/08-api/evidence.jsonl`
-   Use `ensphere evidence query --file <path>` to read entries from each.
-
-6. Run or document evidence hash-chain verification:
-   - `ensphere evidence verify --file <path>`
-
-## Output Artifacts
-
-Write:
-- `ensphere-pentest/09-report/report.md`
-- `ensphere-pentest/09-report/finding-registry.yaml`
-- `ensphere-pentest/09-report/evidence-appendix.md`
-
-## Report Template
-
-Write to `ensphere-pentest/09-report/report.md`:
-
-```markdown
-# Security Assessment Report
-
-## Authorization & Attestation
-
-[Copy the Authorization section from ensphere-pentest/config.md verbatim here]
-
-**Assessor**: Ensphere Autonomous Security Assessment
-**Report Date**: [current date]
-**Ensphere CLI Version**: [output of ensphere --version or "latest"]
-**Assessment Mode**: WHITE_BOX | BLACK_BOX
-
-## Executive Summary
-- **Target**: [URL from config]
-- **Assessment Date**: [current date]
-- **Scope**: Authentication, authorization, injection, XSS, SSRF, cloud security, API security as applicable
-- **Target Type**: [from assessment-plan.yaml]
-- **Coverage Label**: [full | partial | blocked | source_only | black_box_only | client_only | cloud_only]
-- **Exploit Verification**: Not run in Session 09. Optional Session 10 required for exploit-verified final report.
-
-## Assessment Mode Notes (Black-Box Only)
-
-Include this section ONLY when Assessment Mode is BLACK_BOX.
-
-### Coverage Limitations
-- No source code review — all detection is behavioral (HTTP request/response analysis)
-- Technology identification is inference-based (headers, cookies, error pages, HTML signatures)
-- No callback server available — blind SSRF and out-of-band SQL injection cannot be definitively confirmed
-- Remediation recommendations describe fix classes (e.g., "use parameterized queries") but cannot reference specific file:line locations
-- Attack surface limited to endpoints discovered via crawling, JS analysis, API documentation, and directory probing — undiscoverable internal endpoints may exist
-
-### Confidence Adjustments
-- **HIGH confidence**: Concrete evidence obtained — data extracted, JavaScript executed, unauthorized access achieved, SQL error with injected content
-- **MEDIUM confidence**: Behavioral signals — timing differences, response length changes, error message analysis, indirect indicators
-- **LOW confidence**: Findings that would require out-of-band verification (callback server) to confirm definitively
-
-### Technology Profile
-[Copy the Technology Profile from ensphere-pentest/progress.md here]
-
-[2-3 paragraph overview: overall security posture, most critical findings, key recommendations]
-
-## Vulnerability Summary
-
-| Category | Critical | High | Medium | Low | Total |
-|----------|----------|------|--------|-----|-------|
-| Injection | N | N | N | N | N |
-| Authentication | N | N | N | N | N |
-| Authorization | N | N | N | N | N |
-| XSS | N | N | N | N | N |
-| SSRF | N | N | N | N | N |
-| Cloud | N | N | N | N | N |
-| **Total** | **N** | **N** | **N** | **N** | **N** |
-
-## Remediation Timeline
-
-| Severity | Deadline | Finding Count |
-|----------|----------|---------------|
-| Critical | 24 hours | N |
-| High | 7 days | N |
-| Medium | 30 days | N |
-| Low | 90 days | N |
-
-## Critical Findings
-
-[For each reportable finding across all categories, ordered by severity and CVSS score descending. Do not use EXPLOITED unless evidence reaches L3+ impact proof.]
-
-### VULN-{NNN}: [Title]
-- **Category**: [Injection/Auth/Authz/XSS/SSRF/Cloud]
-- **Severity**: [Critical/High/Medium/Low]
-- **CVSS v4.0**: [score] [severity] `[vector string]`
-- **CVSS v3.1**: [score] [severity] `[vector string]`
-- **Endpoint**: [affected endpoint]
-- **Impact**: [business impact]
-- **Compliance Impact**:
-  - OWASP: [control IDs]
-  - PCI-DSS: [control IDs]
-  - SOC 2: [control IDs]
-  - ISO 27001: [control IDs]
-- **Evidence**: [EVID-XXX references]
-- **Screenshots**: [screenshot paths if applicable]
-- **Reproduction**: [brief steps — full details in category report]
-- **Exploit Candidate**: yes | no
-- **Exploit Verification Status**: not selected | recommended for Session 10 | not applicable
-- **Remediation**: [specific fix recommendation]
-- **Deadline**: [24h/7d/30d/90d based on severity]
-
-## Network Reconnaissance
-[Security-relevant findings from nmap, subfinder, httpx — exposed services, misconfigurations, expanded attack surface]
-
-## Potential Findings
-[Vulnerabilities blocked by external constraints, not security controls]
-
-## Assessment Coverage
-[Summary of what was tested, any blind spots or constraints noted in category reports]
-
-| Session | Decision | Execution State | Coverage Label | Limitation |
-|---------|----------|-----------------|----------------|------------|
-| 02 Injection | run | DONE | full | - |
-| 03 Auth | skipped | SKIPPED | partial | No auth mechanism |
-
-### Mode-Specific Coverage Notes (Black-Box Only)
-Include when Assessment Mode is BLACK_BOX:
-- **Discovery methodology**: crawl, JS analysis, API schema, directory probing, GraphQL introspection
-- **Total endpoints discovered**: [N]
-- **Input vectors identified**: [N]
-- **Injection testing approach**: behavioral error-character probing + technology-aware payload selection
-- **Authorization testing approach**: multi-session access control matrix ([N] endpoints × [N] roles)
-- **Known blind spots**: endpoints not discoverable without source code, internal-only routes, undocumented APIs
-
-## Appendix A: Evidence Index
-
-| Evidence ID | Session | Probe Type | Technique | URL | Result Stage | Finding Ref |
-|-------------|---------|------------|-----------|-----|--------------|-------------|
-| EVID-001 | 02 | sqli | blind_time | ... | payload | VULN-001 |
-| ... | ... | ... | ... | ... | ... | ... |
-
-## Appendix B: Optional Exploitation Candidates
-
-| Finding | Reason To Select | Risk Limit | Required Approval | Cleanup Notes |
-|---------|------------------|------------|-------------------|---------------|
-
-## Appendix C: Report Honesty Notes
-- No uncited findings:
-- Skipped or blocked sessions:
-- Source-only or black-box-only limitations:
-- Imported scanner leads:
-- Evidence verification failures:
-
-## Appendix D: Compliance Summary
-
-### OWASP Top 10 2025
-| Control ID | Control Name | Status | Related Findings |
-|------------|-------------|--------|-----------------|
-| A01 | Broken Access Control | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A02 | Security Misconfiguration | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A03 | Software Supply Chain Failures | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A04 | Cryptographic Failures | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A05 | Injection | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A06 | Insecure Design | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A07 | Authentication Failures | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A08 | Software or Data Integrity Failures | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A09 | Security Logging and Alerting Failures | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A10 | Mishandling of Exceptional Conditions | PASS/FAIL/NOT TESTED | VULN-IDs |
-
-### PCI-DSS v4.0.1
-| Control ID | Control Name | Status | Related Findings |
-|------------|-------------|--------|-----------------|
-| 6.2.4 | Software Engineering Techniques | PASS/FAIL/NOT TESTED | VULN-IDs |
-| 7.2.1 | Access Control Model | PASS/FAIL/NOT TESTED | VULN-IDs |
-| 7.2.2 | Role-Based Access Assignment | PASS/FAIL/NOT TESTED | VULN-IDs |
-| 8.2.1 | Unique User Identification | PASS/FAIL/NOT TESTED | VULN-IDs |
-| 8.3.1 | Strong Authentication | PASS/FAIL/NOT TESTED | VULN-IDs |
-
-### SOC 2
-| Control ID | Control Name | Status | Related Findings |
-|------------|-------------|--------|-----------------|
-| CC6.1 | Logical Access Security | PASS/FAIL/NOT TESTED | VULN-IDs |
-| CC6.3 | Role-Based Access | PASS/FAIL/NOT TESTED | VULN-IDs |
-| CC6.6 | System Boundaries | PASS/FAIL/NOT TESTED | VULN-IDs |
-| CC7.1 | Monitoring & Detection | PASS/FAIL/NOT TESTED | VULN-IDs |
-| CC7.2 | Anomaly Detection | PASS/FAIL/NOT TESTED | VULN-IDs |
-
-### ISO 27001
-| Control ID | Control Name | Status | Related Findings |
-|------------|-------------|--------|-----------------|
-| A.8.26 | Application Security | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A.8.28 | Secure Coding | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A.8.12 | Data Leakage Prevention | PASS/FAIL/NOT TESTED | VULN-IDs |
-| A.8.5 | Secure Authentication | PASS/FAIL/NOT TESTED | VULN-IDs |
-
-## Appendix E: Tool Versions
-- Ensphere CLI: [version]
-- CVSS Calculator: v3.1 + v4.0
-- Skill files: [date of last methodology update]
-```
-
-## Finding Registry Template
-
-Write `ensphere-pentest/09-report/finding-registry.yaml`:
+Write `09-report/finding-registry.yaml` using the canonical finding schema:
 
 ```yaml
-schema_version: 1
-generated_from: "Session 09"
+generated_from: "Sessions 01-08"
 findings:
   - id: VULN-001
-    title: "Short finding title"
-    category: injection
-    status: strong_evidence_not_exploited
-    confidence: medium
+    title: "Cross-tenant invoice read"
+    category: authorization
+    status: confirmed
+    confidence: high
+    evidence_strength: direct
     severity: high
-    cvss_v4: "CVSS:4.0/..."
-    cvss_v31: "CVSS:3.1/..."
+    priority: P1
+    cvss_v4: "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N"
+    affected_assets:
+      - "test.example.invalid"
+    affected_locations:
+      - "GET /api/invoices/{id}"
+    observed_facts:
+      - "Account A received Account B's synthetic invoice fixture"
+      - "The nonexistent-object control returned a distinct not-found response"
+    root_cause: "The object lookup is not constrained by the authenticated tenant"
+    security_impact: "A tenant can read another tenant's invoice object"
+    business_impact: "Cross-customer financial-record confidentiality exposure"
+    remediation: "Bind invoice lookup to the authenticated tenant in the data-access layer"
+    validation_criteria:
+      - "Cross-tenant fixture requests are denied without disclosing object data"
+      - "Same-tenant owner and authorized-role controls continue to succeed"
     evidence_ids:
-      - EVID-004
+      - EVID-042
     transcripts:
-      - transcripts/example.http
+      - "04-authz/transcripts/VULN-001.md"
+    artifact_paths: []
+    cleanup_evidence: []
+    import_refs: []
+    manual_notes: []
     evidence_categories:
       - ensphere_measurement
-    coverage_label: full
-    exploit_candidate: true
-    exploit_candidate_reason: "Impact proof would clarify data exposure."
-    selected_for_exploitation: false
-    notes: "Report judgment, not CLI evidence."
+      - agent_judgment
+    coverage_label: partial
+    impact_validation_candidate: false
+    impact_validation_candidate_reason: ""
+    selected_for_impact_validation: false
+    notes: "Tested with two synthetic tenant fixtures"
 ```
 
-## CVSS Scoring
+Use statuses `confirmed`, `likely`, `informational`, `not_supported`, or
+`not_tested`. Do not use optional Session 10 outcomes as statuses. Every
+reportable weakness needs affected assets/locations, observed facts, root
+cause, security/business impact, remediation, validation criteria, and at least
+one valid citation.
 
-For each finding, compute BOTH CVSS scores:
+`impact_validation_candidate` is an optional recommendation only. It does not enable
+Session 10, select the finding, or imply exploitation is necessary.
 
-```bash
-# CVSS v4.0 (primary)
-ensphere cvss --version 4.0 --av N --ac L --at N --pr N --ui N --vc H --vi L --va N --sc H --si L --sa N
+## Required Report Structure
 
-# CVSS v3.1 (secondary, for backward compatibility)
-ensphere cvss --version 3.1 --av N --ac L --pr N --ui N --s C --c H --i L --a N
-```
+Write `09-report/report.md`:
 
-Include both in each finding for maximum compatibility with compliance frameworks.
+1. **Authorization and attestation** — target, environment, dates, authorized
+   perspective, and constraints. Redact secrets.
+2. **Executive summary** — overall risk themes, top priorities, business
+   relevance, and material coverage limitations. Avoid counts without context.
+3. **Scope and methodology** — in/out of scope, modes, standards used, and the
+   baseline/probe/control approach.
+4. **Coverage** — asset/session/role/protocol matrix, skipped/blocked work,
+   evidence integrity, and source/live gaps.
+5. **Finding summary** — ID, title, status, severity, priority, affected asset,
+   and evidence strength.
+6. **Detailed findings** — observed facts, root cause, impact, prerequisites,
+   safe reproduction, citations, CVSS rationale, remediation, and validation
+   criteria.
+7. **Tested defenses and not-supported candidates** — narrowly scoped; no broad
+   assurance wording.
+8. **Unresolved and not-tested areas** — missing input and decision impact.
+9. **Attack paths and risk scenarios** — visibly separate observed paths from
+   hypothetical combinations.
+10. **Remediation roadmap** — prioritize by business context, exposure,
+    dependencies, and fix leverage; do not impose universal deadlines.
+11. **Contextual compliance mapping** — map relevant findings and tested
+    controls; do not claim certification or blanket `PASS`/`FAIL`.
+12. **Appendices** — evidence/provenance index, coverage detail, tool versions,
+    redactions, limitations, and optional Session 10 candidates.
 
-## Compliance Impact
+Write `09-report/evidence-appendix.md` as a claim-to-evidence table containing
+finding ID, claim/observed fact, evidence category and strength, evidence ID or
+path, producer/source, target/role context, integrity state, and limitations.
 
-For each finding, look up compliance mappings:
+## Quality Gate
 
-```bash
-ensphere compliance sqli
-ensphere compliance xss
-```
+Run `ensphere run report` again after writing the registry and report artifacts.
+Then review for:
 
-Include in each finding the affected framework controls (OWASP Top 10, PCI-DSS, SOC 2, ISO 27001).
+- uncited or missing-path findings;
+- status/evidence-strength inconsistencies;
+- severity unsupported by stated impact/prerequisites;
+- duplicated findings or missing affected instances;
+- scanner severity laundering;
+- inferred attack-path edges presented as observed;
+- compliance certification language;
+- broad negative assurance;
+- secrets/personal data or unsafe artifact paths;
+- mismatch between coverage statements and the plan/session reports.
 
-## Evidence Cross-Referencing
-
-1. Read all `evidence.jsonl` files from sessions 02-08 using `ensphere evidence query --file <path>`
-2. Preserve evidence IDs assigned by `ensphere evidence log` or verify commands at write time
-3. Cross-reference each relevant evidence entry with its corresponding VULN-{NNN} finding
-4. Populate Appendix A with all evidence entries using factual result stages (`baseline`, `probe`, `payload`, `control`, `callback`, `manual_note`)
-
-## Rules
-- Sessions marked SKIPPED in progress.md still have a report.md — read it for the skip reason and note it in Assessment Coverage
-- Include reportable findings, blocked findings, and strong evidence findings. Keep false positives out of the main findings and place them in an appendix when useful.
-- No uncited finding: every finding needs an evidence ID, transcript path, imported lead reference, or explicitly labeled manual note
-- No implied coverage: skipped, blocked, partial, source-only, black-box-only, client-only, and cloud-only coverage must be visible
-- No scanner laundering: imported scanner severity remains source-provided until corroborated
-- No exploit wording unless evidence reaches L3+ impact proof
-- VULN-ID assignment: sequential, ordered by CVSS score descending
-- Order by severity (Critical → High → Medium → Low)
-- Remediation timelines: Critical→24h, High→7d, Medium→30d, Low→90d
-- Keep reproduction steps brief — reference category reports for full details
-- Audience: technical leadership (CTOs, CISOs) — precise but concise
-- Do not include technology stack details (they know their own stack)
-- Focus on business impact and actionable findings
-- Always include both CVSS v4.0 and v3.1 scores per finding
-- Always include compliance impact per finding
-- Compliance status: FAIL if any EXPLOITED finding affects control, PASS only if tested and clean, NOT TESTED if outside assessment scope
-- Copy Authorization section from config.md verbatim into report header
-- When Assessment Mode is BLACK_BOX, include the "Assessment Mode Notes" section after Executive Summary
-- Behavioral-only findings (timing, response length) should be MEDIUM confidence, not HIGH
-- Coverage limitations must be honestly documented — black-box cannot guarantee completeness
-- Include Technology Profile in the report for context on payload selection decisions
-- Recommend Session 10 candidates, but do not run Session 10 from this methodology
+Mark Session 09 `DONE` only after the registry, report, appendix, and gate are
+consistent. The normal assessment is then complete.

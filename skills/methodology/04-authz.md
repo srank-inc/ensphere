@@ -1,161 +1,70 @@
 # Session 04: Authorization
 
-Analyze authorization mechanisms — access control, privilege escalation, IDOR.
+## Objective
 
-## Tool Selection
+Assess object-level, function-level, property-level, tenant, and workflow
+authorization using explicitly supplied identities and owned test objects.
 
-| Need | Tier | Tool |
-|------|------|------|
-| Horizontal IDOR verification | Tier 1 | `ensphere verify idor` |
-| Supabase RLS testing | Tier 1 | `ensphere verify rls` |
-| Vertical privilege escalation, workflow bypass | Tier 2 | `curl` via Bash |
-| UI-driven role switching | Tier 3 | Playwright MCP (only for UI role changes) |
+## Preflight and Coverage
 
-**Decision flow:**
-1. Use `ensphere verify idor` for automated horizontal IDOR verification with evidence logging
-2. Use `ensphere verify rls` for Supabase-specific tenant isolation testing
-3. Use `curl` for vertical privilege escalation (admin endpoint access) and workflow bypass testing
-4. Use Playwright only when role switching requires UI interaction (e.g., admin panel toggle)
+Create an authorization matrix:
 
-## Black-Box Path
+| Identity/role | Tenant | Object owner | Operation | Property/state | Expected result | Coverage |
+|---------------|--------|--------------|-----------|----------------|-----------------|----------|
 
-When assessment mode is BLACK_BOX, replace Phase A (code review) with the following. Phase B bounded verification still applies after this.
+Include reads and writes, privileged functions, indirect references, list and
+search endpoints, bulk operations, exports, background jobs, and material
+workflow transitions only when present in recon.
 
-### Phase A-BB: Access Control Matrix (replaces code review)
+Use two or more controlled accounts/tenants and paired owned test objects when
+the boundary requires them. If these fixtures are unavailable, do not substitute
+real users' identifiers; mark the affected rows blocked.
 
-Read `ensphere-pentest/01-recon/report.md` sections 4 (API Endpoints), 7 (Role & Privilege Architecture), and 8 (Authorization Vulnerability Candidates).
-Read the Technology Profile from `ensphere-pentest/progress.md`.
+## Candidate Generation
 
-**Step 1 — Session Setup**: Create separate authenticated sessions for each available role:
-- **User A** (standard user) — login via curl, save token/cookies
-- **User B** (different standard user) — login via curl, save token/cookies
-- **Admin** (if admin credentials available in `ensphere-pentest/config.md`) — login, save token/cookies
-- **Unauthenticated** — no token/cookies
+White-box review traces authorization from entry point through middleware,
+service, data access, serializers, and async consumers. Record whether checks
+bind subject, tenant, object, operation, state, and property.
 
-For Playwright-based testing, use separate browser contexts per role.
+Black-box candidates come from the inventory and expected-access matrix. Do not
+discover targets by enumerating sequential or guessed identifiers.
 
-Capture object IDs owned by each user (user IDs, resource IDs, org IDs) from their respective API responses.
+## Controlled Validation
 
-**Step 2 — Build Access Control Matrix**: For EVERY endpoint from the recon report, test access with each session. Record status code and whether the response contains authorized data.
+For each candidate:
 
-| Endpoint | Method | User A (owner) | User B (other) | Admin | Unauth | Expected | Verdict |
-|----------|--------|----------------|----------------|-------|--------|----------|---------|
-| GET /api/items/123 | GET | 200 ✓ | 200 ✗ | 200 ✓ | 401 | A-only | **IDOR** |
-| DELETE /api/items/123 | DELETE | 200 | 200 | 200 | 401 | A-only | **IDOR** |
-| GET /api/admin/users | GET | 403 | 403 | 200 | 401 | admin-only | Secure |
+1. Verify the control identity can access its own test object or permitted
+   function (positive control).
+2. Replay the same operation with one boundary changed: object owner, tenant,
+   role, operation, property, or workflow state.
+3. Use a negative control such as a nonexistent owned identifier or disallowed
+   state to distinguish authorization behavior from generic errors.
+4. Compare status, response body, side effects, audit events, and persistent
+   state as applicable.
+5. For writes, mutate only a benign canary field on owned fixtures and restore
+   it. Verify cleanup.
 
-Test ALL HTTP methods (GET, POST, PUT, PATCH, DELETE) on each endpoint — an endpoint may allow GET but also respond to DELETE without authorization.
+Do not enumerate other users' objects, read sensitive fields for proof, modify
+unauthorized records, invoke destructive business actions, or chain into
+account takeover. A differing status or body length alone is not proof; verify
+whether protected data or state was actually exposed within the controlled
+fixture.
 
-**Step 3 — Horizontal Authorization (IDOR)**:
-For each endpoint with object IDs:
-- Swap IDs between User A and User B
-- Test sequential ID enumeration (for numeric IDs: try id-1, id+1, id+2)
-- Test UUID harvesting: collect UUIDs from User A's list responses, use them in User B's detail requests
-- Test batch/list endpoints: does `/api/items` return items from ALL users or only the authenticated user?
-- Use `ensphere verify idor --url URL --id VICTIM_ID --token ATTACKER_TOKEN --in-scope SCOPE`
+## Interpretation and Stop Rules
 
-**Step 4 — Vertical Authorization (Privilege Escalation)**:
-- Access admin-only endpoints with unprivileged tokens (from the matrix)
-- Test role manipulation in profile update: `PUT /api/profile {"role":"admin"}`, `{"is_admin":true}`, `{"permissions":["admin"]}`
-- Test admin API paths: `/admin/*`, `/api/admin/*`, `/internal/*`, `/management/*`
-- If JWT-based auth: modify role claims in JWT payload and re-encode (without valid signature — test if signature is verified)
+- Distinguish object existence leakage from unauthorized object access.
+- Distinguish UI hiding from server-side enforcement.
+- Distinguish stale/cached responses and invalid object state from a policy
+  decision.
+- Treat source-only missing checks as candidates unless reachability and
+  enforcement outcome are established.
+- Stop after the narrow subject-object-operation claim is resolved. Do not
+  broaden to unrelated roles or objects merely to strengthen proof.
 
-**Step 5 — Workflow/Context Authorization**:
-For multi-step workflows discovered in recon:
-- Map the intended sequence (e.g., create order → add items → checkout → pay)
-- Test step skipping: call checkout directly without creating order
-- Test reverse ordering: call pay before checkout
-- Test state manipulation: modify status parameters (e.g., `{"status":"approved"}` on a pending item)
-- Test forced state transitions: directly set final state without processing
+## Report
 
-After Phase A-BB, write evidence-backed findings and optional Session 10 candidates. Do not run prove-by-exploitation from Session 04 unless the user explicitly forces Session 10 later.
-
-## Phase A: Analysis
-
-Read `ensphere-pentest/01-recon/report.md` section 8 (Authorization Vulnerability Candidates).
-Create a task for each candidate endpoint organized by type.
-
-### 1. Horizontal Authorization (Ownership/IDOR)
-
-For each item in recon section 8.1:
-1. Start at the endpoint
-2. Trace backward through code until you find either:
-   - A **sufficient guard** (session auth + ownership binding + tenant validation + runs before side effect + dominates all paths), OR
-   - A **side effect** reached without sufficient guard
-3. Side effects: DB read/write of user objects, file changes, cross-tenant data access, metadata exposure
-4. **Verdict**: guarded (guard dominates sink) or vulnerable (side effect before guard)
-
-### 2. Vertical Authorization (Role Escalation)
-
-For each item in recon section 8.2:
-1. Start at the endpoint
-2. Trace backward until you find either:
-   - A **sufficient role/capability guard** (explicit role check + runs before side effect + dominates all paths), OR
-   - A **privileged side effect** without such guard
-3. Side effects: user/role management, system config, DB export/import, global state changes
-4. **Verdict**: guarded or vulnerable
-
-### 3. Context/Workflow Authorization (State Bypass)
-
-For each item in recon section 8.3:
-1. Start at the workflow step endpoint
-2. Walk forward through intended flow
-3. At each step, verify later actions validate prior state (status flags, stage tokens, nonces)
-4. Guard must run before applying state change
-5. **Verdict**: guarded (all steps validate prior state) or vulnerable (side effect without prior state check)
-
-### Proof Rules
-- Guards appearing AFTER the side effect do not count
-- UI-only checks (hidden buttons, disabled forms) do not count as guards
-- Authentication ≠ authorization (being logged in ≠ ownership check exists)
-- Don't trust framework defaults without explicit configuration evidence
-
-## Phase B: Verification and Session 10 Candidate Selection
-
-For each vulnerable endpoint candidate from Phase A, gather bounded access-control
-evidence using authorized test accounts. Do not modify unauthorized production
-data or broaden into destructive proof from Session 04.
-
-### Horizontal Attacks
-- **Identifier manipulation**: change `user_id`, `order_id`, `file_id` in requests to access other users' resources
-- **Sequential enumeration**: iterate through predictable ID patterns
-- **Tenant boundary crossing**: manipulate `org_id`, `company_id`, `tenant_id`
-- **Reference swapping**: replace your reference tokens with other users'
-
-### Vertical Attacks
-- **Direct access**: hit admin endpoints (`/admin/*`, `/api/admin/*`) with lower-privilege session
-- **Role manipulation**: modify role-related parameters in requests
-- **Header injection**: add/modify authorization-related headers
-- **Permission field editing**: modify permission fields in update requests
-
-### Context/Workflow Attacks
-- **Step skipping**: execute later steps without completing prerequisites
-- **State manipulation**: modify state parameters to bypass validation
-- **Out-of-order execution**: execute workflow steps in wrong sequence
-- **Forced state transitions**: directly set final states without processing
-
-### Stage 1: Bounded Verification
-Execute the `minimal_witness` from the analysis with test accounts and record:
-- Auth context
-- Object owner
-- Requested object or action
-- Expected access
-- Actual response
-- Evidence ID or transcript path
-
-### Stage 2: Candidate Selection
-Recommend Session 10 when stronger proof requires:
-- Accessing protected resources beyond minimal metadata
-- Modifying unauthorized data
-- Demonstrating elevated privileges
-- Chaining multiple authorization weaknesses
-
-Session 10 must define rollback and cleanup evidence before any state-changing
-authorization proof.
-
-## Report Format
-
-Write to `ensphere-pentest/04-authz/report.md`:
-- Evidence-backed authorization findings with type, affected endpoint, auth context, evidence IDs, and reproduction steps
-- Optional Session 10 candidates for state-changing or chained impact proof
-- Vectors Confirmed Secure (table: Endpoint | Guard Location | Defense | Verdict)
+Write `04-authz/report.md` with the tested authorization matrix, fixture and
+cleanup record, resolved findings, tested defenses, unresolved boundaries,
+baseline/probe/control evidence, root causes, impact, remediation and validation
+criteria, and citations. State exactly which roles/tenants were and were not
+covered.

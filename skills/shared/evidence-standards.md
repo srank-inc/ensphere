@@ -1,99 +1,146 @@
 # Evidence Standards
 
-Read this with [workflow-contract.md](workflow-contract.md). The evidence
-ledger records facts; the finding registry and reports hold security judgments.
+Read this with [workflow-contract.md](workflow-contract.md). Ensphere records
+facts. The analyst—human or AI—turns those facts into findings.
 
-## CLI Evidence Rows
+## Evidence Record
 
-`ensphere evidence log` and automated verify/callback/cloud parser writes assign `EVID-XXX` IDs at write time and maintain a hash chain. The `result` field is a factual stage only: `baseline`, `probe`, `payload`, `control`, `callback`, or `manual_note`. Do not store AI/human conclusions such as confirmed, potential, safe, confidence, or exploitability in `result`; put those judgments in session reports and the final report.
+Every material observation must be attributable to one of these categories:
 
-## Evidence Categories
+| Category | What it records |
+|----------|-----------------|
+| `imported_lead` | A scanner or external tool result, retaining the source tool, rule, source severity, raw reference, and parse status. |
+| `ensphere_measurement` | A deterministic Ensphere request, response, timing, hash, callback, count, or configuration measurement. |
+| `source_review` | A cited file, line, data-flow trace, configuration value, or implementation fact. |
+| `manual_observation` | A reproducible observation captured in a transcript or artifact. |
+| `human_authorization` | Human authorization for an exact plan revision, executor, environment, actions, and limits. |
+| `human_execution` | A human-executed optional Session 10 action and its raw observations. |
+| `agent_execution` | An AI-agent-executed optional Session 10 action and its raw observations. |
+| `agent_judgment` | A cited analytical conclusion: status, confidence, severity, impact, priority, or remediation. |
+| `impact_validation_attempt` | An optional Session 10 executor-run action and its observed response. |
+| `impact_validation_result` | An optional Session 10 outcome judgment backed by attempt evidence. |
 
-Use these categories in finding registries and report appendices. They are not
-replacement values for the evidence `result` field.
+These categories are not values for the JSONL `result` field. Evidence rows use
+only factual stages such as `baseline`, `probe`, `payload`, `control`,
+`callback`, or `manual_note`.
 
-| Category | Meaning |
-|----------|---------|
-| `imported_lead` | Factual scanner or external tool output. Source severity remains source-provided. |
-| `ensphere_measurement` | Native Ensphere probe, payload selection, response measurement, callback, hash, or parser result. |
-| `agent_judgment` | AI or human classification, confidence, severity, exploitability, impact, or remediation priority. |
-| `exploit_attempt` | Session 10 planned exploit command, request sequence, expected proof, stop condition, and observed response. |
-| `exploit_result` | Session 10/11 outcome bucket backed by exploit evidence. |
+For every cited artifact preserve:
 
-## Proof Levels
+- evidence ID or workspace-relative path;
+- producer and collection time;
+- target, endpoint, input, and identity/role context;
+- exact request, command, source location, or observation procedure;
+- raw result or a lossless redacted representation;
+- hash-chain or integrity state where available;
+- redactions and known collection limitations.
 
-| Level | Name | Evidence Required | Classification |
-|-------|------|-------------------|----------------|
-| L1 | Weakness Identified | Error messages, timing differences, or response variations | Report may classify as suspected or strong evidence only with context. |
-| L2 | Structure Manipulated | Boolean-blind working, UNION SELECT succeeds, partial bypass | Report may classify as strong evidence not exploited. |
-| L3 | Impact Confirmed | Actual data extracted, unauthorized access achieved, JS executed | Report may classify as exploited. |
-| L4 | Critical Impact | Admin credentials, sensitive data dump, RCE, full account takeover | Report may classify as exploited with critical impact. |
+Imported severity and confidence always remain source-provided until the
+analyst independently assesses them.
 
-You MUST reach L3+ with cited evidence to mark a finding as `EXPLOITED`.
-That label belongs in reports and finding registries, not CLI evidence rows.
+## Evidence Strength
 
-## Report Bucket Decision Framework
+Evidence strength describes support for a claim, not finding severity.
 
-After exhaustive bypass attempts, ask:
-**"Is this preventing factor a security implementation designed to stop this attack, or an external operational constraint?"**
+| Value | Use when |
+|-------|----------|
+| `direct` | The claimed behavior or policy violation was observed with an appropriate baseline and control, or is unambiguous in source/configuration. |
+| `corroborated` | Independent evidence types support the same claim and material alternatives were checked. |
+| `indicative` | A relevant signal exists, but a material alternative explanation or missing input remains. |
+| `insufficient` | The available evidence cannot support the claim. Preserve it as a lead, limitation, or `not_tested` record. |
 
-- **Security feature that withstands bypass attempts** -> `BLOCKED_BY_SECURITY` or `FALSE_POSITIVE`
-- **External constraint (server crash, missing auth you can't obtain)** -> `BLOCKED_BY_OPERATIONAL_CONSTRAINT`
-- **Strong evidence but no exploit proof** -> `STRONG_EVIDENCE_NOT_EXPLOITED`
-- **Successfully exploited with concrete evidence** -> `EXPLOITED`
+Do not promote timing, status-code, response-size, reflection, or scanner output
+to `direct` merely because it is repeatable. The measurement must distinguish
+the security claim from plausible alternatives.
 
-Report bucket assignment is only valid after attempting systematic bypasses
-across multiple techniques, or after explicitly recording why bypass attempts
-were out of scope.
+## Finding Status
 
-## Bypass Exhaustion Protocol
+Status records the analyst's conclusion about the narrow claim:
 
-Classification is FORBIDDEN until you have:
-1. Attempted **3+ distinct bypass techniques** per vulnerability
-2. Tried **systematic approach across different attack vectors** (encoding, obfuscation, alternate syntax)
-3. **Escalated** through manual → automated → custom techniques
-4. **Documented each failed attempt** with what was tried and why it failed
+| Status | Meaning |
+|--------|---------|
+| `confirmed` | Evidence directly or through strong corroboration demonstrates the weakness in scope. |
+| `likely` | Evidence supports the weakness, but one material uncertainty remains. |
+| `informational` | A factual condition worth reporting without asserting an exploitable weakness. |
+| `not_supported` | Controlled checks contradict the candidate or support an effective control for the tested case. |
+| `not_tested` | The claim could not be evaluated because it was outside scope, blocked, inapplicable, or missing required input. |
 
-## Reproducibility Requirements
+Keep these dimensions separate:
 
-Every finding must be completely reproducible:
-- Full endpoint URL with protocol, domain, port, path, parameters
-- Complete payload/command exactly as used
-- Authentication context (cookies, tokens, headers)
-- Expected vs actual response
-- Clear placeholders for variable values: `[SESSION_TOKEN]`, `[USER_ID]`, etc.
+- **Confidence**: `high`, `medium`, or `low`—certainty in the status.
+- **Severity**: consequence and exploit conditions if the finding is real.
+- **Priority**: remediation order after business context, reachability,
+  exposure, and compensating controls are considered.
+- **Optional validation outcome**: Session 10 result. It never replaces the
+  Session 09 status.
 
-Write as if the reader has never seen the application. Another tester must reproduce from documentation alone.
+`confirmed` normally requires `direct` or `corroborated` evidence. A `likely`
+finding may use `indicative` evidence only when the uncertainty and required
+validation are explicit. Do not report `insufficient` evidence as a weakness.
 
-## Confidence Scoring
+## Controlled Validation Cycle
 
-- **High**: Clear, unambiguous evidence. Direct code path or deterministic behavior. No material alternate control.
-- **Medium**: Strongly indicated but one material uncertainty remains (possible upstream control, conditional behavior).
-- **Low**: Plausible but unverified. Indirect evidence, unclear scope, inconsistent indicators.
+Use this cycle for each candidate in Sessions 02–08:
 
-Rule: when uncertain, round down to minimize false positives.
+1. State one narrow, falsifiable claim.
+2. Capture a normal baseline using the same endpoint, identity, state, and
+   relevant transport conditions.
+3. Apply the smallest safe probe that distinguishes the claim.
+4. Run a negative or positive control suited to the mechanism.
+5. Repeat or interleave only enough trials to address noise or state drift.
+6. Compare raw observations; list plausible alternative explanations.
+7. Resolve the candidate as `confirmed`, `likely`, `not_supported`, or
+   `not_tested`, with evidence strength and confidence.
+8. Stop when the narrow claim is resolved.
 
-## Report Honesty Requirements
+Do not require arbitrary bypass counts, fixed request counts, or
+manual-to-automated escalation. Additional variants must test a named parser,
+normalization, state, or control hypothesis. Never broaden scope or increase
+impact solely to obtain a more dramatic proof.
 
-- No uncited finding: every finding needs an evidence ID, transcript path,
-  import reference, or explicitly labeled manual note.
-- Transcript, artifact, and cleanup references must be relative to the
-  workspace root and safe to cite. Do not use absolute paths, URLs,
-  parent-directory traversal, or paths outside `ensphere-pentest/`.
-- No implied coverage: skipped, blocked, partial, source-only, black-box-only,
-  client-only, and cloud-only coverage must be visible in report coverage
-  sections.
-- No exploit wording unless Session 10 or category evidence proves impact.
-- No scanner laundering: imported severity remains source-provided until
-  corroborated by native Ensphere evidence or manual proof.
-- No silent evidence failure: hash-chain or transcript failures are report
-  limitations.
+## Reproducibility
 
-## False Positive Documentation
+For a reportable finding include:
 
-Record false positives in `ensphere-pentest/{NN}-{name}/false-positives.md` with:
-- Vulnerability ID and description
-- All techniques attempted
-- Why it was determined to be a false positive
+- affected asset and exact location;
+- prerequisites, identity, role, and state;
+- safe reproduction steps and exact non-secret inputs;
+- baseline, probe, and control observations;
+- expected versus observed behavior;
+- evidence citations and artifact integrity state;
+- environmental or temporal dependencies;
+- cleanup/reversion steps when state changed.
 
-Do NOT include false positives in the main report.
+Use placeholders such as `[SESSION_TOKEN]` and `[TEST_OBJECT_ID]`; never publish
+live secrets or personal data. Transcript, artifact, and cleanup references
+must remain inside the assessment workspace and must not use absolute paths,
+URLs, `~`, backslashes, or parent traversal.
+
+## Honest Negative Conclusions
+
+- Say what was tested, against which assets and roles, and with which controls.
+- Use `not_supported` for the tested claim; do not write "safe", "secure", or
+  "no vulnerabilities" as a broad conclusion.
+- Use `not_tested` when required access, roles, data, regions, protocols, or
+  environment stability were absent.
+- A missing signal is not affirmative proof that a surface is absent.
+- Skipped, blocked, partial, source-only, black-box-only, client-only, and
+  cloud-only coverage must be visible in both the session report and final
+  report.
+- Hash-chain, parser, transcript, or artifact failures are report limitations.
+
+## Optional Session 10 Evidence
+
+Session 10 is disabled by default and explicitly selected. The AI prepares the
+bounded plan and pauses. A human must authorize that exact revision and name
+either the human or AI as executor before any action runs. A separate strict
+authorization file records the plan path, revision, SHA-256, human authorizer,
+timestamp, executor, environment acknowledgement, exact actions, and
+action/time/risk limits. The outcome cites that file and records timestamps,
+performed actions, action count, stop-condition state, rollback, and cleanup.
+The pre-execution `run impact-ready` JSON is retained in the transcript.
+
+An outcome such as `objective_achieved`, `objective_not_achieved`,
+`blocked_by_control`, `blocked_by_constraint`, or `inconclusive` is a separate
+validation result. A contradictory result may
+trigger an analyst reassessment, but the runner must never overwrite the
+Session 09 status automatically.

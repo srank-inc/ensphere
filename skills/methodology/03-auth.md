@@ -1,155 +1,74 @@
 # Session 03: Authentication
 
-Analyze authentication mechanisms — identity verification and session management.
+## Objective
 
-## Tool Selection
+Assess identity establishment and session lifecycle controls using supplied
+accounts and bounded, reversible checks.
 
-| Need | Tier | Tool |
-|------|------|------|
-| Token/session bypass | Tier 1 | `ensphere verify auth` |
-| Custom auth flows and rate limiting | Tier 2 | `curl` via Bash |
-| OAuth/SSO redirect flows | Tier 3 | Playwright MCP (only when browser state required) |
+## Preflight and Coverage
 
-**Decision flow:**
-1. Use `ensphere verify auth --technique <type>` for automated bypass verification (no_token, expired_token, alg_none, method_override)
-2. Use `curl` for custom auth flows, controlled abuse-defense checks, and rate limiting measurements
-3. Use Playwright ONLY for OAuth/SSO redirect flows requiring browser state:
-   - `browser_navigate` to SSO login page
-   - `browser_click` on SSO provider button
-   - Observe redirect chain via `browser_network_requests`
-   - Record where tokens are stored in URL fragments, cookies, or browser storage
-   - `browser_evaluate` to inspect token storage using owned test sessions, redacting values
-   - `browser_take_screenshot` for evidence
-   - Test token replay and state parameter manipulation
+Build a matrix covering applicable login, logout, registration, verification,
+password reset/change, MFA enrollment/challenge/recovery, OAuth/OIDC/SSO, API
+keys, session cookies, refresh/access tokens, device/session management, and
+account recovery flows.
 
-## Black-Box Path
+For each flow record endpoint, identity/role, tenant, credential type, state
+transition, expected control, required test account, and coverage state. Use
+owned test accounts. If a role, MFA device, IdP tenant, mail channel, or recovery
+factor is unavailable, mark the specific flow not tested or blocked.
 
-When assessment mode is BLACK_BOX, the existing Phase A 9-point checklist still applies — most items are already behavioral (checking HTTP headers, cookie flags, login responses). Make these adjustments:
+## Candidate Generation
 
-**Items to skip in BLACK_BOX mode:**
-- Checklist item 6: "No default credentials in code, fixtures, or bootstrap scripts" — cannot check without source code. Instead: test common default credentials (admin/admin, admin/password, test/test) against login.
-- Checklist item 6: "Passwords stored with one-way hashing" — cannot verify without source code. Skip this check.
+White-box review should trace credential verification, token validation,
+session issuance/rotation/revocation, reset-token generation/storage/use,
+OAuth state/nonce/PKCE handling, MFA enforcement, and error handling. Cite
+reachable source and configuration.
 
-**Items to add in BLACK_BOX mode:**
+Black-box candidates come from observed flow behavior, not assumptions about
+framework defaults.
 
-### BB-Additional: JWT Deep Analysis
-If auth uses JWT (detected in Session 01 Technology Profile):
-- Base64-decode header and payload (no secret needed)
-- Check `alg` claim: should be RS256/ES256, not HS256 with weak secret or `none`
-- Check `exp` claim: should have expiration
-- Check for sensitive data in claims (passwords, full user records = vulnerability)
-- Check `kid` header (potential injection vector for path traversal or SQLi)
-- Use `ensphere verify auth --technique alg_none --url URL --token TOKEN --in-scope SCOPE`
+Do not estimate token entropy from a small sample, infer password strength from
+UI text alone, or treat cookie flags as proof of session compromise.
 
-### BB-Additional: Session Token Entropy Analysis
-- Collect 10+ session tokens from repeated logins
-- Analyze: length, character set, sequential patterns, common prefixes
-- Tokens should be ≥128 bits of entropy, no predictable patterns
+## Controlled Validation
 
-### BB-Additional: Login Enumeration Timing
-- Send login with valid-username + wrong-password → record response time
-- Send login with invalid-username + wrong-password → record response time
-- Timing difference >100ms suggests different code paths = user enumeration possible
+Use the shared baseline/probe/control cycle with owned accounts:
 
-After these adjustments, proceed with the standard Phase A checklist and Phase B bounded verification.
+- compare valid, invalid, expired, revoked, replayed, and context-mismatched
+  tokens only where each case is safely constructible;
+- verify session identifier rotation across login, privilege change, password
+  change, and logout using the same test account;
+- test reset and verification tokens for single use, intended account binding,
+  expiry, and invalidation without taking over another account;
+- compare authentication error behavior using a small authorized set of known
+  test identities and matched controls;
+- exercise OAuth/OIDC state, nonce, redirect URI, issuer, audience, and PKCE
+  controls only in a configured test integration;
+- validate MFA enforcement and recovery transitions with supplied factors.
 
-## Phase A: Analysis (9-Point Checklist)
+Do not use generic default-credential lists, online password guessing,
+credential stuffing, lockout triggering, CAPTCHA/rate-limit evasion, token
+forgery against real users, or acquisition of another user's session.
 
-Read `ensphere-pentest/01-recon/report.md` sections 3 (Auth & Session) and 4 (API Endpoints).
-Create a task for each checklist item.
+For timing claims, use randomized/interleaved repeated observations and report
+the distribution and noise. There is no universal millisecond threshold.
 
-### 1. Transport & Caching
-- All auth endpoints enforce HTTPS (no HTTP fallbacks)
-- HSTS header present at edge
-- Auth responses include `Cache-Control: no-store` / `Pragma: no-cache`
-→ If failed: `transport_exposure` → credential/session theft
+Positive controls are required where a negative result could mean the test was
+misconfigured—for example, demonstrate that the valid test token/account works
+before interpreting a rejected variant.
 
-### 2. Rate Limiting & Abuse Defenses
-- Login, signup, reset, token endpoints have per-IP and/or per-account rate limits
-- Repeated failures trigger lockout, backoff, or CAPTCHA
-- Monitoring/alerting exists for failed-login spikes
-→ If failed: `abuse_defenses_missing` → brute_force / credential_stuffing / password_spraying
+## Interpretation and Stop Rules
 
-### 3. Session Cookies
-- `HttpOnly` and `Secure` flags set on all session cookies
-- `SameSite` set to Lax or Strict
-- Session ID rotated after successful login (no reuse)
-- Logout invalidates server-side session
-- Idle timeout and absolute session timeout configured
-- Session IDs not in URLs
-→ If failed: `session_cookie_misconfig` → session_hijacking / session_fixation
+Separate authentication failure, authorization failure, upstream rejection,
+invalid test state, and environmental instability. Stop when the specific
+control is demonstrated or contradicted, the account/request limit is reached,
+or further work would require guessing, unrelated identities, or greater
+impact.
 
-### 4. Token Properties
-- Custom tokens use cryptographic randomness (not sequential/guessable)
-- Tokens sent only over HTTPS, never logged
-- Explicit expiration (TTL), invalidated on logout
-→ If failed: `token_management_issue` → token_replay / offline_guessing
+## Report
 
-### 5. Session Fixation
-- Pre-login vs post-login session IDs differ (new ID on auth success)
-→ If failed: `login_flow_logic` → session_fixation
-
-### 6. Password & Account Policy
-- No default credentials in code, fixtures, or bootstrap scripts
-- Strong password policy enforced server-side (if applicable)
-- Passwords stored with one-way hashing (not reversible encryption)
-- MFA available/enforced where required
-→ If failed: `weak_credentials` → credential_stuffing / password_spraying
-
-### 7. Login/Signup Responses
-- Error messages are generic (no user-enumeration hints like "user not found" vs "wrong password")
-- Auth state not reflected in URLs/redirects that could be abused
-→ If failed: `login_flow_logic` → account_enumeration / open_redirect_chain
-
-### 8. Recovery & Logout
-- Password reset uses single-use, short-TTL tokens
-- Reset attempts rate-limited
-- Reset responses don't enumerate users
-- Logout invalidates server-side session and clears client cookies
-→ If failed: `reset_recovery_flaw` → reset_token_guessing / takeover
-
-### 9. SSO/OAuth (if applicable)
-- `state` parameter validated (CSRF protection)
-- `nonce` parameter validated (replay protection)
-- Exact redirect URI allowlists (no wildcards)
-- IdP tokens: signature verified, algorithms pinned, `iss`/`aud`/`exp` validated
-- Public clients use PKCE
-- **nOAuth check**: User identification uses immutable `sub` claim, NOT mutable attributes (`email`, `preferred_username`, `name`). Using mutable attributes allows attackers to impersonate users via their own OAuth tenant.
-→ If failed: `login_flow_logic` / `token_management_issue` → oauth_code_interception / noauth_attribute_hijack
-
-## Phase B: Verification and Session 10 Candidate Selection
-
-For each weakness found in Phase A, gather bounded evidence and decide whether
-it should become a Session 10 candidate. Do not run destructive account attacks
-or broad credential attacks from Session 03.
-
-### Stage 1: Bounded Verification
-Execute safe, scoped checks that preserve evidence:
-- **No rate limiting** -> measure controlled request bursts within configured limits
-- **Weak password policy** -> create only authorized test accounts
-- **User enumeration** -> compare response text, status, timing, and hashes without building real user lists
-- **Missing HttpOnly** -> record cookie flags and mark XSS chaining as a Session 10 candidate
-- **Session fixation** -> test only with owned test accounts
-
-### Stage 2: Candidate Selection
-Recommend Session 10 only when deeper proof is valuable and explicitly safe:
-- Account takeover proof using test accounts
-- Session hijacking proof using owned sessions
-- Password reset manipulation proof in a staging mailbox
-- OAuth or JWT forgery proof with reversible state
-
-### Session 10 Candidate Techniques
-- **Session hijacking**: inject stolen cookie via Playwright `addCookies()` or `curl -b`
-- **Credential attack simulation**: POST to login only with authorized test credentials and configured request limits
-- **JWT `alg:none`**: decode JWT, change `alg` to `none`, modify payload, re-encode without signature
-- **Password reset manipulation**: request reset for victim, intercept and redirect token
-
-These techniques are Session 10 material unless they can be reduced to
-non-mutating measurements with owned test accounts.
-
-## Report Format
-
-Write to `ensphere-pentest/03-auth/report.md`:
-- Evidence-backed auth findings and measurements
-- Session 10 candidates with required approvals and cleanup notes
-- Secure by Design: Validated Components (table of safe checks)
+Write `03-auth/report.md` with the coverage matrix, account/role limitations,
+resolved findings, baseline/probe/control evidence, tested defenses, token and
+session lifecycle facts, unresolved flows, evidence index, and remediation
+validation criteria. Never include live tokens, passwords, reset links, or
+personal data.

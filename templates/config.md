@@ -18,13 +18,18 @@
 - Rules to avoid: (e.g., no DoS, no data destruction)
 - Areas to focus: (e.g., payment flow, admin panel)
 
-## Exploitation
+## Impact Validation
 - Enabled: false
 - Selected findings: []
 - Max risk: 3
-- Allowed actions: read_only_data_extraction, browser_js_execution
-- Forbidden actions: data_deletion, persistence, credential_dumping
+- Allowed actions: non_sensitive_canary_read, benign_browser_execution
+- Forbidden actions: sensitive_data_access, data_deletion, persistence, credential_dumping
+- Human authorization required: true
+- Authorization record required: true
+- Permitted executors: human, agent
+- Cleanup required: true
 - Cleanup evidence required: true
 
 ## Authorization
 This test is fully authorized against the specified controlled environment.
+This general assessment authorization does not authorize Session 10 actions.
