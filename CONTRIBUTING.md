@@ -1,6 +1,6 @@
 # Contributing
 
-Ensphere is currently proprietary and privately maintained. Contributions are accepted only from authorized collaborators.
+Ensphere is licensed under the GNU Affero General Public License v3.0 and is maintained as a proof of concept. Contributions are accepted under the same license; by submitting a contribution you agree it may be distributed under AGPL-3.0.
 
 ## Engineering Bar
 

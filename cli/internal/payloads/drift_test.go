@@ -7,9 +7,8 @@ import (
 	"github.com/srank/ensphere/internal/enums"
 )
 
-// Canary values: these counts are tied to docs (README.md, ENSPHERE-GO-SPEC.md,
-// ENSPHERE-EXTERNAL-TOOL-INTEGRATION-PLAN.md). When payloads are added or removed, update
-// both this test AND the documentation.
+// Canary values: these counts are tied to docs (README.md, ENSPHERE-GO-SPEC.md).
+// When payloads are added or removed, update both this test AND the documentation.
 const expectedPayloadCount = 1206
 const expectedVulnTypeCount = 27
 

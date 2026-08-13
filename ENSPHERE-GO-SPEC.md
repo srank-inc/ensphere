@@ -157,11 +157,9 @@ findings. The merge preserves every base finding status.
 not establish reachability or exploitability.
 
 The cloud package currently has format-specific Prowler and Trivy parsers. They
-do not yet implement the complete provenance/parser-state contract. Future
-work follows
-[ENSPHERE-EXTERNAL-TOOL-INTEGRATION-PLAN.md](ENSPHERE-EXTERNAL-TOOL-INTEGRATION-PLAN.md):
-preserve provenance and source claims, expose parser errors, and never assign an
-Ensphere finding judgment.
+do not yet implement the complete provenance/parser-state contract. Future work
+must preserve provenance and source claims, expose parser errors, and never
+assign an Ensphere finding judgment.
 
 ### Supporting deterministic resources
 

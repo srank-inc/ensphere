@@ -16,7 +16,6 @@ folder-local indexes.
 | CLI command reference | [docs/cli-reference.md](docs/cli-reference.md) |
 | Agent assessment workflow | [docs/agent-workflow.md](docs/agent-workflow.md) |
 | Installed skill entry point | [skills/SKILL.md](skills/SKILL.md) |
-| Active product plan | [docs/ensphere-product-plan.html](docs/ensphere-product-plan.html) |
 | Current Go CLI specification | [ENSPHERE-GO-SPEC.md](ENSPHERE-GO-SPEC.md) |
 
 ## Current Direction
@@ -46,7 +45,7 @@ project docs. If that ever changes, write a new model from scratch.
 | [assets/seeds/](assets/seeds/) | YAML payload source data compiled into embedded SQLite. |
 | [skills/](skills/) | Agent skill, methodology, checklists, and shared contracts. |
 | [skills/evaluation/](skills/evaluation/) | Blind ground-truth benchmark protocol, manifest, and reviewer template. |
-| [docs/](docs/) | Engineering docs, workflow docs, plans, testing, and dogfood runbooks. |
+| [docs/](docs/) | Engineering docs, workflow docs, and testing. |
 | [templates/](templates/) | Workspace configuration template. |
 
 ## Folder Indexes
@@ -54,7 +53,6 @@ project docs. If that ever changes, write a new model from scratch.
 | Area | Index |
 |------|-------|
 | Documentation | [docs/index.md](docs/index.md) |
-| Dogfood targets | [docs/dogfood/index.md](docs/dogfood/index.md) |
 | Assessment methodology | [skills/methodology/index.md](skills/methodology/index.md) |
 | Shared workflow contracts | [skills/shared/index.md](skills/shared/index.md) |
 | Framework checklists | [skills/checklists/index.md](skills/checklists/index.md) |

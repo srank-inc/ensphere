@@ -27,19 +27,10 @@ reference.
 | [../skills/shared/workflow-contract.md](../skills/shared/workflow-contract.md) | Session lifecycle, decisions, coverage, safety, human-operation boundary, and reporting contract | Implementing or auditing workflow behavior |
 | [../skills/shared/evidence-standards.md](../skills/shared/evidence-standards.md) | Provenance, evidence strength, finding status, controlled validation, and report honesty | Writing session reports or evidence artifacts |
 
-## Plans
-
-| Plan | Status | Use |
-|------|--------|-----|
-| [ensphere-product-plan.html](ensphere-product-plan.html) | Active product plan | Product boundary, methodology quality standard, priorities, and decision gates |
-| [production-grade-hardening-plan.html](production-grade-hardening-plan.html) | Active engineering plan | Remaining conformance, reliability, evaluation, and release-readiness work |
-| [../ENSPHERE-EXTERNAL-TOOL-INTEGRATION-PLAN.md](../ENSPHERE-EXTERNAL-TOOL-INTEGRATION-PLAN.md) | Active integration roadmap | Provenance-preserving ingestion of supplied external-tool artifacts |
-
 ## Folder Indexes
 
 | Folder | Index | Purpose |
 |--------|-------|---------|
-| [dogfood/](dogfood/) | [dogfood/index.md](dogfood/index.md) | Reproducible local benchmark runbooks |
 | [../skills/evaluation/](../skills/evaluation/) | [../skills/evaluation/README.md](../skills/evaluation/README.md) | Blind ground-truth methodology evaluation protocol |
 | [../skills/methodology/](../skills/methodology/) | [../skills/methodology/index.md](../skills/methodology/index.md) | Session 01-11 methodology map |
 | [../skills/shared/](../skills/shared/) | [../skills/shared/index.md](../skills/shared/index.md) | Evidence categories, coverage labels, and agent/Ensphere contract |

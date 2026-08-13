@@ -58,3 +58,9 @@ Desktop.ini
 
 # ── Claude Code local settings ──────────────────────────────────
 .claude/settings.local.json
+
+# ── Internal planning & benchmark material (local only) ─────────
+docs/dogfood/
+docs/ensphere-product-plan.html
+docs/production-grade-hardening-plan.html
+ENSPHERE-EXTERNAL-TOOL-INTEGRATION-PLAN.md

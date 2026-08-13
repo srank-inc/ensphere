@@ -39,7 +39,7 @@ outcomes without replacing the Session 09 finding status.
 ## Quick Start
 
 ```bash
-git clone https://github.com/srank-com-my/ensphere.git
+git clone https://github.com/srank-inc/ensphere.git
 cd ensphere
 make build
 ./bin/ensphere --help
@@ -186,12 +186,12 @@ cd cli && go test -race -short ./internal/verify/
 | [docs/agent-workflow.md](docs/agent-workflow.md) | AI-agent assessment workflow |
 | [docs/development.md](docs/development.md) | Architecture, build, testing, and contribution rules |
 | [docs/testing.md](docs/testing.md) | Test inventory, CI gates, and generated drift checks |
-| [docs/dogfood/README.md](docs/dogfood/README.md) | Local dogfood runbooks |
-| [docs/ensphere-product-plan.html](docs/ensphere-product-plan.html) | Active product direction, methodology quality standard, and priorities |
-| [docs/production-grade-hardening-plan.html](docs/production-grade-hardening-plan.html) | Active conformance and release-readiness plan |
-| [ENSPHERE-EXTERNAL-TOOL-INTEGRATION-PLAN.md](ENSPHERE-EXTERNAL-TOOL-INTEGRATION-PLAN.md) | External-artifact ingestion roadmap |
 | [ENSPHERE-GO-SPEC.md](ENSPHERE-GO-SPEC.md) | Current Go CLI implementation contract and known conformance gaps |
 
 ## Distribution
 
-Ensphere is proprietary software. No license is granted unless provided separately in a written agreement with the project owner.
+Ensphere is free software licensed under the GNU Affero General Public License v3.0. See [LICENSE](LICENSE) for the full text.
+
+Because Ensphere is AGPL-licensed, if you modify it and make it available to users over a network, you must also offer those users the corresponding source of your modified version.
+
+Ensphere is a proof of concept. It is published for review and research, and is not a supported product.

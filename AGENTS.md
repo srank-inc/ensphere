@@ -103,7 +103,7 @@ See `docs/testing.md` for the full test file inventory, conventions, and drift g
 | Workflow contract | skills/shared/workflow-contract.md |
 | Development guide | docs/development.md |
 | Test inventory & conventions | docs/testing.md |
-| Active product plan | docs/ensphere-product-plan.html |
-| Production hardening plan | docs/production-grade-hardening-plan.html |
-| External-tool integration plan | ENSPHERE-EXTERNAL-TOOL-INTEGRATION-PLAN.md |
+| Active product plan (local, untracked) | docs/ensphere-product-plan.html |
+| Production hardening plan (local, untracked) | docs/production-grade-hardening-plan.html |
+| External-tool integration plan (local, untracked) | ENSPHERE-EXTERNAL-TOOL-INTEGRATION-PLAN.md |
 | Current Go CLI specification | ENSPHERE-GO-SPEC.md |

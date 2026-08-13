@@ -109,6 +109,5 @@ The browser step is used for workflows that need user interaction, DOM execution
 
 ## Benchmark Runs
 
-Reproducible benchmark runbooks are in [dogfood/README.md](dogfood/README.md).
 Reports stay local until they are backed by a verified workspace; the
 repository does not ship synthetic sample reports.
