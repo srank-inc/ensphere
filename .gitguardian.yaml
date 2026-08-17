@@ -1,0 +1,11 @@
+version: 2
+
+# Ensphere is a security-testing CLI: assets/seeds/ and *_test.go fixtures
+# intentionally contain example passwords, tokens, and JWTs used as attack
+# payloads or parser test data. These are not real credentials — see the
+# repo-wide false-positive triage from 2026-08-18 (GitGuardian alerts on
+# iam_test.go, contracts_test.go, csrf.yaml, sqli-postgres.yaml).
+secret:
+  ignored-paths:
+    - "assets/seeds/**"
+    - "cli/internal/**/*_test.go"
